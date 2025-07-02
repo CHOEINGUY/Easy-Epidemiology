@@ -1,0 +1,35 @@
+/* index.css (기존 스타일 내용 유지) */
+
+/* 전역 스크롤 방지 - 최우선 적용 */
+html, body {
+  height: 100% !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+#app {
+  height: calc(100vh - 5px) !important;
+  max-height: calc(100vh - 5px) !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 5px !important;
+}
+
+/* 기존 스타일 */
+.scrollbar-measure {
+  position: absolute;
+  top: -9999px;
+  width: 100px;
+  height: 100px;
+  overflow: scroll;
+}
