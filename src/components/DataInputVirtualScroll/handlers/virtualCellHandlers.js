@@ -363,8 +363,6 @@ async function handleDateTimePickerEdit(rowIndex, colIndex, event, context) {
  * 날짜/시간 전용 인라인 편집 처리 (데이트피커 없을 때 폴백)
  */
 async function handleDateTimeInlineEdit(rowIndex, colIndex, event, context) {
-  const { allColumnsMeta, selectionSystem, getCellValue, rows, cellInputState, storeBridge } = context;
-  
   // 기본 인라인 편집 시작
   await handleInlineEdit(rowIndex, colIndex, event, context);
   

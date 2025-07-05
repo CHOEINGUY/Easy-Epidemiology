@@ -6,11 +6,7 @@
     <div class="dashboard">
       <div class="summary-bar">
         <div class="summary-bar__title">
-          <img
-            src="https://www.gstatic.com/mobilesdk/160503_mobilesdk/logo/2x/firebase_28dp.png"
-            alt="Placeholder-Logo"
-            class="summary-bar__logo"
-          />
+          <span class="material-icons summary-bar__logo">medical_services</span>
           임상증상
         </div>
       </div>
@@ -1095,6 +1091,9 @@ const exportChart = async () => {
   margin-right: 5px;
   width: 35px;
   height: auto;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
 }
 .summary-bar__info {
   background: #fff;

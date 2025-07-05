@@ -7,7 +7,7 @@
     <div class="dashboard">
       <div class="summary-bar">
         <div class="summary-bar__title">
-          <img src="https://www.gstatic.com/mobilesdk/160503_mobilesdk/logo/2x/firebase_28dp.png" alt="Firebase-Logo" class="summary-bar__logo" />
+          <span class="material-icons summary-bar__logo">people</span>
           대상자 특성 분포
         </div>
       </div>
@@ -1223,6 +1223,9 @@ watch(
   margin-right: 5px; 
   width: 35px; 
   height: auto; 
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
 }
 
 .top-section { 

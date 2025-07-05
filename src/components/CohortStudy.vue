@@ -7,11 +7,7 @@
     <div class="dashboard">
       <div class="summary-bar">
         <div class="summary-bar__title">
-          <img
-            src="https://www.gstatic.com/mobilesdk/160503_mobilesdk/logo/2x/firebase_28dp.png"
-            alt="Placeholder-Logo"
-            class="summary-bar__logo"
-          />
+          <span class="material-icons summary-bar__logo">groups</span>
           코호트 연구
         </div>
       </div>
@@ -502,6 +498,9 @@ const cohortAnalysisResults = computed(() => {
   margin-right: 5px;
   width: 35px;
   height: auto;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* --- 상단 정보 래퍼 스타일 --- */

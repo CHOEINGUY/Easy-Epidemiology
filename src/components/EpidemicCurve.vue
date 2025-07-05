@@ -7,11 +7,7 @@
     <div class="dashboard">
       <div class="summary-bar">
          <div class="summary-bar__title">
-          <img
-            src="https://www.gstatic.com/mobilesdk/160503_mobilesdk/logo/2x/firebase_28dp.png"
-            alt="Firebase-Logo"
-            class="summary-bar__logo"
-          />
+          <span class="material-icons summary-bar__logo">show_chart</span>
           유행곡선 및 잠복기 분석
         </div>
       </div>
@@ -1975,6 +1971,9 @@ const exportIncubationChart = async () => {
   margin-right: 5px;
   width: 35px;
   height: auto;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* --- 입력 컨트롤 영역 스타일 (PatientCharacteristics UI container 스타일 적용) --- */
