@@ -5,6 +5,7 @@
       ref="fileInput"
       type="file"
       accept=".xlsx,.xls"
+      tabindex="-1"
       @change="handleFileSelect"
       style="display: none;"
     />
@@ -13,6 +14,7 @@
       @click="triggerFileSelect"
       :disabled="isUploading"
       :class="['function-button', { uploading: isUploading }]"
+      tabindex="-1"
     >
       <span v-if="!isUploading" class="material-icons-outlined function-button-icon">
         file_upload
@@ -32,7 +34,7 @@ import { ref, defineProps, defineEmits } from 'vue';
 
 const props = defineProps({
   isUploading: { type: Boolean, default: false },
-  uploadProgress: { type: Number, default: 0 }, // 0-100
+  uploadProgress: { type: Number, default: 0 } // 0-100
 });
 const emit = defineEmits(['file-selected']);
 const fileInput = ref(null);

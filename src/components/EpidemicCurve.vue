@@ -356,14 +356,15 @@ import {
   computed,
   onMounted,
   onUnmounted,
+  onActivated,
   watch,
   nextTick,
-  markRaw,
-} from "vue";
-import { useStore } from "vuex";
-import { useStoreBridge } from "../store/storeBridge.js";
-import { useUndoRedo } from "../hooks/useUndoRedo.js";
-import * as echarts from "echarts";
+  markRaw
+} from 'vue';
+import { useStore } from 'vuex';
+import { useStoreBridge } from '../store/storeBridge.js';
+import { useUndoRedo } from '../hooks/useUndoRedo.js';
+import * as echarts from 'echarts';
 // 성능 최적화: lodash-es 임포트
 import { debounce } from 'lodash-es';
 
@@ -371,54 +372,53 @@ const store = useStore();
 const storeBridge = useStoreBridge(store);
 useUndoRedo(storeBridge);
 
-// eslint-disable-next-line no-unused-vars
-const headers = computed(() => storeBridge.headers);
-const rows = computed(() => storeBridge.rows);
+// 기존 store를 직접 사용하여 즉시 반응성 보장
+const rows = computed(() => store.getters.rows || []);
 
 // '개별 노출 시간' 열 표시 여부 상태
 const isIndividualExposureColumnVisible = computed(() => store.state.isIndividualExposureColumnVisible);
 
 const selectedSymptomInterval = computed({
   get: () => store.getters.getSelectedSymptomInterval,
-  set: (value) => storeBridge.updateSymptomInterval(value),
+  set: (value) => storeBridge.updateSymptomInterval(value)
 });
 const exposureDateTime = computed({
   get: () => store.getters.getExposureDateTime,
-  set: (value) => storeBridge.updateExposureDateTime(value),
+  set: (value) => storeBridge.updateExposureDateTime(value)
 });
 const selectedIncubationInterval = computed({
   get: () => store.getters.getSelectedIncubationInterval,
-  set: (value) => storeBridge.updateIncubationInterval(value),
+  set: (value) => storeBridge.updateIncubationInterval(value)
 });
 
 // Chart customization states (상태 관리 개선)
 const fontSizes = [12, 15, 18, 21, 24];
 const chartWidths = [700, 900, 1100]; // 차트 너비 배열
 const barColors = [
-  "#5470c6", // 기본 파란색
-  "#1E88E5", // 진한 파란색 (현재 유행곡선 하단 색상)
-  "#29ABE2", // 밝은 파란색 (현재 유행곡선 상단 색상)  
-  "#91cc75", // 녹색
-  "#fac858", // 노란색
-  "#ee6666", // 빨간색
-  "#73c0de", // 하늘색
-  "#3ba272", // 진한 녹색
-  "#fc8452", // 주황색
-  "#9a60b4", // 보라색
-  "#ea7ccc", // 분홍색
+  '#5470c6', // 기본 파란색
+  '#1E88E5', // 진한 파란색 (현재 유행곡선 하단 색상)
+  '#29ABE2', // 밝은 파란색 (현재 유행곡선 상단 색상)  
+  '#91cc75', // 녹색
+  '#fac858', // 노란색
+  '#ee6666', // 빨간색
+  '#73c0de', // 하늘색
+  '#3ba272', // 진한 녹색
+  '#fc8452', // 주황색
+  '#9a60b4', // 보라색
+  '#ea7ccc' // 분홍색
 ];
 
 // 유행곡선 차트 상태
 const epiChartFontSize = ref(15);
 const epiChartWidth = ref(1100);
-const epiBarColor = ref("#1E88E5");
+const epiBarColor = ref('#1E88E5');
 const epiFontSizeButtonText = ref(epiChartFontSize.value);
 const epiChartWidthButtonText = ref(`${epiChartWidth.value}px`);
 
 // 잠복기 차트 상태
 const incubationChartFontSize = ref(15);
 const incubationChartWidth = ref(1100);
-const incubationBarColor = ref("#91cc75"); // 녹색으로 구분
+const incubationBarColor = ref('#91cc75'); // 녹색으로 구분
 const incubationFontSizeButtonText = ref(incubationChartFontSize.value);
 const incubationChartWidthButtonText = ref(`${incubationChartWidth.value}px`);
 
@@ -426,12 +426,12 @@ const activeTooltip = ref(null);
 const tooltipText = ref('');
 
 const showTooltip = (key, text) => {
-    activeTooltip.value = key;
-    tooltipText.value = text;
+  activeTooltip.value = key;
+  tooltipText.value = text;
 };
 
 const hideTooltip = () => {
-    activeTooltip.value = null;
+  activeTooltip.value = null;
 };
 
 // 선택된 색상을 기반으로 그라디언트 생성하는 함수
@@ -448,7 +448,7 @@ const generateGradientColors = (baseColor) => {
   
   // RGB를 HEX로 변환
   const rgb2hex = (r, g, b) => {
-    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
   };
   
   // 밝기 조절 함수
@@ -509,7 +509,7 @@ const hasValidData = computed(() => {
 const hasValidPatientData = computed(() => {
   try {
     if (!hasValidData.value) return false;
-    return rows.value.some(row => row.isPatient === "1" && row.symptomOnset);
+    return rows.value.some(row => row.isPatient === '1' && row.symptomOnset);
   } catch (error) {
     console.error('hasValidPatientData 계산 오류:', error);
     return false;
@@ -617,7 +617,7 @@ const handleIncubationMouseLeaveChartWidth = () => {
 const cycleEpiFontSize = () => {
   epiChartFontSize.value = getNextValue(epiChartFontSize.value, fontSizes);
   epiFontSizeButtonText.value = epiChartFontSize.value;
-  nextTick(updateCharts);
+  nextTick(safeUpdateCharts);
 };
 const cycleEpiChartWidth = () => {
   epiChartWidth.value = getNextValue(epiChartWidth.value, chartWidths);
@@ -625,7 +625,7 @@ const cycleEpiChartWidth = () => {
 };
 const cycleEpiBarColor = () => {
   epiBarColor.value = getNextValue(epiBarColor.value, barColors);
-  nextTick(updateCharts);
+  nextTick(safeUpdateCharts);
 };
 
 // 잠복기 차트 사이클 버튼 핸들러
@@ -635,7 +635,7 @@ const cycleIncubationFontSize = () => {
     fontSizes
   );
   incubationFontSizeButtonText.value = incubationChartFontSize.value;
-  nextTick(updateCharts);
+  nextTick(safeUpdateCharts);
 };
 const cycleIncubationChartWidth = () => {
   incubationChartWidth.value = getNextValue(
@@ -649,33 +649,33 @@ const cycleIncubationBarColor = () => {
     incubationBarColor.value,
     barColors
   );
-  nextTick(updateCharts);
+  nextTick(safeUpdateCharts);
 };
 
 // Chart export functions
 const exportChart = async () => {
   const instance = epiCurveChartInstance.value;
-  if (!instance || typeof instance.getDataURL !== "function") {
-    alert("차트 내보내기 불가");
+  if (!instance || typeof instance.getDataURL !== 'function') {
+    alert('차트 내보내기 불가');
     return;
   }
   const filename = `유행곡선_${selectedSymptomInterval.value}시간_${new Date().toISOString().split('T')[0]}.png`;
   try {
     const dataUrl = instance.getDataURL({
-      type: "png",
+      type: 'png',
       pixelRatio: 3,
-      backgroundColor: "#fff",
+      backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith("data:image/png"))
-      throw new Error("유효하지 않은 이미지 데이터 URL");
-    const link = document.createElement("a");
+    if (!dataUrl || !dataUrl.startsWith('data:image/png'))
+      throw new Error('유효하지 않은 이미지 데이터 URL');
+    const link = document.createElement('a');
     link.href = dataUrl;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   } catch (error) {
-    console.error("차트 내보내기 오류:", error);
+    console.error('차트 내보내기 오류:', error);
     alert(`차트 내보내기 오류: ${error.message}`);
   }
 };
@@ -821,7 +821,7 @@ const copyIncubationTableToClipboard = async () => {
 
 const copyChartToClipboard = async () => {
   const instance = epiCurveChartInstance.value;
-  if (!instance || typeof instance.getDataURL !== "function") {
+  if (!instance || typeof instance.getDataURL !== 'function') {
     isEpiChartCopied.value = false;
     return;
   }
@@ -829,22 +829,22 @@ const copyChartToClipboard = async () => {
     isEpiChartCopied.value = false;
     return;
   }
-  if (typeof ClipboardItem === "undefined") {
+  if (typeof ClipboardItem === 'undefined') {
     isEpiChartCopied.value = false;
     return;
   }
   try {
     const dataUrl = instance.getDataURL({
-      type: "png",
+      type: 'png',
       pixelRatio: 3,
-      backgroundColor: "#fff",
+      backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith("data:image/png")) throw new Error("유효하지 않은 이미지 데이터 URL");
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) throw new Error('유효하지 않은 이미지 데이터 URL');
     const response = await fetch(dataUrl);
     if (!response.ok) throw new Error(`이미지 로드 실패: ${response.statusText}`);
     const blob = await response.blob();
     await navigator.clipboard.write([
-      new ClipboardItem({ [blob.type]: blob }),
+      new ClipboardItem({ [blob.type]: blob })
     ]);
     isEpiChartCopied.value = true;
     setTimeout(() => (isEpiChartCopied.value = false), 1500);
@@ -853,7 +853,7 @@ const copyChartToClipboard = async () => {
 
 const copyIncubationChartToClipboard = async () => {
   const instance = incubationChartInstance.value;
-  if (!instance || typeof instance.getDataURL !== "function") {
+  if (!instance || typeof instance.getDataURL !== 'function') {
     isIncubationChartCopied.value = false;
     return;
   }
@@ -861,22 +861,22 @@ const copyIncubationChartToClipboard = async () => {
     isIncubationChartCopied.value = false;
     return;
   }
-  if (typeof ClipboardItem === "undefined") {
+  if (typeof ClipboardItem === 'undefined') {
     isIncubationChartCopied.value = false;
     return;
   }
   try {
     const dataUrl = instance.getDataURL({
-      type: "png",
+      type: 'png',
       pixelRatio: 3,
-      backgroundColor: "#fff",
+      backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith("data:image/png")) throw new Error("유효하지 않은 이미지 데이터 URL");
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) throw new Error('유효하지 않은 이미지 데이터 URL');
     const response = await fetch(dataUrl);
     if (!response.ok) throw new Error(`이미지 로드 실패: ${response.statusText}`);
     const blob = await response.blob();
     await navigator.clipboard.write([
-      new ClipboardItem({ [blob.type]: blob }),
+      new ClipboardItem({ [blob.type]: blob })
     ]);
     isIncubationChartCopied.value = true;
     setTimeout(() => (isIncubationChartCopied.value = false), 1500);
@@ -894,16 +894,16 @@ const formatDateTime = (date) => {
   try {
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
       console.warn('formatDateTime: 유효하지 않은 날짜:', date);
-      return "";
+      return '';
     }
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${month}-${day} ${hours}:${minutes}`;
   } catch (error) {
     console.error('formatDateTime 오류:', error, 'date:', date);
-    return "";
+    return '';
   }
 };
 
@@ -956,21 +956,21 @@ const formatDurationHHMM = (durationMillis) => {
     // Handle NaN or invalid inputs gracefully
     if (isNaN(durationMillis) || durationMillis < 0) {
       console.warn('formatDurationHHMM: 유효하지 않은 duration:', durationMillis);
-      return "--:--";
+      return '--:--';
     }
     
     const totalMinutes = Math.round(durationMillis / (60 * 1000)); // Round to nearest minute
     if (isNaN(totalMinutes)) {
       console.warn('formatDurationHHMM: totalMinutes 계산 실패:', durationMillis);
-      return "--:--";
+      return '--:--';
     }
     
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   } catch (error) {
     console.error('formatDurationHHMM 오류:', error, 'duration:', durationMillis);
-    return "--:--";
+    return '--:--';
   }
 };
 
@@ -983,19 +983,19 @@ const formatShortDateTime = (date) => {
   try {
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
       console.warn('formatShortDateTime: 유효하지 않은 날짜:', date);
-      return "N/A";
+      return 'N/A';
     }
     
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
     
     return `${year}-${month}-${day} ${hours}:${minutes}`;
   } catch (error) {
     console.error('formatShortDateTime 오류:', error, 'date:', date);
-    return "N/A";
+    return 'N/A';
   }
 };
 
@@ -1003,13 +1003,13 @@ const formatShortDateTime = (date) => {
 const patientOnsetTimes = computed(() => {
   if (!rows.value || rows.value.length === 0) return [];
   return rows.value
-    .filter((r) => r.isPatient === "1" && r.symptomOnset)
+    .filter((r) => r.isPatient === '1' && r.symptomOnset)
     .map((r) => {
       try {
         // Handle potential timezone issues by ensuring 'T' separator
-        const dateStr = r.symptomOnset.includes("T")
+        const dateStr = r.symptomOnset.includes('T')
           ? r.symptomOnset
-          : r.symptomOnset.replace(" ", "T");
+          : r.symptomOnset.replace(' ', 'T');
         const d = new Date(dateStr);
         return !isNaN(d.getTime()) ? d : null;
       } catch {
@@ -1054,23 +1054,23 @@ const symptomOnsetTableData = computed(() => {
 
   // Ensure blockStart is valid before proceeding
   const blockStartTimestamp = floorToIntervalStart(minTimestamp, intervalHours);
-   if (isNaN(blockStartTimestamp)) {
-       console.error("Invalid blockStartTimestamp calculated.");
-       return []; // Return empty if calculation fails
-   }
+  if (isNaN(blockStartTimestamp)) {
+    console.error('Invalid blockStartTimestamp calculated.');
+    return []; // Return empty if calculation fails
+  }
 
   // 🔥 NEW: 첫 환자가 속한 구간을 찾은 후, 그 이전 1개 구간부터 시작
   let firstPatientIntervalStart = blockStartTimestamp;
   while (firstPatientIntervalStart > minTimestamp) {
-      firstPatientIntervalStart -= intervalMillis;
+    firstPatientIntervalStart -= intervalMillis;
   }
   // 첫 환자가 실제로 구간에 포함되는지 확인
   if (minTimestamp >= firstPatientIntervalStart + intervalMillis) {
-      firstPatientIntervalStart += intervalMillis;
+    firstPatientIntervalStart += intervalMillis;
   }
   
   // 🔥 NEW: 첫 환자 구간 이전에 패딩 구간 추가
-  let firstIntervalStart = firstPatientIntervalStart - (PADDING_INTERVALS_BEFORE * intervalMillis);
+  const firstIntervalStart = firstPatientIntervalStart - (PADDING_INTERVALS_BEFORE * intervalMillis);
 
   // 🔥 NEW: 마지막 환자 이후 1개 구간을 추가하여 종료점 확장
   const extendedMaxTimestamp = maxTimestamp + (PADDING_INTERVALS_AFTER * intervalMillis);
@@ -1097,13 +1097,13 @@ const symptomOnsetTableData = computed(() => {
       intervalLabel: `${formatDateTime(
         new Date(currentIntervalStart)
       )} ~ ${formatDateTime(new Date(currentIntervalEnd))}`,
-      count,
+      count
     });
 
     currentIntervalStart = currentIntervalEnd;
     guard++;
   }
-  if (guard >= 1000) console.error("Loop guard hit in symptom onset");
+  if (guard >= 1000) console.error('Loop guard hit in symptom onset');
 
   return data;
 });
@@ -1114,7 +1114,7 @@ const exposureTimestamp = computed(() => {
   const expStr = exposureDateTime.value;
   if (!expStr) return null;
   try {
-    const dateStr = expStr.includes("T") ? expStr : expStr.replace(" ", "T");
+    const dateStr = expStr.includes('T') ? expStr : expStr.replace(' ', 'T');
     const d = new Date(dateStr);
     return isNaN(d.getTime()) ? null : d.getTime();
   } catch {
@@ -1124,7 +1124,7 @@ const exposureTimestamp = computed(() => {
 
 // NEW: Calculate raw incubation durations in milliseconds
 const incubationDurations = computed(() => {
-  const patientRows = store.getters.rows.filter(row => row.isPatient === '1');
+  const patientRows = rows.value.filter(row => row.isPatient === '1');
   
   if (isIndividualExposureColumnVisible.value) {
     // 개별 노출 시간 사용
@@ -1161,37 +1161,37 @@ const incubationDurations = computed(() => {
 
 // NEW: Calculate summary statistics for incubation period
 const minIncubationPeriodFormatted = computed(() => {
-    if (incubationDurations.value.length === 0) return '--:--';
-    const minDuration = Math.min(...incubationDurations.value);
-    return formatDurationHHMM(minDuration);
+  if (incubationDurations.value.length === 0) return '--:--';
+  const minDuration = Math.min(...incubationDurations.value);
+  return formatDurationHHMM(minDuration);
 });
 
 const maxIncubationPeriodFormatted = computed(() => {
-    if (incubationDurations.value.length === 0) return '--:--';
-    const maxDuration = Math.max(...incubationDurations.value);
-    return formatDurationHHMM(maxDuration);
+  if (incubationDurations.value.length === 0) return '--:--';
+  const maxDuration = Math.max(...incubationDurations.value);
+  return formatDurationHHMM(maxDuration);
 });
 
 const avgIncubationPeriodFormatted = computed(() => {
-    if (incubationDurations.value.length === 0) return '--:--';
-    const sum = incubationDurations.value.reduce((acc, val) => acc + val, 0);
-    const avgDuration = sum / incubationDurations.value.length;
-    return formatDurationHHMM(avgDuration);
+  if (incubationDurations.value.length === 0) return '--:--';
+  const sum = incubationDurations.value.reduce((acc, val) => acc + val, 0);
+  const avgDuration = sum / incubationDurations.value.length;
+  return formatDurationHHMM(avgDuration);
 });
 
 const medianIncubationPeriodFormatted = computed(() => {
-    if (incubationDurations.value.length === 0) return '--:--';
-    const sortedDurations = [...incubationDurations.value].sort((a, b) => a - b);
-    const mid = Math.floor(sortedDurations.length / 2);
-    let medianDuration;
-    if (sortedDurations.length % 2 === 0) {
-        // Even number of values: average the two middle ones
-        medianDuration = (sortedDurations[mid - 1] + sortedDurations[mid]) / 2;
-    } else {
-        // Odd number of values: take the middle one
-        medianDuration = sortedDurations[mid];
-    }
-    return formatDurationHHMM(medianDuration);
+  if (incubationDurations.value.length === 0) return '--:--';
+  const sortedDurations = [...incubationDurations.value].sort((a, b) => a - b);
+  const mid = Math.floor(sortedDurations.length / 2);
+  let medianDuration;
+  if (sortedDurations.length % 2 === 0) {
+    // Even number of values: average the two middle ones
+    medianDuration = (sortedDurations[mid - 1] + sortedDurations[mid]) / 2;
+  } else {
+    // Odd number of values: take the middle one
+    medianDuration = sortedDurations[mid];
+  }
+  return formatDurationHHMM(medianDuration);
 });
 
 
@@ -1200,7 +1200,7 @@ const incubationPeriodTableData = computed(() => {
   const durations = incubationDurations.value; // Use the calculated durations
 
   if (!intervalHours || durations.length === 0) {
-      return [];
+    return [];
   }
 
   const intervalMillis = intervalHours * 3600000;
@@ -1222,26 +1222,26 @@ const incubationPeriodTableData = computed(() => {
 
     // Only add if there's a count or it's the first interval for context
     if (count > 0 || currentIntervalStart === 0) {
-        data.push({
-          intervalLabel: `${formatDurationHHMM(
-            currentIntervalStart
-          )} ~ ${formatDurationHHMM(currentIntervalEnd)}`,
-          count,
-        });
+      data.push({
+        intervalLabel: `${formatDurationHHMM(
+          currentIntervalStart
+        )} ~ ${formatDurationHHMM(currentIntervalEnd)}`,
+        count
+      });
     }
 
     currentIntervalStart = currentIntervalEnd;
     guard++;
   }
-  if (guard >= 1000) console.error("Loop guard hit in incubation period table");
+  if (guard >= 1000) console.error('Loop guard hit in incubation period table');
 
-   // Add the final "empty" interval if the last duration wasn't exactly at the start of the last interval
-   if (currentIntervalStart <= maxDuration + intervalMillis) {
-      data.push({
-          intervalLabel: `${formatDurationHHMM(currentIntervalStart)} ~ `,
-          count: 0
-      });
-   }
+  // Add the final "empty" interval if the last duration wasn't exactly at the start of the last interval
+  if (currentIntervalStart <= maxDuration + intervalMillis) {
+    data.push({
+      intervalLabel: `${formatDurationHHMM(currentIntervalStart)} ~ `,
+      count: 0
+    });
+  }
 
   return data;
 });
@@ -1265,52 +1265,52 @@ const generateEpiCurveChartOptions = () => {
     
     if (!Array.isArray(data)) {
       console.error('generateEpiCurveChartOptions: data가 배열이 아님:', data);
-      return { title: { text: "데이터 형식 오류" } };
+      return { title: { text: '데이터 형식 오류' } };
     }
     
     // 🔥 NEW: 이제 모든 데이터를 사용 (패딩 구간 포함)
     const validData = data;
     if (!validData || validData.length === 0) {
       console.warn('generateEpiCurveChartOptions: 유효한 데이터가 없음');
-      return { title: { text: "데이터 없음" } };
+      return { title: { text: '데이터 없음' } };
     }
 
     // --- 제공된 최종 예제 코드를 기반으로 로직 재구성 ---
 
     // 1. 데이터 가공 (날짜/시간 포맷팅)
     const processedData = validData.map(item => {
-        const intervalLabel = item.intervalLabel;
-        const parts = intervalLabel.split(' ~ ');
-        const startDateStr = parts[0]; // "04-08 00:00"
+      const intervalLabel = item.intervalLabel;
+      const parts = intervalLabel.split(' ~ ');
+      const startDateStr = parts[0]; // "04-08 00:00"
         
-        const datePart = startDateStr.split(' ')[0]; // "04-08"
-        const timePart = startDateStr.split(' ')[1]; // "00:00"
+      const datePart = startDateStr.split(' ')[0]; // "04-08"
+      const timePart = startDateStr.split(' ')[1]; // "00:00"
 
-        const [month, day] = datePart.split('-').map(p => parseInt(p, 10));
+      const [month, day] = datePart.split('-').map(p => parseInt(p, 10));
 
-        const year = new Date().getFullYear();
-        const dateObj = new Date(year, month - 1, day);
-        const dayOfWeekMap = ['일', '월', '화', '수', '목', '금', '토'];
-        const dayOfWeek = dayOfWeekMap[dateObj.getDay()];
+      const year = new Date().getFullYear();
+      const dateObj = new Date(year, month - 1, day);
+      const dayOfWeekMap = ['일', '월', '화', '수', '목', '금', '토'];
+      const dayOfWeek = dayOfWeekMap[dateObj.getDay()];
 
-        const formattedDate = `${month}. ${day}.(${dayOfWeek})`;
+      const formattedDate = `${month}. ${day}.(${dayOfWeek})`;
 
-        const startTime = timePart.split(':')[0];
-        let endTime = '??';
-        if (parts[1] && parts[1].includes(':')) {
-            endTime = parts[1].split(' ')[1].split(':')[0];
-        } else {
-             const intervalHours = selectedSymptomInterval.value || 3;
-             endTime = String((parseInt(startTime, 10) + intervalHours) % 24).padStart(2, '0');
-        }
+      const startTime = timePart.split(':')[0];
+      let endTime = '??';
+      if (parts[1] && parts[1].includes(':')) {
+        endTime = parts[1].split(' ')[1].split(':')[0];
+      } else {
+        const intervalHours = selectedSymptomInterval.value || 3;
+        endTime = String((parseInt(startTime, 10) + intervalHours) % 24).padStart(2, '0');
+      }
         
-        const formattedTime = `${parseInt(startTime, 10)}~${endTime === '00' ? 24 : parseInt(endTime, 10)}시`;
+      const formattedTime = `${parseInt(startTime, 10)}~${endTime === '00' ? 24 : parseInt(endTime, 10)}시`;
 
-        return {
-            formattedDate: formattedDate,
-            formattedTime: formattedTime,
-            value: Number(item.count) || 0
-        };
+      return {
+        formattedDate,
+        formattedTime,
+        value: Number(item.count) || 0
+      };
     });
     
     const timeData = processedData.map(item => item.formattedTime);
@@ -1320,13 +1320,13 @@ const generateEpiCurveChartOptions = () => {
     const dateGroups = [];
     const dateMap = new Map();
     processedData.forEach((item, index) => {
-        if (!dateMap.has(item.formattedDate)) {
-            dateMap.set(item.formattedDate, { startIndex: index, count: 0 });
-        }
-        dateMap.get(item.formattedDate).count++;
+      if (!dateMap.has(item.formattedDate)) {
+        dateMap.set(item.formattedDate, { startIndex: index, count: 0 });
+      }
+      dateMap.get(item.formattedDate).count++;
     });
     dateMap.forEach((value, key) => {
-        dateGroups.push({ name: key, ...value });
+      dateGroups.push({ name: key, ...value });
     });
 
 
@@ -1335,18 +1335,18 @@ const generateEpiCurveChartOptions = () => {
         fontFamily: 'Noto Sans KR, sans-serif'
       },
       title: {
-        text: "시간별 발생자 수",
-        left: "center",
+        text: '시간별 발생자 수',
+        left: 'center',
         textStyle: { fontSize: (epiChartFontSize.value || 15) + 4, fontWeight: 'bold' },
         top: 15
       },
       tooltip: { 
-        trigger: "axis",
+        trigger: 'axis',
         axisPointer: { type: 'shadow' },
         formatter: (params) => {
-            const dataIndex = params[0].dataIndex;
-            const item = processedData[dataIndex];
-            return `<strong>${item.formattedDate}</strong><br/>${item.formattedTime} : <strong>${item.value}</strong> 명`;
+          const dataIndex = params[0].dataIndex;
+          const item = processedData[dataIndex];
+          return `<strong>${item.formattedDate}</strong><br/>${item.formattedTime} : <strong>${item.value}</strong> 명`;
         }
       },
       grid: {
@@ -1368,7 +1368,7 @@ const generateEpiCurveChartOptions = () => {
             fontSize: epiChartFontSize.value || 15,
             margin: 10
           },
-          splitLine: { show: false },
+          splitLine: { show: false }
         },
         {
           type: 'category',
@@ -1386,60 +1386,60 @@ const generateEpiCurveChartOptions = () => {
             show: true,
             interval: (index, value) => value !== '',
             color: '#333',
-            fontSize: epiChartFontSize.value || 15,
+            fontSize: epiChartFontSize.value || 15
           },
           splitLine: { show: false },
           data: dateGroups.flatMap(group => {
-              const groupData = Array(group.count).fill('');
-              if (groupData.length > 0) {
-                groupData[0] = group.name; 
-              }
-              return groupData;
+            const groupData = Array(group.count).fill('');
+            if (groupData.length > 0) {
+              groupData[0] = group.name; 
+            }
+            return groupData;
           })
         }
       ],
       yAxis: { 
-        type: "value", 
-        name: "환자 수 (명)",
+        type: 'value', 
+        name: '환자 수 (명)',
         nameTextStyle: { padding: [0, 0, 0, 60], fontSize: epiChartFontSize.value || 15 },
         axisLabel: { fontSize: epiChartFontSize.value || 15 },
         splitLine: { show: true, lineStyle: { type: 'dashed' } }
       },
       series: [
         {
-          name: "환자 수",
-          type: "bar",
+          name: '환자 수',
+          type: 'bar',
           xAxisIndex: 0, 
           data: seriesData,
           barWidth: '100%',
           itemStyle: {
-              color: (() => {
-                const colors = generateGradientColors(epiBarColor.value || "#1E88E5");
-                return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: colors.lightColor }, 
-                  { offset: 1, color: colors.darkColor }
-                ]);
-              })()
+            color: (() => {
+              const colors = generateGradientColors(epiBarColor.value || '#1E88E5');
+              return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: colors.lightColor }, 
+                { offset: 1, color: colors.darkColor }
+              ]);
+            })()
           },
           emphasis: {
-              focus: 'series',
-              itemStyle: {
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                      { offset: 0, color: '#FDB813' }, { offset: 1, color: '#F9A825' }
-                  ])
-              }
+            focus: 'series',
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#FDB813' }, { offset: 1, color: '#F9A825' }
+              ])
+            }
           },
           label: { 
             show: true, 
-            position: "top", 
+            position: 'top', 
             fontSize: Math.max(10, (epiChartFontSize.value || 15) - 1)
-          },
+          }
         }
       ]
     };
   } catch (error) {
     console.error('generateEpiCurveChartOptions 오류:', error);
-    return { title: { text: "차트 생성 오류" } };
+    return { title: { text: '차트 생성 오류' } };
   }
 };
 
@@ -1453,14 +1453,14 @@ const generateIncubationChartOptions = () => {
     
     if (!Array.isArray(data)) {
       console.error('generateIncubationChartOptions: data가 배열이 아님:', data);
-      return { title: { text: "데이터 형식 오류" } };
+      return { title: { text: '데이터 형식 오류' } };
     }
     
     // Filter out the last "empty" row for charting
     const validData = data.slice(0, -1);
     if (!validData || validData.length === 0) {
       console.warn('generateIncubationChartOptions: 유효한 데이터가 없음');
-      return { title: { text: "데이터 없음" } };
+      return { title: { text: '데이터 없음' } };
     }
 
     // 데이터 검증
@@ -1470,7 +1470,7 @@ const generateIncubationChartOptions = () => {
     
     if (!hasValidLabels) {
       console.error('generateIncubationChartOptions: 유효하지 않은 라벨 형식');
-      return { title: { text: "데이터 라벨 오류" } };
+      return { title: { text: '데이터 라벨 오류' } };
     }
 
     return {
@@ -1478,8 +1478,8 @@ const generateIncubationChartOptions = () => {
         fontFamily: 'Noto Sans KR, sans-serif'
       },
       title: {
-        text: "잠복기별 환자 수",
-        left: "center",
+        text: '잠복기별 환자 수',
+        left: 'center',
         textStyle: { 
           fontSize: (incubationChartFontSize.value || 15) + 4, 
           fontWeight: 'bold' 
@@ -1487,10 +1487,10 @@ const generateIncubationChartOptions = () => {
         top: 15
       },
       tooltip: { 
-        trigger: "axis", 
+        trigger: 'axis', 
         axisPointer: { type: 'shadow' },
         formatter: (params) => {
-          if (!params || params.length === 0) return "";
+          if (!params || params.length === 0) return '';
           const param = params[0];
           return `<strong>${param.name}</strong><br/>${param.seriesName}: <strong>${param.value}</strong> 명`;
         }
@@ -1503,7 +1503,7 @@ const generateIncubationChartOptions = () => {
         containLabel: true
       },
       xAxis: {
-        type: "category",
+        type: 'category',
         data: validData.map((item) => {
           try {
             return formatIncubationLabel(item.intervalLabel || '시간 오류');
@@ -1524,8 +1524,8 @@ const generateIncubationChartOptions = () => {
         splitLine: { show: false }
       },
       yAxis: { 
-        type: "value", 
-        name: "환자 수 (명)",
+        type: 'value', 
+        name: '환자 수 (명)',
         nameTextStyle: { 
           padding: [0, 0, 0, 60], 
           fontSize: incubationChartFontSize.value || 15 
@@ -1540,13 +1540,13 @@ const generateIncubationChartOptions = () => {
       },
       series: [
         {
-          name: "환자 수",
-          type: "bar",
+          name: '환자 수',
+          type: 'bar',
           data: validData.map((item) => Number(item.count) || 0),
           barWidth: '100%', // 유행곡선과 동일한 막대 너비
           itemStyle: {
             color: (() => {
-              const colors = generateGradientColors(incubationBarColor.value || "#1E88E5");
+              const colors = generateGradientColors(incubationBarColor.value || '#1E88E5');
               return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: colors.lightColor }, 
                 { offset: 1, color: colors.darkColor }
@@ -1564,15 +1564,15 @@ const generateIncubationChartOptions = () => {
           },
           label: { 
             show: true, 
-            position: "top", 
+            position: 'top', 
             fontSize: Math.max(10, (incubationChartFontSize.value || 15) - 1)
           }
-        },
-      ],
+        }
+      ]
     };
   } catch (error) {
     console.error('generateIncubationChartOptions 오류:', error);
-    return { title: { text: "차트 생성 오류" } };
+    return { title: { text: '차트 생성 오류' } };
   }
 };
 
@@ -1593,9 +1593,15 @@ const updateCharts = () => {
     
     const states = chartStates.value;
     console.log('차트 업데이트 시작:', states);
+    console.log('유행곡선 차트 조건:', {
+      container: !!epiCurveChartContainer.value,
+      isEpiCurveReady: states.isEpiCurveReady,
+      symptomOnsetTableDataLength: symptomOnsetTableData.value.length
+    });
     
     // 유행곡선 차트 업데이트
     if (epiCurveChartContainer.value && states.isEpiCurveReady) {
+      console.log('유행곡선 차트 업데이트 시작');
       if (!epiCurveChartInstance.value) {
         epiCurveChartInstance.value = markRaw(
           echarts.init(epiCurveChartContainer.value)
@@ -1604,10 +1610,18 @@ const updateCharts = () => {
       }
       
       const epiOptions = generateEpiCurveChartOptions();
+      console.log('유행곡선 차트 옵션 생성됨:', epiOptions ? '성공' : '실패');
       if (epiOptions && typeof epiOptions === 'object') {
         epiCurveChartInstance.value.setOption(epiOptions, false); // 성능 향상: 병합 방식
         console.log('유행곡선 차트 업데이트 완료');
+      } else {
+        console.warn('유행곡선 차트 옵션이 유효하지 않음');
       }
+    } else {
+      console.log('유행곡선 차트 업데이트 건너뜀:', {
+        hasContainer: !!epiCurveChartContainer.value,
+        isEpiCurveReady: states.isEpiCurveReady
+      });
     }
     
     // 잠복기 차트 업데이트
@@ -1628,7 +1642,7 @@ const updateCharts = () => {
     
     console.log('전체 차트 업데이트 완료');
   } catch (error) {
-    console.error("차트 업데이트 중 오류 발생:", error);
+    console.error('차트 업데이트 중 오류 발생:', error);
     // 에러 발생 시 사용자에게 알림 (선택적)
     // alert(`차트 업데이트 오류: ${error.message}`);
   }
@@ -1636,8 +1650,71 @@ const updateCharts = () => {
 
 // --- Lifecycle Hooks ---
 onMounted(() => {
-  console.log("유행곡선 컴포넌트 마운트됨");
+  console.log('유행곡선 컴포넌트 마운트됨');
   nextTick(updateCharts);
+});
+
+// 안전한 차트 상태 검증 함수
+const validateChartState = () => {
+  const hasData = hasValidData.value;
+  const hasPatientData = hasValidPatientData.value;
+  const hasIndividualExposure = isIndividualExposureColumnVisible.value;
+  const hasExposureData = hasValidExposureData.value;
+  
+  console.log('차트 상태 검증:', { hasData, hasPatientData, hasIndividualExposure, hasExposureData });
+  
+  // 유행곡선 차트: 환자 데이터만 있으면 OK
+  // 잠복기 차트: 개별노출시간열이 있으면 잠복기 데이터 필요, 없으면 공통 노출시간만 있으면 OK
+  return hasData && hasPatientData && (hasIndividualExposure ? hasExposureData : true);
+};
+
+// 안전한 차트 업데이트 함수
+const safeUpdateCharts = () => {
+  try {
+    if (validateChartState()) {
+      console.log('차트 상태 유효, 업데이트 시작');
+      updateCharts();
+    } else {
+      console.warn('차트 상태가 유효하지 않아 업데이트 건너뜀');
+    }
+  } catch (error) {
+    console.error('차트 업데이트 중 오류:', error);
+  }
+};
+
+// activated 훅 추가 - 탭 전환 시 안전하게 차트 업데이트
+onActivated(() => {
+  console.log('유행곡선 탭 활성화됨');
+  
+  // 상태 동기화 대기
+  nextTick(() => {
+    // 상세한 데이터 유효성 검증
+    console.log('상세 데이터 검증:', {
+      hasValidData: hasValidData.value,
+      hasValidPatientData: hasValidPatientData.value,
+      hasValidExposureData: hasValidExposureData.value,
+      isIndividualExposureColumnVisible: isIndividualExposureColumnVisible.value,
+      rowsLength: rows.value?.length,
+      patientCount: rows.value?.filter(row => row.isPatient === '1').length
+    });
+    
+    // 데이터 유효성 검증
+    if (hasValidData.value) {
+      console.log('데이터 유효성 확인됨, 차트 업데이트 시작');
+      
+      // 개별노출시간열 상태 확인
+      if (isIndividualExposureColumnVisible.value) {
+        console.log('개별노출시간열 모드로 차트 업데이트');
+      } else {
+        console.log('공통 노출시간 모드로 차트 업데이트');
+      }
+      
+      // 안전한 차트 업데이트 실행
+      safeUpdateCharts();
+    } else {
+      console.log('유효한 데이터가 없어 차트 업데이트 건너뜀');
+    }
+  });
 });
 onUnmounted(() => {
   // 차트 인스턴스 정리
@@ -1645,9 +1722,9 @@ onUnmounted(() => {
     try {
       epiCurveChartInstance.value.dispose();
       epiCurveChartInstance.value = null;
-      console.log("유행곡선 차트 인스턴스 정리 완료");
+      console.log('유행곡선 차트 인스턴스 정리 완료');
     } catch (error) {
-      console.error("유행곡선 차트 정리 오류:", error);
+      console.error('유행곡선 차트 정리 오류:', error);
     }
   }
   
@@ -1655,9 +1732,9 @@ onUnmounted(() => {
     try {
       incubationChartInstance.value.dispose();
       incubationChartInstance.value = null;
-      console.log("잠복기 차트 인스턴스 정리 완료");
+      console.log('잠복기 차트 인스턴스 정리 완료');
     } catch (error) {
-      console.error("잠복기 차트 정리 오류:", error);
+      console.error('잠복기 차트 정리 오류:', error);
     }
   }
   
@@ -1670,13 +1747,13 @@ onUnmounted(() => {
   epiCurveChartContainer.value = null;
   incubationChartContainer.value = null;
   
-  console.log("EpidemicCurve 컴포넌트 cleanup 완료");
+  console.log('EpidemicCurve 컴포넌트 cleanup 완료');
 });
 
 // 성능 최적화: debounced 차트 업데이트
 const debouncedUpdateCharts = debounce(() => {
-  console.log("Debounced chart update triggered");
-  updateCharts();
+  console.log('Debounced chart update triggered');
+  safeUpdateCharts();
 }, 200);
 
 // --- Watcher (성능 최적화) ---
@@ -1688,12 +1765,12 @@ watch(
       console.log(`Epi chart width changed: ${oldWidth} -> ${newWidth}. Recreating epi chart.`);
       
       // 유행곡선 차트 인스턴스 dispose하고 재생성
-      if (epiCurveChartInstance.value && typeof epiCurveChartInstance.value.dispose === "function") {
+      if (epiCurveChartInstance.value && typeof epiCurveChartInstance.value.dispose === 'function') {
         try {
           epiCurveChartInstance.value.dispose();
           epiCurveChartInstance.value = null;
         } catch (e) {
-          console.error("Error disposing epi curve chart:", e);
+          console.error('Error disposing epi curve chart:', e);
         }
       }
       
@@ -1702,9 +1779,9 @@ watch(
         if (epiCurveChartContainer.value) {
           try {
             epiCurveChartInstance.value = markRaw(echarts.init(epiCurveChartContainer.value));
-            updateCharts();
+            safeUpdateCharts();
           } catch (error) {
-            console.error("EpiCurve chart recreation failed:", error);
+            console.error('EpiCurve chart recreation failed:', error);
           }
         }
       });
@@ -1721,12 +1798,12 @@ watch(
       console.log(`Incubation chart width changed: ${oldWidth} -> ${newWidth}. Recreating incubation chart.`);
       
       // 잠복기 차트 인스턴스 dispose하고 재생성
-      if (incubationChartInstance.value && typeof incubationChartInstance.value.dispose === "function") {
+      if (incubationChartInstance.value && typeof incubationChartInstance.value.dispose === 'function') {
         try {
           incubationChartInstance.value.dispose();
           incubationChartInstance.value = null;
         } catch (e) {
-          console.error("Error disposing incubation chart:", e);
+          console.error('Error disposing incubation chart:', e);
         }
       }
       
@@ -1735,9 +1812,9 @@ watch(
         if (incubationChartContainer.value) {
           try {
             incubationChartInstance.value = markRaw(echarts.init(incubationChartContainer.value));
-            updateCharts();
+            safeUpdateCharts();
           } catch (error) {
-            console.error("Incubation chart recreation failed:", error);
+            console.error('Incubation chart recreation failed:', error);
           }
         }
       });
@@ -1753,7 +1830,7 @@ watch(
     if (newInterval === 3) {
       epiChartWidth.value = 1100;
       epiChartWidthButtonText.value = `${epiChartWidth.value}px`;
-      console.log("유행곡선 차트: 3시간 간격 설정으로 너비를 1100px로 자동 조정");
+      console.log('유행곡선 차트: 3시간 간격 설정으로 너비를 1100px로 자동 조정');
     }
   },
   { immediate: false }
@@ -1766,41 +1843,39 @@ watch(
     if (newInterval === 3) {
       incubationChartWidth.value = 1100;
       incubationChartWidthButtonText.value = `${incubationChartWidth.value}px`;
-      console.log("잠복기 차트: 3시간 간격 설정으로 너비를 1100px로 자동 조정");
+      console.log('잠복기 차트: 3시간 간격 설정으로 너비를 1100px로 자동 조정');
     }
   },
   { immediate: false }
 );
 
-// 다른 속성 변경 시 차트 업데이트
+// 다른 속성 변경 시 차트 업데이트 (rows 제거)
 watch(
   [
     selectedSymptomInterval,
     exposureDateTime,
     selectedIncubationInterval,
-    rows,
     epiBarColor,
     epiChartFontSize,
     incubationBarColor,
     incubationChartFontSize
   ],
-  ([newSymptomInterval, newExposureDateTime, newIncubationInterval, newRows, newEpiBarColor, newEpiFontSize, newIncubationBarColor, newIncubationFontSize],
-   [oldSymptomInterval, oldExposureDateTime, oldIncubationInterval, oldRows, oldEpiBarColor, oldEpiFontSize, oldIncubationBarColor, oldIncubationFontSize]) => {
+  ([newSymptomInterval, newExposureDateTime, newIncubationInterval, newEpiBarColor, newEpiFontSize, newIncubationBarColor, newIncubationFontSize],
+    [oldSymptomInterval, oldExposureDateTime, oldIncubationInterval, oldEpiBarColor, oldEpiFontSize, oldIncubationBarColor, oldIncubationFontSize]) => {
     
     // 실제 변경사항 확인 (불필요한 업데이트 방지)
     const hasSymptomChange = newSymptomInterval !== oldSymptomInterval;
     const hasExposureChange = newExposureDateTime !== oldExposureDateTime;
     const hasIncubationChange = newIncubationInterval !== oldIncubationInterval;
-    const hasDataChange = newRows !== oldRows;
     const hasEpiStyleChange = newEpiBarColor !== oldEpiBarColor || newEpiFontSize !== oldEpiFontSize;
     const hasIncubationStyleChange = newIncubationBarColor !== oldIncubationBarColor || newIncubationFontSize !== oldIncubationFontSize;
     
-    if (!hasSymptomChange && !hasExposureChange && !hasIncubationChange && !hasDataChange && !hasEpiStyleChange && !hasIncubationStyleChange) {
+    if (!hasSymptomChange && !hasExposureChange && !hasIncubationChange && !hasEpiStyleChange && !hasIncubationStyleChange) {
       return; // 변경사항 없으면 조기 종료
     }
     
-    console.log("Chart update triggered with changes:", {
-      hasSymptomChange, hasExposureChange, hasIncubationChange, hasDataChange, hasEpiStyleChange, hasIncubationStyleChange
+    console.log('Chart update triggered with changes:', {
+      hasSymptomChange, hasExposureChange, hasIncubationChange, hasEpiStyleChange, hasIncubationStyleChange
     });
     
     nextTick(() => {
@@ -1814,30 +1889,51 @@ watch(
   }
 );
 
+// 기존 store의 rows 감시 - Excel 데이터 가져오기 시 즉시 반응
+watch(
+  () => store.getters.rows,
+  (newRows, oldRows) => {
+    if (newRows !== oldRows && newRows && newRows.length > 0) {
+      console.log('Store rows changed, updating epidemic curve charts');
+      console.log('Store rows change detected:', {
+        newRowsLength: newRows.length,
+        oldRowsLength: oldRows ? oldRows.length : 0,
+        hasValidData: hasValidData.value,
+        hasValidPatientData: hasValidPatientData.value
+      });
+      
+      nextTick(() => {
+        safeUpdateCharts();
+      });
+    }
+  },
+  { deep: true, immediate: false }
+);
+
 // 잠복기 차트 내보내기 함수 추가
 const exportIncubationChart = async () => {
   const instance = incubationChartInstance.value;
-  if (!instance || typeof instance.getDataURL !== "function") {
-    alert("차트 내보내기 불가");
+  if (!instance || typeof instance.getDataURL !== 'function') {
+    alert('차트 내보내기 불가');
     return;
   }
   const filename = `잠복기_유행곡선_${selectedIncubationInterval.value}시간_${new Date().toISOString().split('T')[0]}.png`;
   try {
     const dataUrl = instance.getDataURL({
-      type: "png",
+      type: 'png',
       pixelRatio: 3,
-      backgroundColor: "#fff",
+      backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith("data:image/png"))
-      throw new Error("유효하지 않은 이미지 데이터 URL");
-    const link = document.createElement("a");
+    if (!dataUrl || !dataUrl.startsWith('data:image/png'))
+      throw new Error('유효하지 않은 이미지 데이터 URL');
+    const link = document.createElement('a');
     link.href = dataUrl;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   } catch (error) {
-    console.error("차트 내보내기 오류:", error);
+    console.error('차트 내보내기 오류:', error);
     alert(`차트 내보내기 오류: ${error.message}`);
   }
 };

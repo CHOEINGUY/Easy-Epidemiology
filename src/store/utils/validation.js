@@ -18,7 +18,7 @@ export const VALIDATION_RULES = {
     maxLength: 100,
     required: false,
     allowEmpty: true,
-    message: '최대 100자까지 입력 가능합니다.'
+    message: ''
   },
   clinicalSymptoms: {
     type: 'binary',
@@ -162,14 +162,20 @@ export function validateCell(value, columnType) {
   
   // 타입별 검증
   switch (rule.type) {
-    case 'binary':
-      return validateBinary(value);
-    case 'string':
-      return validateString(value, rule);
-    case 'datetime':
-      return validateDateTime(value, rule);
-    default:
-      return { valid: true };
+  case 'binary':
+    return validateBinary(value);
+  case 'string': {
+    const stringResult = validateString(value, rule);
+    // 기본정보는 길이 제한이 있어도 툴팁을 표시하지 않음
+    if (columnType === 'basicInfo' && !stringResult.valid) {
+      return { valid: false, message: '' };
+    }
+    return stringResult;
+  }
+  case 'datetime':
+    return validateDateTime(value, rule);
+  default:
+    return { valid: true };
   }
 }
 
@@ -237,7 +243,7 @@ export function validateRow(row) {
   
   return {
     valid: errors.length === 0,
-    errors: errors
+    errors
   };
 }
 
@@ -255,7 +261,7 @@ export function validateData(rows, headers) {
     if (!rowValidation.valid) {
       rowValidation.errors.forEach(error => {
         allErrors.push({
-          rowIndex: rowIndex,
+          rowIndex,
           field: error.field,
           message: error.message
         });

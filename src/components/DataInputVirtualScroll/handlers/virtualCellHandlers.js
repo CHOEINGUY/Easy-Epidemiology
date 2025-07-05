@@ -4,10 +4,94 @@
  */
 
 // 컬럼 타입 상수 import
-const COL_TYPE_IS_PATIENT = "isPatient";
-const COL_TYPE_BASIC = "basic";
-const COL_TYPE_CLINICAL = "clinical";
-const COL_TYPE_DIET = "diet";
+const COL_TYPE_IS_PATIENT = 'isPatient';
+const COL_TYPE_BASIC = 'basic';
+const COL_TYPE_ONSET = 'symptomOnset';
+const COL_TYPE_INDIVIDUAL_EXPOSURE = 'individualExposureTime';
+
+// 네비게이션 함수 (virtualKeyboardHandlers.js에서 복사)
+function isCellNavigable(rowIndex, colIndex, allColumnsMeta) {
+  const column = allColumnsMeta.find(c => c.colIndex === colIndex);
+  if (!column) return false;
+  
+  // 헤더 셀인 경우
+  if (rowIndex < 0) {
+    // headerRow === 2이고 편집 가능한 셀만 네비게이션 허용
+    return column.headerRow === 2 && column.isEditable;
+  }
+  
+  // 바디 셀은 모두 네비게이션 가능 (기존 로직 유지)
+  return true;
+}
+
+function findNextNavigableCell(currentRow, currentCol, direction, allColumnsMeta, totalRows, totalCols) {
+  switch (direction) {
+  case 'left':
+    // 헤더에서 왼쪽으로 이동
+    if (currentRow < 0) {
+      for (let col = currentCol - 1; col >= 0; col--) {
+        if (isCellNavigable(currentRow, col, allColumnsMeta)) {
+          return { rowIndex: currentRow, colIndex: col };
+        }
+      }
+      // 더 이상 네비게이션 가능한 헤더 셀이 없으면 현재 위치 유지
+      return { rowIndex: currentRow, colIndex: currentCol };
+    } else {
+      // 바디에서는 기존 로직 (환자여부(1) 열까지만)
+      return { rowIndex: currentRow, colIndex: Math.max(1, currentCol - 1) };
+    }
+      
+  case 'right':
+    // 헤더에서 오른쪽으로 이동
+    if (currentRow < 0) {
+      for (let col = currentCol + 1; col < totalCols; col++) {
+        if (isCellNavigable(currentRow, col, allColumnsMeta)) {
+          return { rowIndex: currentRow, colIndex: col };
+        }
+      }
+      // 더 이상 네비게이션 가능한 헤더 셀이 없으면 바디로 이동
+      return { rowIndex: 0, colIndex: 0 };
+    } else {
+      // 바디에서는 기존 로직
+      return { rowIndex: currentRow, colIndex: Math.min(totalCols - 1, currentCol + 1) };
+    }
+      
+  case 'up':
+    if (currentRow > 0) {
+      return { rowIndex: currentRow - 1, colIndex: currentCol };
+    } else if (currentRow === 0) {
+      // 바디에서 헤더로 이동 시, 네비게이션 가능한 헤더 셀 찾기
+      if (isCellNavigable(-1, currentCol, allColumnsMeta)) {
+        return { rowIndex: -1, colIndex: currentCol };
+      } else {
+        // 현재 열이 네비게이션 불가능하면 가장 가까운 네비게이션 가능한 헤더 셀 찾기
+        for (let col = currentCol; col >= 0; col--) {
+          if (isCellNavigable(-1, col, allColumnsMeta)) {
+            return { rowIndex: -1, colIndex: col };
+          }
+        }
+        for (let col = currentCol + 1; col < totalCols; col++) {
+          if (isCellNavigable(-1, col, allColumnsMeta)) {
+            return { rowIndex: -1, colIndex: col };
+          }
+        }
+        // 네비게이션 가능한 헤더 셀이 없으면 현재 위치 유지
+        return { rowIndex: currentRow, colIndex: currentCol };
+      }
+    }
+    return { rowIndex: currentRow, colIndex: currentCol };
+      
+  case 'down':
+    if (currentRow === -1) {
+      return { rowIndex: 0, colIndex: currentCol };
+    } else if (currentRow < totalRows - 1) {
+      return { rowIndex: currentRow + 1, colIndex: currentCol };
+    }
+    return { rowIndex: currentRow, colIndex: currentCol };
+  }
+  
+  return { rowIndex: currentRow, colIndex: currentCol };
+}
 
 let autoScrollInterval = null;
 
@@ -71,13 +155,16 @@ export function handleVirtualCellMouseDown(rowIndex, colIndex, event, context) {
     }
   }
 
-  // 편집 모드에서 같은 셀을 클릭한 경우, 텍스트 커서 이동을 허용
+  // 편집 모드에서 같은 셀을 클릭한 경우, 모든 선택 관련 동작을 차단하고 텍스트 커서 이동만 허용
   const { isEditing, editingCell } = selectionSystem.state;
   if (isEditing && 
       editingCell.rowIndex === originalRowIndex && 
       editingCell.colIndex === colIndex) {
-    // 편집 중인 같은 셀 내부를 클릭한 경우 이벤트를 방지하지 않음
-    // 브라우저의 기본 동작(텍스트 커서 이동)을 허용
+    // 편집 중인 같은 셀 내부를 클릭한 경우 모든 선택 관련 동작을 차단
+    // 브라우저의 기본 동작(텍스트 커서 이동)만 허용
+    console.log('[CellClick] 편집 모드에서 같은 셀 클릭 - 모든 선택 동작 차단, 텍스트 커서 이동만 허용');
+    event.stopPropagation(); // 이벤트 전파 중단
+    event.stopImmediatePropagation(); // 즉시 이벤트 전파 중단
     return;
   }
 
@@ -137,20 +224,26 @@ export function handleVirtualCellMouseDown(rowIndex, colIndex, event, context) {
 
   // 기본 클릭: 단일 선택 처리 -------------------------------
 
-  // 기본 텍스트 선택 및 드래그 동작 방지
-  event.preventDefault();
-
-  // Ctrl/Shift 없이 클릭한 경우 개별 셀/행 선택을 모두 초기화합니다.
-  selectionSystem.clearIndividualSelections();
-
-  if (colIndex === 0) {
-    selectionSystem.selectRow(originalRowIndex, allColumnsMeta);
-  } else {
-    selectionSystem.selectCell(originalRowIndex, colIndex);
+  // 편집 모드가 아닌 경우에만 기본 동작 방지
+  if (!isEditing) {
+    // 기본 텍스트 선택 및 드래그 동작 방지
+    event.preventDefault();
   }
 
-  // 드래그 상태 활성화
-  selectionSystem.startDrag(colIndex);
+  // 편집 모드가 아닌 경우에만 선택 상태 변경
+  if (!isEditing) {
+    // Ctrl/Shift 없이 클릭한 경우 개별 셀/행 선택을 모두 초기화합니다.
+    selectionSystem.clearIndividualSelections();
+
+    if (colIndex === 0) {
+      selectionSystem.selectRow(originalRowIndex, allColumnsMeta);
+    } else {
+      selectionSystem.selectCell(originalRowIndex, colIndex);
+    }
+
+    // 드래그 상태 활성화
+    selectionSystem.startDrag(colIndex);
+  }
 
   // The document listeners are now handled in DataInputVirtual.vue
 }
@@ -163,7 +256,7 @@ export function handleVirtualCellMouseDown(rowIndex, colIndex, event, context) {
  * @param {object} context - 핸들러 컨텍스트
  */
 export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, context) {
-  const { getOriginalIndex, allColumnsMeta, selectionSystem, getCellValue, rows, cellInputState, storeBridge } = context;
+  const { getOriginalIndex, allColumnsMeta, selectionSystem } = context;
 
   let originalRowIndex;
   if (rowIndex >= 0) {
@@ -186,15 +279,99 @@ export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, co
   // 먼저 해당 셀을 선택
   selectionSystem.selectCell(originalRowIndex, colIndex);
 
+  // 날짜/시간 컬럼인지 확인
+  const isDateTimeColumn = columnMeta.type === COL_TYPE_ONSET || 
+                           columnMeta.type === COL_TYPE_INDIVIDUAL_EXPOSURE;
+
+  if (isDateTimeColumn) {
+    // 데이트피커 모드로 처리
+    await handleDateTimePickerEdit(originalRowIndex, colIndex, event, context);
+  } else {
+    // 기존 contentEditable 모드로 처리
+    await handleInlineEdit(originalRowIndex, colIndex, event, context);
+  }
+}
+
+/**
+ * 날짜/시간 컬럼에 대한 데이트피커 편집 처리
+ */
+async function handleDateTimePickerEdit(rowIndex, colIndex, event, context) {
+  const { allColumnsMeta, selectionSystem } = context;
+  
+  // 데이트피커 참조가 없으면 인라인 편집으로 폴백
+  if (!context.dateTimePickerRef || !context.dateTimePickerRef.value) {
+    console.warn('[DateTimePicker] DateTimePicker reference not found, falling back to inline edit');
+    await handleInlineEdit(rowIndex, colIndex, event, context);
+    return;
+  }
+
+  console.log(`[DateTimePicker] Starting date picker edit for cell: ${rowIndex}, ${colIndex}`);
+  
+  // 현재 셀 값 가져오기 (올바른 파라미터로 호출)
+  const columnMeta = allColumnsMeta.find(col => col.colIndex === colIndex);
+  const row = rowIndex >= 0 ? context.rows.value[rowIndex] : null;
+  const currentValue = context.getCellValue(row, columnMeta, rowIndex);
+  
+  // 날짜/시간 파싱 (utils에서 import 필요)
+  const { parseDateTime } = await import('../utils/dateTimeUtils.js');
+  const parsedDateTime = parseDateTime(currentValue);
+  
+  // 셀 위치 계산
+  const cellRect = event.target.getBoundingClientRect();
+  const pickerPosition = calculatePickerPosition(cellRect);
+  
+  // 편집 상태 설정
+  selectionSystem.startEditing(rowIndex, colIndex, context.getCellValue, 
+    rowIndex >= 0 ? context.rows.value[rowIndex] : null, 
+    context.cellInputState, allColumnsMeta);
+  
+  // 메인 컴포넌트의 상태 업데이트 (반응형 방식)
+  if (context.dateTimePickerState) {
+    context.dateTimePickerState.visible = true;
+    context.dateTimePickerState.position = pickerPosition;
+    context.dateTimePickerState.initialValue = parsedDateTime;
+    
+    // 셀 직접 입력 핸들러 부착 (더블클릭 시에도 숫자 입력 가능)
+    try {
+      const { setupDateTimeInputHandling } = await import('./virtualKeyboardHandlers.js');
+      const cellElement = event.target.closest('td, th');
+      if (cellElement && typeof setupDateTimeInputHandling === 'function') {
+        // 날짜/시간 컬럼에서는 마우스 클릭 위치 기반 캐럿 설정이 필요 없음
+        // 항상 맨 앞에서부터 입력 시작, context 전달하여 DateTimePicker 동기화
+        setupDateTimeInputHandling(cellElement, '', null, context);
+      }
+    } catch (err) {
+      console.warn('setupDateTimeInputHandling import failed', err);
+    }
+    
+    // 현재 편집 중인 셀 정보 저장 (나중에 값 저장 시 사용)
+    context.dateTimePickerState.currentEdit = {
+      rowIndex,
+      colIndex,
+      columnMeta
+    };
+  } else {
+    console.warn('[DateTimePicker] dateTimePickerState not found in context');
+    // 폴백: 인라인 편집으로 전환
+    await handleInlineEdit(rowIndex, colIndex, event, context);
+  }
+}
+
+/**
+ * 기존 contentEditable 방식의 인라인 편집 처리
+ */
+async function handleInlineEdit(rowIndex, colIndex, event, context) {
+  const { allColumnsMeta, selectionSystem, getCellValue, rows, cellInputState, storeBridge } = context;
+  
   // 편집 모드 시작 (selectionSystem을 통해)
-  if (originalRowIndex < 0) {
+  if (rowIndex < 0) {
     // 헤더 셀 편집
-    selectionSystem.startEditing(originalRowIndex, colIndex, getCellValue, null, cellInputState, allColumnsMeta);
+    selectionSystem.startEditing(rowIndex, colIndex, getCellValue, null, cellInputState, allColumnsMeta);
   } else {
     // 바디 셀 편집
-    const row = rows.value[originalRowIndex];
+    const row = rows.value[rowIndex];
     if (row) {
-      selectionSystem.startEditing(originalRowIndex, colIndex, getCellValue, row, cellInputState, allColumnsMeta);
+      selectionSystem.startEditing(rowIndex, colIndex, getCellValue, row, cellInputState, allColumnsMeta);
     }
   }
 
@@ -202,17 +379,19 @@ export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, co
   await new Promise(resolve => requestAnimationFrame(resolve));
 
   // DOM 요소 찾기 및 편집 설정
-  const cellElement = event.target.closest("td, th");
+  const cellElement = event.target.closest('td, th');
   if (cellElement) {
-    console.log(`[DoubleClick] Setting up DOM for editing`);
+    console.log('[DoubleClick] Setting up DOM for editing');
     
     // contentEditable 강제 설정
-    cellElement.contentEditable = "true";
+    cellElement.contentEditable = 'true';
     cellElement.focus();
+    
+    const columnMeta = allColumnsMeta.find(col => col.colIndex === colIndex);
     
     // --- 편집 완료 이벤트 리스너 추가 ---
     const handleEditComplete = () => {
-      console.log(`[DoubleClick] Edit complete event triggered for cell: ${originalRowIndex}, ${colIndex}`);
+      console.log(`[DoubleClick] Edit complete event triggered for cell: ${rowIndex}, ${colIndex}`);
       
       // 이벤트 리스너 제거 (한 번만 실행되도록)
       cellElement.removeEventListener('blur', handleEditComplete);
@@ -221,10 +400,10 @@ export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, co
       cellElement.removeEventListener('keydown', handleKeyDown);
       
       // 편집 완료 처리
-      const tempValue = cellInputState.getTempValue(originalRowIndex, colIndex);
+      const tempValue = cellInputState.getTempValue(rowIndex, colIndex);
       if (tempValue !== null) {
-        storeBridge.saveCellValue(originalRowIndex, colIndex, tempValue, columnMeta);
-        console.log(`[DoubleClick] Saved value: ${tempValue} for cell: ${originalRowIndex}, ${colIndex}`);
+        storeBridge.saveCellValue(rowIndex, colIndex, tempValue, columnMeta);
+        console.log(`[DoubleClick] Saved value: ${tempValue} for cell: ${rowIndex}, ${colIndex}`);
       }
       
       // cellInputState 상태 정리
@@ -235,17 +414,38 @@ export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, co
     // input 이벤트 핸들러 추가
     const handleInput = (e) => {
       const newValue = e.target.textContent;
-      cellInputState.updateTempValue(originalRowIndex, colIndex, newValue, columnMeta);
-      console.log(`[DoubleClick] Input event: ${newValue} for cell: ${originalRowIndex}, ${colIndex}`);
+      cellInputState.updateTempValue(rowIndex, colIndex, newValue, columnMeta);
+      console.log(`[DoubleClick] Input event: ${newValue} for cell: ${rowIndex}, ${colIndex}`);
     };
     
     // 키보드 이벤트 핸들러 추가
-    const handleKeyDown = (e) => {
-      if (e.key === 'Enter' || e.key === 'Tab') {
+    const handleKeyDown = async (e) => {
+      if (e.key === 'Enter') {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         handleEditComplete();
+        
+        // Enter 키: 아래 셀로 이동
+        const nextRow = rowIndex < rows.value.length - 1 ? rowIndex + 1 : rowIndex;
+        selectionSystem.selectCell(nextRow, colIndex);
+        await context.ensureCellIsVisible(nextRow, colIndex);
+        context.focusGrid();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        handleEditComplete();
+        
+        // Tab 키: 오른쪽 셀로 이동 (일반 모드 Tab 처리와 동일)
+        const tabTarget = findNextNavigableCell(rowIndex, colIndex, 'right', allColumnsMeta, rows.value.length, allColumnsMeta.length);
+        selectionSystem.selectCell(tabTarget.rowIndex, tabTarget.colIndex);
+        await context.ensureCellIsVisible(tabTarget.rowIndex, tabTarget.colIndex);
+        context.focusGrid();
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         // 편집 취소
         cellElement.removeEventListener('blur', handleEditComplete);
         cellElement.removeEventListener('focusout', handleEditComplete);
@@ -268,16 +468,16 @@ export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, co
     selection.removeAllRanges();
     const range = document.createRange();
 
-    // 전체 선택이 필요한 타입들 정의
+    // 전체 선택이 필요한 타입들 정의 (실제 컬럼 메타데이터의 type과 일치)
     const selectAllTypes = [
       COL_TYPE_IS_PATIENT,
       COL_TYPE_BASIC,
-      COL_TYPE_CLINICAL,
-      COL_TYPE_DIET,
+      'clinicalSymptoms',  // 실제 컬럼 메타데이터의 type
+      'dietInfo'           // 실제 컬럼 메타데이터의 type
     ];
 
     // '전체 선택' 타입에 해당하고, 바디 셀인 경우에만 전체 선택 동작
-    if (originalRowIndex >= 0 && selectAllTypes.includes(columnMeta.type)) {
+    if (rowIndex >= 0 && selectAllTypes.includes(columnMeta.type)) {
       // 방식 1: 내부 텍스트 전체 선택
       range.selectNodeContents(cellElement);
     } else {
@@ -346,9 +546,96 @@ export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, co
     }
     
     selection.addRange(range);
-    console.log(`[DoubleClick] Editing setup complete for cell: ${originalRowIndex}, ${colIndex}`);
+    console.log(`[DoubleClick] Editing setup complete for cell: ${rowIndex}, ${colIndex}`);
     // --- 조건부 텍스트 선택 로직 종료 ---
   }
+}
+
+/**
+ * 가상 스크롤 환경에서 데이트피커 위치 계산
+ * @param {DOMRect} cellRect - 셀의 getBoundingClientRect() 결과
+ * @returns {object} - {top, left} 위치 객체
+ */
+function calculatePickerPosition(cellRect) {
+  // 데이트피커 예상 크기
+  const pickerWidth = 450;
+  const pickerHeight = 400;
+  const margin = 10; // 화면 경계와의 여백
+  
+  // 화면 크기 정보
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // 기본 위치: 셀 하단 중앙
+  let top = cellRect.bottom + 4; // 4px 여백
+  let left = cellRect.left + (cellRect.width / 2) - (pickerWidth / 2); // 셀 중앙 정렬
+  
+  // 좌측 경계 체크
+  if (left < margin) {
+    left = margin;
+  }
+  
+  // 우측 경계 체크
+  if (left + pickerWidth > viewportWidth - margin) {
+    left = viewportWidth - pickerWidth - margin;
+  }
+  
+  // 여전히 화면을 벗어나면 셀 좌측에 맞춤
+  if (left < margin) {
+    left = cellRect.left;
+    // 셀 좌측도 화면을 벗어나면 최소 여백 유지
+    if (left < margin) {
+      left = margin;
+    }
+  }
+  
+  // 하단 경계 체크 - 공간이 부족하면 셀 상단에 표시
+  if (top + pickerHeight > viewportHeight - margin) {
+    top = cellRect.top - pickerHeight - 4; // 셀 상단에 표시
+    
+    // 상단에도 공간이 부족하면 화면 내부로 조정
+    if (top < margin) {
+      // 화면 내부에서 최적 위치 찾기
+      const availableTopSpace = cellRect.top - margin;
+      const availableBottomSpace = viewportHeight - cellRect.bottom - margin;
+      
+      if (availableTopSpace > availableBottomSpace) {
+        // 상단 공간이 더 크면 상단에 최대한 표시
+        top = Math.max(margin, cellRect.top - pickerHeight);
+      } else {
+        // 하단 공간이 더 크거나 같으면 하단에 표시
+        top = cellRect.bottom + 4;
+        // 필요하면 높이 제한 (여기서는 위치만 조정)
+        if (top + pickerHeight > viewportHeight - margin) {
+          top = viewportHeight - pickerHeight - margin;
+        }
+      }
+    }
+  }
+  
+  // 스크롤 컨테이너 고려 (추가 보정)
+  const scrollContainer = document.querySelector('.grid-container');
+  if (scrollContainer) {
+    const containerRect = scrollContainer.getBoundingClientRect();
+    
+    // 컨테이너 영역 내부로 제한
+    if (top < containerRect.top + margin) {
+      top = containerRect.top + margin;
+    }
+    
+    if (left < containerRect.left + margin) {
+      left = containerRect.left + margin;
+    }
+    
+    if (left + pickerWidth > containerRect.right - margin) {
+      left = containerRect.right - pickerWidth - margin;
+    }
+  }
+  
+  console.log(`[PickerPosition] Cell: ${cellRect.left}, ${cellRect.top}, ${cellRect.width}x${cellRect.height}`);
+  console.log(`[PickerPosition] Calculated: ${left}, ${top}`);
+  
+  return { top, left };
 }
 
 /**
@@ -402,12 +689,12 @@ export function handleVirtualDocumentMouseMove(event, context) {
   if (event.clientX > rect.right - buffer) scrollX = 20;
   
   if (scrollX !== 0 || scrollY !== 0) {
-      autoScrollInterval = setInterval(() => {
-          gridBodyContainer.scrollTop += scrollY;
-          gridBodyContainer.scrollLeft += scrollX;
-          // 스크롤 중에도 커서 위치의 셀을 계속 선택하도록 업데이트
-          updateSelection(event.clientX, event.clientY);
-      }, 50);
+    autoScrollInterval = setInterval(() => {
+      gridBodyContainer.scrollTop += scrollY;
+      gridBodyContainer.scrollLeft += scrollX;
+      // 스크롤 중에도 커서 위치의 셀을 계속 선택하도록 업데이트
+      updateSelection(event.clientX, event.clientY);
+    }, 50);
   }
 
   // --- Standard drag selection update ---
@@ -423,4 +710,6 @@ export function handleVirtualDocumentMouseMove(event, context) {
 export function handleVirtualDocumentMouseUp(event, context) {
   stopAutoScroll();
   context.selectionSystem.endDragSelection();
-} 
+}
+
+export { calculatePickerPosition, handleInlineEdit }; 

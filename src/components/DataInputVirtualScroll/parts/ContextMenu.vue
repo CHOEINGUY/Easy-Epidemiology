@@ -28,20 +28,20 @@ import { ref, reactive, watch, nextTick, computed, defineProps, defineEmits } fr
 const props = defineProps({
   visible: {
     type: Boolean,
-    default: false,
+    default: false
   },
   x: {
     type: Number,
-    default: 0,
+    default: 0
   },
   y: {
     type: Number,
-    default: 0,
+    default: 0
   },
   items: {
     type: Array,
-    default: () => [], // 예: [{ label: 'Copy', action: 'copy', icon: '©' }]
-  },
+    default: () => [] // 예: [{ label: 'Copy', action: 'copy', icon: '©' }]
+  }
 });
 
 const emit = defineEmits(['select']);
@@ -52,7 +52,7 @@ const position = reactive({ x: 0, y: 0, opacity: 0 });
 const menuStyle = computed(() => ({
   left: `${position.x}px`,
   top: `${position.y}px`,
-  opacity: position.opacity,
+  opacity: position.opacity
 }));
 
 const adjustPosition = () => {

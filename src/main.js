@@ -1,19 +1,21 @@
 // main.js (또는 Vue 앱 엔트리 파일)
-import { createApp } from "vue";
-import App from "./App.vue";
-import store from "./components/store.js"; // 경로 수정: components 폴더
+import { createApp } from 'vue';
+import App from './App.vue';
+import store from './components/store.js'; // 경로 수정: components 폴더
 
 // StoreBridge import
 import { StoreBridge } from './store/storeBridge.js';
 
 // 마이그레이션 유틸리티 import
-import { logMigrationStatus, executeMigration, getMigrationStatus } from './store/utils/migration.js'
+import { logMigrationStatus, executeMigration, getMigrationStatus } from './store/utils/migration.js';
 
 const app = createApp(App);
 app.use(store); // Vue 앱에 Vuex 스토어 연결
 
 // StoreBridge 초기화
-const storeBridge = new StoreBridge(store);
+const storeBridge = new StoreBridge(store, null, { 
+  debug: process.env.NODE_ENV === 'development' 
+});
 storeBridge.setLegacyStore(store);
 
 // StoreBridge를 전역으로 노출 (개발용)
@@ -26,11 +28,6 @@ if (process.env.NODE_ENV === 'development') {
   window.checkMigration = logMigrationStatus;
   window.executeMigration = executeMigration;
   window.getMigrationStatus = getMigrationStatus;
-  
-  console.log('🔧 마이그레이션 도구가 로드되었습니다:');
-  console.log('  - checkMigration(): 마이그레이션 상태 확인');
-  console.log('  - executeMigration(): 마이그레이션 실행');
-  console.log('  - getMigrationStatus(): 마이그레이션 상태 반환');
 }
 
-app.mount("#app");
+app.mount('#app');

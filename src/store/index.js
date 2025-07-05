@@ -26,7 +26,9 @@ export function initializeStoreBridge(legacyStore) {
     return globalStoreBridge;
   }
   
-  globalStoreBridge = new StoreBridge(legacyStore);
+  globalStoreBridge = new StoreBridge(legacyStore, null, { 
+    debug: process.env.NODE_ENV === 'development' 
+  });
   console.log('[Store] StoreBridge가 초기화되었습니다.');
   
   return globalStoreBridge;
@@ -63,7 +65,9 @@ export function useStore(legacyStore = null) {
     return null;
   }
   
-  return useStoreBridge(globalStoreBridge.legacyStore);
+  return useStoreBridge(globalStoreBridge.legacyStore, null, { 
+    debug: process.env.NODE_ENV === 'development' 
+  });
 }
 
 /**

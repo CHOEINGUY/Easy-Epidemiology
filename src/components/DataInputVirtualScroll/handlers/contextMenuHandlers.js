@@ -1,11 +1,9 @@
 import {
   COL_TYPE_BASIC,
-  COL_TYPE_CLINICAL,
-  COL_TYPE_DIET,
   COL_TYPE_SERIAL,
   COL_TYPE_ONSET,
   COL_TYPE_IS_PATIENT,
-  COL_IDX_SERIAL,
+  COL_IDX_SERIAL
 } from '../constants/index.js';
 
 /**
@@ -76,13 +74,26 @@ function getMenuItemsForContext(rowIndex, colIndex, selectionState, allColumnsMe
   const rangeColCount = selectedRange.start.colIndex !== null ? Math.abs(selectedRange.end.colIndex - selectedRange.start.colIndex) + 1 : 0;
 
   // 우선순위: 개별 선택 > 범위 선택
-  let effectiveRowCount = individualRowCount > 0 ? individualRowCount : rangeRowCount;
-  let effectiveColCount = individualCellCount > 0 ? getUniqueColumnCount(selectedCellsIndividual) : rangeColCount;
+  const effectiveRowCount = individualRowCount > 0 ? individualRowCount : rangeRowCount;
+  const effectiveColCount = individualCellCount > 0 ? getUniqueColumnCount(selectedCellsIndividual) : rangeColCount;
   
   const isMultiRow = effectiveRowCount > 1;
   const isMultiCol = effectiveColCount > 1;
 
   const menuItems = [];
+
+  // --- 셀 데이터 삭제 메뉴 (맨 위에 추가) ---
+  // 데이터 영역 셀을 클릭했을 때만 셀 데이터 삭제 메뉴를 추가합니다.
+  if (rowIndex >= 0 && colIndex > COL_IDX_SERIAL) {
+    // 개별 셀 선택이 있는 경우 선택된 셀 개수 표시
+    const cellCount = individualCellCount > 0 ? individualCellCount : 1;
+    const label = cellCount > 1 ? `셀 데이터 삭제 (${cellCount}개)` : '셀 데이터 삭제';
+    
+    menuItems.push(
+      { label, action: 'clear-cell-data', icon: '×' }
+    );
+    menuItems.push({ type: 'separator' });
+  }
 
   // --- 행 관련 메뉴 ---
   // 연번 열을 클릭했거나, 개별 행 선택이 있거나, 데이터 영역을 클릭했을 때 행 메뉴를 추가합니다.
@@ -105,7 +116,7 @@ function getMenuItemsForContext(rowIndex, colIndex, selectionState, allColumnsMe
     }
 
     // 개별 셀 선택이 있는 경우 해당 셀들의 열 타입을 확인
-    let targetColumnTypes = new Set();
+    const targetColumnTypes = new Set();
     if (individualCellCount > 0) {
       selectedCellsIndividual.forEach(cellKey => {
         const [, colStr] = cellKey.split('_');
@@ -118,7 +129,7 @@ function getMenuItemsForContext(rowIndex, colIndex, selectionState, allColumnsMe
 
     // 1. 삭제 가능한 열 (기본, 임상, 식단)
     const hasDeletableColumns = Array.from(targetColumnTypes).some(type => 
-      [COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET].includes(type)
+      [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(type)
     );
 
     if (hasDeletableColumns) {
@@ -183,7 +194,7 @@ function areSelectedColumnsDeletable(selectionState, allColumnsMeta) {
   
   // 1. 각 그룹별 전체 열의 개수를 미리 계산합니다.
   const totalCounts = allColumnsMeta.reduce((acc, col) => {
-    if ([COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET].includes(col.type)) {
+    if ([COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(col.type)) {
       if (!acc[col.type]) acc[col.type] = 0;
       acc[col.type]++;
     }
@@ -199,7 +210,7 @@ function areSelectedColumnsDeletable(selectionState, allColumnsMeta) {
       const [, colStr] = cellKey.split('_');
       const colIndex = parseInt(colStr, 10);
       const meta = allColumnsMeta.find(c => c.colIndex === colIndex);
-      if (meta && [COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET].includes(meta.type)) {
+      if (meta && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(meta.type)) {
         if (!selectedCounts[meta.type]) selectedCounts[meta.type] = 0;
         selectedCounts[meta.type]++;
       }
@@ -208,7 +219,7 @@ function areSelectedColumnsDeletable(selectionState, allColumnsMeta) {
     // 범위 선택된 열들의 타입별 개수 계산
     for (let i = selectedRange.start.colIndex; i <= selectedRange.end.colIndex; i++) {
       const meta = allColumnsMeta.find(c => c.colIndex === i);
-      if (meta && [COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET].includes(meta.type)) {
+      if (meta && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(meta.type)) {
         if (!selectedCounts[meta.type]) selectedCounts[meta.type] = 0;
         selectedCounts[meta.type]++;
       }

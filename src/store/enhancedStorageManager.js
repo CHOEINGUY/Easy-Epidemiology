@@ -106,45 +106,20 @@ export class EnhancedStorageManager {
   }
   
   /**
-   * 실제 저장을 실행합니다.
-   * @param {Object} editData - 편집 데이터
+   * 실제 저장을 수행합니다.
    */
   executeSave(editData) {
-    if (!this.legacyStore) {
-      console.error('[EnhancedStorageManager] 기존 store.js 인스턴스가 설정되지 않았습니다.');
-      return;
-    }
+    if (!this.legacyStore) return;
     
-    try {
-      this.isProcessing = true;
-      
-      const { cell, value, columnMeta } = editData;
-      
-      // 기존 store.js의 updateCell action 호출
-      this.legacyStore.dispatch('updateCell', {
-        rowIndex: cell.rowIndex,
-        key: cell.dataKey,
-        value: value,
-        cellIndex: cell.cellIndex
-      });
-      
-      // 새로운 형식으로도 저장 (마이그레이션 완료 후)
-      if (this.isInitialized) {
-        this.saveCurrentState();
-      }
-      
-      console.log(`[EnhancedStorageManager] 저장 완료:`, {
-        cell: cell,
-        value: value,
-        columnMeta: columnMeta
-      });
-      
-    } catch (error) {
-      console.error('[EnhancedStorageManager] 저장 중 오류 발생:', error);
-      // 에러 처리 로직을 여기에 추가할 수 있습니다.
-    } finally {
-      this.isProcessing = false;
-    }
+    const { rowIndex, key, value, cellIndex } = editData;
+    
+    // 기존 store.js의 updateCell 액션 호출
+    this.legacyStore.dispatch('updateCell', {
+      rowIndex,
+      key,
+      value,
+      cellIndex
+    });
   }
   
   /**
@@ -152,8 +127,6 @@ export class EnhancedStorageManager {
    */
   processPendingSaves() {
     if (this.pendingSaves.size === 0) return;
-    
-    console.log(`[EnhancedStorageManager] 대기 중인 ${this.pendingSaves.size}개 저장 작업을 처리합니다.`);
     
     for (const [, saveInfo] of this.pendingSaves) {
       clearTimeout(saveInfo.timeoutId);
@@ -172,7 +145,6 @@ export class EnhancedStorageManager {
     }
     
     this.pendingSaves.clear();
-    console.log('[EnhancedStorageManager] 모든 대기 중인 저장 작업이 취소되었습니다.');
   }
   
   /**
@@ -339,14 +311,44 @@ export class EnhancedStorageManager {
     }
     
     const currentState = this.legacyStore.state;
+    
+    // 유효성 검사 오류를 안전하게 변환
+    const validationErrors = {};
+    if (currentState.validationState?.errors) {
+      currentState.validationState.errors.forEach((error, key) => {
+        // error가 객체인지 확인하고 안전하게 저장
+        if (typeof error === 'object' && error !== null) {
+          validationErrors[key] = {
+            message: error.message || '유효성 검사 오류',
+            timestamp: error.timestamp || Date.now()
+          };
+        } else if (typeof error === 'string') {
+          validationErrors[key] = {
+            message: error,
+            timestamp: Date.now()
+          };
+        } else {
+          validationErrors[key] = {
+            message: '유효성 검사 오류',
+            timestamp: Date.now()
+          };
+        }
+      });
+    }
+    
     const data = {
       headers: currentState.headers,
       rows: currentState.rows,
       settings: {
         isIndividualExposureColumnVisible: currentState.isIndividualExposureColumnVisible
+      },
+      validationState: {
+        errors: validationErrors,
+        version: currentState.validationState?.version || 0
       }
     };
     
+    console.log('[EnhancedStorageManager] 유효성 검사 오류 저장:', validationErrors);
     return this.saveData(data);
   }
 } 

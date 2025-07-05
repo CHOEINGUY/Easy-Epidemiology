@@ -7,6 +7,7 @@
       min="1"
       class="rows-count-input"
       aria-label="추가할 행 수"
+      tabindex="-1"
       @focus="emit('clear-selection')"
       @keydown.enter.prevent="emitAdd"
     />
@@ -14,6 +15,7 @@
     <button
       class="delete-empty-rows-button"
       aria-label="빈 행 삭제"
+      tabindex="-1"
       @click="emitDeleteEmpty"
     >
       <span class="material-icons-outlined delete-empty-rows-button-icon">delete_outline</span>
@@ -49,8 +51,7 @@ function emitDeleteEmpty() {
 }
 
 .add-rows-button {
-  margin-left: 15px;
-  margin-right: 5px;
+  margin-left: 50px;
   font-size: 0.95em;
   color: #1a73e8;
   cursor: pointer;

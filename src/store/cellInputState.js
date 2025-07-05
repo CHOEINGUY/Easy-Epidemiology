@@ -38,7 +38,7 @@ export class CellInputState {
     this.columnMeta = { ...columnMeta };
     this.editStartTime = Date.now();
     
-    console.log(`[CellInputState] 편집 시작:`, {
+    console.log('[CellInputState] 편집 시작:', {
       cell: this.currentCell,
       originalValue: this.originalValue,
       columnMeta: this.columnMeta
@@ -67,7 +67,7 @@ export class CellInputState {
     }
     
     this.tempValue = value;
-    console.log(`[CellInputState] 임시 값 업데이트:`, value);
+    console.log('[CellInputState] 임시 값 업데이트:', value);
     
     // columnMeta를 사용하지 않는다는 것을 명시적으로 표시
     if (columnMeta) {
@@ -95,7 +95,7 @@ export class CellInputState {
     
     this.reset();
     
-    console.log(`[CellInputState] 편집 취소:`, cancelledEdit);
+    console.log('[CellInputState] 편집 취소:', cancelledEdit);
     return cancelledEdit;
   }
   
@@ -120,7 +120,7 @@ export class CellInputState {
     
     this.reset();
     
-    console.log(`[CellInputState] 편집 완료:`, completedEdit);
+    console.log('[CellInputState] 편집 완료:', completedEdit);
     return completedEdit;
   }
   

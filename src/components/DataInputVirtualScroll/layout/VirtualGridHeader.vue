@@ -1,5 +1,5 @@
 <template>
-  <div class="grid-header-virtual" ref="headerContainer">
+  <div class="grid-header-virtual" ref="headerContainer" :style="headerContainerStyle">
     <table class="data-table" :style="{ width: tableWidth }">
       <colgroup>
         <col 
@@ -69,6 +69,7 @@
               role="columnheader"
               :data-col="column.colIndex"
               :class="getCellClasses(-1, column.colIndex)"
+              :data-validation-message="getValidationMessage()"
               :contenteditable="isCellEditing(-1, column.colIndex)"
               @input="$emit('cell-input', $event, -1, column.colIndex)"
               @dblclick="$emit('cell-dblclick', -1, column.colIndex, $event)"
@@ -97,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineExpose, defineEmits, reactive } from 'vue';
+import { ref, defineProps, defineExpose, defineEmits, reactive, computed } from 'vue';
 
 const props = defineProps({
   headerGroups: {
@@ -120,12 +121,13 @@ const props = defineProps({
     type: Object,
     default: () => ({
       start: { rowIndex: null, colIndex: null },
-      end: { rowIndex: null, colIndex: null },
-    }),
+      end: { rowIndex: null, colIndex: null }
+    })
   },
   isEditing: { type: Boolean, default: false },
   editingCell: { type: Object, default: () => ({ rowIndex: null, colIndex: null }) },
   individualSelectedCells: { type: Object, default: null },
+  scrollbarWidth: { type: Number, default: 0 }
 });
 
 defineEmits(['cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-column', 'delete-column']);
@@ -200,6 +202,11 @@ function getCellClasses(rowIndex, colIndex) {
   return classes;
 }
 
+function getValidationMessage() {
+  // 헤더에는 유효성 검사 오류가 없으므로 빈 문자열 반환
+  return '';
+}
+
 const getHeaderText = (group) => {
   // COL_IDX_IS_PATIENT === 1
   if (group.startColIndex === 1) {
@@ -211,8 +218,8 @@ const getHeaderText = (group) => {
 function showTooltip(type, text, event) {
   const rect = event.currentTarget.getBoundingClientRect();
   tooltipText.value = text;
-  tooltipStyle.left = rect.left + rect.width / 2 + 'px';
-  tooltipStyle.top = rect.bottom + 5 + 'px';
+  tooltipStyle.left = `${rect.left + rect.width / 2}px`;
+  tooltipStyle.top = `${rect.bottom + 5}px`;
   tooltipStyle.transform = 'translateX(-50%)';
   activeTooltip.value = type;
 }
@@ -223,6 +230,13 @@ function hideTooltip() {
 
 // Expose the container for parent access
 defineExpose({ headerContainer });
+
+// 헤더 컨테이너 스타일 계산
+const headerContainerStyle = computed(() => {
+  return {
+    paddingRight: props.scrollbarWidth > 0 ? `${props.scrollbarWidth}px` : '0px'
+  };
+});
 </script>
 
 <style scoped>
@@ -232,6 +246,7 @@ defineExpose({ headerContainer });
   border-bottom: 1px solid #dee2e6;
   position: relative;
   z-index: 2;
+  box-sizing: border-box; /* 패딩이 너비에 포함되도록 설정 */
 }
 
 .data-table {
@@ -281,12 +296,6 @@ th.allow-wrap {
   background-color: #e9ecef;
 }
 
-/* .column-header.cell-selected {
-  background-color: #d2e3fc !important;
-  box-shadow: 0 0 0 2px #1a73e8 inset !important;
-  z-index: 10;
-} */
-
 .cell-range-selected {
   background-color: #e8f0fe !important;
 }
@@ -297,6 +306,31 @@ th.allow-wrap {
   z-index: 10;
   outline: none;
   cursor: text;
+
+  text-shadow:
+    0 0 4px #ffffff,
+    0 0 8px #ffffff,
+    0 0 12px #ffffff;
+  -webkit-text-stroke: 13px #ffffff;
+  -webkit-text-fill-color: #000000; /* keep text color */
+  paint-order: stroke fill;
+}
+
+/* 텍스트 선택 시 스타일 수정 */
+.cell-editing::selection {
+  background-color: #1a73e8 !important;
+  color: white !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+  -webkit-text-fill-color: white !important;
+}
+
+.cell-editing::-moz-selection {
+  background-color: #1a73e8 !important;
+  color: white !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+  -webkit-text-fill-color: white !important;
 }
 
 .header-actions {
@@ -397,5 +431,64 @@ th.allow-wrap {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+}
+
+.validation-error {
+  box-shadow: 0 0 0 2px #ff4444 inset !important;
+  background-color: rgba(255, 68, 68, 0.1) !important;
+  position: relative;
+}
+
+.cell-editing.validation-error {
+  box-shadow: 0 0 0 2px #1a73e8 inset, 0 0 0 1px #ff4444 inset !important;
+}
+
+.cell-selected.validation-error,
+.cell-range-selected.validation-error,
+.cell-multi-selected.validation-error {
+  box-shadow: 0 0 0 1.5px #1a73e8 inset, 0 0 0 1px #ff4444 inset !important;
+}
+
+.validation-error::after {
+  content: attr(data-validation-message);
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff4444;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.validation-error:hover::after {
+  opacity: 1;
+}
+
+/* Tooltip arrow */
+.validation-error::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #ff4444;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.validation-error:hover::before {
+  opacity: 1;
 }
 </style> 

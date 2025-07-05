@@ -70,7 +70,7 @@
             </div>
             <table
               class="analysis-table"
-              :style="{ fontSize: tableFontSize + 'px' }"
+              :style="{ fontSize: tableFontSize + 'px', '--table-font-size': tableFontSize + 'px' }"
             >
               <thead>
                 <tr>
@@ -142,10 +142,10 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { useStore } from "vuex";
+import { computed, ref } from 'vue';
+import { useStore } from 'vuex';
 // jStat 라이브러리 import
-import { jStat } from "jstat";
+import { jStat } from 'jstat';
 
 const store = useStore();
 
@@ -195,7 +195,7 @@ const analysisResults = computed(() => {
     headers.value.diet.length === 0 ||
     rows.value.length === 0
   ) {
-    console.warn("분석을 위한 headers.diet 또는 rows 데이터가 없습니다.");
+    console.warn('분석을 위한 headers.diet 또는 rows 데이터가 없습니다.');
     return [];
   }
 
@@ -217,14 +217,14 @@ const analysisResults = computed(() => {
           ? row.dietInfo[index]
           : null;
 
-      if (isPatient === "1") {
+      if (isPatient === '1') {
         // 환자군
-        if (dietValue === "1") b_obs++;
-        else if (dietValue === "0") c_obs++;
-      } else if (isPatient === "0") {
+        if (dietValue === '1') b_obs++;
+        else if (dietValue === '0') c_obs++;
+      } else if (isPatient === '0') {
         // 대조군
-        if (dietValue === "1") e_obs++;
-        else if (dietValue === "0") f_obs++;
+        if (dietValue === '1') e_obs++;
+        else if (dietValue === '0') f_obs++;
       }
     });
 
@@ -242,9 +242,9 @@ const analysisResults = computed(() => {
       f_exp = NaN;
     let adj_chi = null; // Yates' 보정 카이제곱 값
     let pValue = null; // P-value
-    let oddsRatio = "N/A"; // Odds Ratio 추정치
-    let ci_lower = "N/A"; // 95% CI 하한
-    let ci_upper = "N/A"; // 95% CI 상한
+    let oddsRatio = 'N/A'; // Odds Ratio 추정치
+    let ci_lower = 'N/A'; // 95% CI 하한
+    let ci_upper = 'N/A'; // 95% CI 상한
 
     // --- 카이제곱 및 P-value 계산 ---
     if (grandTotal > 0) {
@@ -262,23 +262,23 @@ const analysisResults = computed(() => {
 
       if (canApplyChiSquare) {
       // Yates' 보정 카이제곱 값 계산
-      const term1 = calculateChiTerm(b_obs, b_exp);
-      const term2 = calculateChiTerm(c_obs, c_exp);
-      const term3 = calculateChiTerm(e_obs, e_exp);
-      const term4 = calculateChiTerm(f_obs, f_exp);
-      adj_chi = term1 + term2 + term3 + term4;
+        const term1 = calculateChiTerm(b_obs, b_exp);
+        const term2 = calculateChiTerm(c_obs, c_exp);
+        const term3 = calculateChiTerm(e_obs, e_exp);
+        const term4 = calculateChiTerm(f_obs, f_exp);
+        adj_chi = term1 + term2 + term3 + term4;
 
-      // P-value 계산 (자유도=1)
-      if (isFinite(adj_chi) && adj_chi >= 0) {
-        try {
-          pValue = 1 - jStat.chisquare.cdf(adj_chi, 1);
-          if (isNaN(pValue)) pValue = null; // 계산 불가 시 null 처리
-        } catch (e) {
-          console.error(`P-value calculation error for item ${factorName}:`, e);
-          pValue = null;
-        }
-      } else {
-        adj_chi = null; // 카이제곱 계산 불가 시 null 처리
+        // P-value 계산 (자유도=1)
+        if (isFinite(adj_chi) && adj_chi >= 0) {
+          try {
+            pValue = 1 - jStat.chisquare.cdf(adj_chi, 1);
+            if (isNaN(pValue)) pValue = null; // 계산 불가 시 null 처리
+          } catch (e) {
+            console.error(`P-value calculation error for item ${factorName}:`, e);
+            pValue = null;
+          }
+        } else {
+          adj_chi = null; // 카이제곱 계산 불가 시 null 처리
         }
       } else {
         // 카이제곱 검정 적용 불가 (모든 값이 동일하거나 한 그룹이 비어있음)
@@ -293,81 +293,81 @@ const analysisResults = computed(() => {
     if (colTotal_Exposed > 0 && colTotal_Unexposed > 0 && 
         rowTotal_Case > 0 && rowTotal_Control > 0) {
     // 0인 셀이 있는지 확인 (신뢰구간 계산 시 0으로 나누는 것을 방지하기 위함)
-    const hasZeroCell =
+      const hasZeroCell =
       b_obs === 0 || c_obs === 0 || e_obs === 0 || f_obs === 0;
 
-    // 0.5 보정 적용: 0인 셀이 하나라도 있으면 모든 셀에 0.5를 더함 (Haldane-Anscombe correction)
-    const b_adj = hasZeroCell ? b_obs + 0.5 : b_obs;
-    const c_adj = hasZeroCell ? c_obs + 0.5 : c_obs;
-    const e_adj = hasZeroCell ? e_obs + 0.5 : e_obs;
-    const f_adj = hasZeroCell ? f_obs + 0.5 : f_obs;
+      // 0.5 보정 적용: 0인 셀이 하나라도 있으면 모든 셀에 0.5를 더함 (Haldane-Anscombe correction)
+      const b_adj = hasZeroCell ? b_obs + 0.5 : b_obs;
+      const c_adj = hasZeroCell ? c_obs + 0.5 : c_obs;
+      const e_adj = hasZeroCell ? e_obs + 0.5 : e_obs;
+      const f_adj = hasZeroCell ? f_obs + 0.5 : f_obs;
 
-    try {
+      try {
       // (보정된 값으로) Odds Ratio 계산: OR = (a*d)/(b*c) -> (b_adj * f_adj) / (c_adj * e_adj)
-      const or_calc = (b_adj * f_adj) / (c_adj * e_adj);
+        const or_calc = (b_adj * f_adj) / (c_adj * e_adj);
 
-      if (isFinite(or_calc) && or_calc > 0) {
+        if (isFinite(or_calc) && or_calc > 0) {
         // OR 값 포맷팅
-        oddsRatio = or_calc.toFixed(3);
+          oddsRatio = or_calc.toFixed(3);
 
-        // Log Odds Ratio 계산
-        const logOR = Math.log(or_calc);
+          // Log Odds Ratio 계산
+          const logOR = Math.log(or_calc);
 
-        // Standard Error of Log Odds Ratio 계산: sqrt(1/a + 1/b + 1/c + 1/d)
-        const se_logOR = Math.sqrt(
-          1 / b_adj + 1 / c_adj + 1 / e_adj + 1 / f_adj
-        );
+          // Standard Error of Log Odds Ratio 계산: sqrt(1/a + 1/b + 1/c + 1/d)
+          const se_logOR = Math.sqrt(
+            1 / b_adj + 1 / c_adj + 1 / e_adj + 1 / f_adj
+          );
 
-        // 신뢰구간 계산 가능 여부 확인
-        if (isFinite(se_logOR)) {
+          // 신뢰구간 계산 가능 여부 확인
+          if (isFinite(se_logOR)) {
           // Log Scale에서 CI 계산
-          const logCI_lower = logOR - z_crit * se_logOR;
-          const logCI_upper = logOR + z_crit * se_logOR;
+            const logCI_lower = logOR - z_crit * se_logOR;
+            const logCI_upper = logOR + z_crit * se_logOR;
 
-          // 원래 스케일(OR)로 변환 (지수 함수 적용) 및 포맷팅
-          ci_lower = Math.exp(logCI_lower).toFixed(3);
-          ci_upper = Math.exp(logCI_upper).toFixed(3);
-        }
+            // 원래 스케일(OR)로 변환 (지수 함수 적용) 및 포맷팅
+            ci_lower = Math.exp(logCI_lower).toFixed(3);
+            ci_upper = Math.exp(logCI_upper).toFixed(3);
+          }
         // else: se_logOR 계산 불가 시 ci_lower, ci_upper는 초기값 "N/A" 유지
-      } else if (or_calc === 0) {
+        } else if (or_calc === 0) {
         // OR이 0인 경우
-        oddsRatio = "0.000";
-        ci_lower = "0.000"; // 하한은 0
-        // 상한 계산 (se_logOR이 계산 가능해야 함)
-        const se_logOR_for_zero = Math.sqrt(
-          1 / b_adj + 1 / c_adj + 1 / e_adj + 1 / f_adj
-        );
-        if (isFinite(se_logOR_for_zero)) {
+          oddsRatio = '0.000';
+          ci_lower = '0.000'; // 하한은 0
+          // 상한 계산 (se_logOR이 계산 가능해야 함)
+          const se_logOR_for_zero = Math.sqrt(
+            1 / b_adj + 1 / c_adj + 1 / e_adj + 1 / f_adj
+          );
+          if (isFinite(se_logOR_for_zero)) {
           // 0에 매우 작은 값을 더해 log 계산 시 음의 무한대 방지
-          const logOR_zero = Math.log(or_calc + Number.EPSILON); // Number.EPSILON 사용
-          const logCI_upper_zero = logOR_zero + z_crit * se_logOR_for_zero;
-          ci_upper = Math.exp(logCI_upper_zero).toFixed(3);
-          // 상한이 매우 작은 값으로 나올 수 있음 (예: 0.000)
-          if (parseFloat(ci_upper) === 0) ci_upper = "0.000";
+            const logOR_zero = Math.log(or_calc + Number.EPSILON); // Number.EPSILON 사용
+            const logCI_upper_zero = logOR_zero + z_crit * se_logOR_for_zero;
+            ci_upper = Math.exp(logCI_upper_zero).toFixed(3);
+            // 상한이 매우 작은 값으로 나올 수 있음 (예: 0.000)
+            if (parseFloat(ci_upper) === 0) ci_upper = '0.000';
+          } else {
+            ci_upper = 'N/A';
+          }
         } else {
-          ci_upper = "N/A";
-        }
-      } else {
         // OR이 무한대(Inf) 또는 계산 불가(NaN)인 경우
         // 분모(c_adj * e_adj)가 0에 가까워 발생 가능
-        oddsRatio = c_adj * e_adj === 0 ? "Inf" : "N/A"; // 조건 수정
-        ci_lower = "N/A";
-        ci_upper = "N/A";
-        // 만약 b_adj*f_adj도 0이면 NaN이 될 수 있음
-        if (isNaN(or_calc)) oddsRatio = "N/A";
-      }
-    } catch (e) {
+          oddsRatio = c_adj * e_adj === 0 ? 'Inf' : 'N/A'; // 조건 수정
+          ci_lower = 'N/A';
+          ci_upper = 'N/A';
+          // 만약 b_adj*f_adj도 0이면 NaN이 될 수 있음
+          if (isNaN(or_calc)) oddsRatio = 'N/A';
+        }
+      } catch (e) {
       // 계산 중 예외 발생 시
-      console.error(`OR/CI calculation error for item ${factorName}:`, e);
-      oddsRatio = "Error";
-      ci_lower = "Error";
-      ci_upper = "Error";
+        console.error(`OR/CI calculation error for item ${factorName}:`, e);
+        oddsRatio = 'Error';
+        ci_lower = 'Error';
+        ci_upper = 'Error';
       }
     } else {
       // 환자군/대조군 또는 노출/비노출군이 없는 경우 OR 계산 불가
-      oddsRatio = "N/A";
-      ci_lower = "N/A";
-      ci_upper = "N/A";
+      oddsRatio = 'N/A';
+      ci_lower = 'N/A';
+      ci_upper = 'N/A';
       console.log(`OR 계산 불가 - ${factorName}: 환자군/대조군 또는 노출/비노출군이 없음`);
     }
 
@@ -384,7 +384,7 @@ const analysisResults = computed(() => {
       pValue,
       oddsRatio, // 계산된 OR 값
       ci_lower, // 계산된 CI 하한
-      ci_upper, // 계산된 CI 상한
+      ci_upper // 계산된 CI 상한
     };
   });
 });
@@ -679,6 +679,7 @@ const copyTableToClipboard = async () => {
   border-collapse: collapse;
   margin: 0 20px 20px 20px;
   table-layout: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 .analysis-table th,
 .analysis-table td {
@@ -687,6 +688,7 @@ const copyTableToClipboard = async () => {
   text-align: center;
   white-space: nowrap;
   vertical-align: middle;
+  font-family: inherit;
 }
 .analysis-table thead th {
   background-color: #f2f2f2;
@@ -721,26 +723,38 @@ const copyTableToClipboard = async () => {
   background-color: #f5f5f5;
 }
 .data-row td {
+  font-family: inherit;
 }
 .cell-item {
   text-align: left !important;
   white-space: normal !important; /* 긴 요인 이름 줄바꿈 허용 */
   font-weight: 500;
   word-break: keep-all; /* 단어 단위 줄바꿈 */
+  font-family: inherit;
 }
 .cell-count {
+  font-family: inherit;
+  font-weight: normal;
 }
 .cell-total {
-  font-weight: bold;
+  font-weight: normal;
+  font-family: inherit;
 }
 .cell-stat {
-  font-family: Consolas, monospace;
+  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+  font-size: 0.95em;
+  letter-spacing: 0.02em;
 }
 .value-adj-chi {
   font-weight: bold;
   color: #c0392b;
+  font-family: inherit;
 }
 .value-pvalue {
+  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+  font-size: 0.95em;
+  letter-spacing: 0.02em;
+  font-weight: normal;
 } /* P-value 기본 스타일 */
 .value-pvalue.significant {
   /* P-value < 0.05 일 때 */
@@ -752,6 +766,7 @@ const copyTableToClipboard = async () => {
   padding: 20px;
   color: #888;
   font-style: italic;
+  font-family: inherit;
 }
 .significant-row {
   background-color: #fffbe6 !important;

@@ -1,4 +1,5 @@
 import { nextTick } from 'vue';
+import { calculatePickerPosition, handleInlineEdit } from './virtualCellHandlers.js';
 
 /**
  * 가상 스크롤용 키보드 이벤트 핸들러
@@ -37,68 +38,68 @@ function isCellNavigable(rowIndex, colIndex, allColumnsMeta) {
  */
 function findNextNavigableCell(currentRow, currentCol, direction, allColumnsMeta, totalRows, totalCols) {
   switch (direction) {
-    case 'left':
-      // 헤더에서 왼쪽으로 이동
-      if (currentRow < 0) {
-        for (let col = currentCol - 1; col >= 0; col--) {
-          if (isCellNavigable(currentRow, col, allColumnsMeta)) {
-            return { rowIndex: currentRow, colIndex: col };
+  case 'left':
+    // 헤더에서 왼쪽으로 이동
+    if (currentRow < 0) {
+      for (let col = currentCol - 1; col >= 0; col--) {
+        if (isCellNavigable(currentRow, col, allColumnsMeta)) {
+          return { rowIndex: currentRow, colIndex: col };
+        }
+      }
+      // 더 이상 네비게이션 가능한 헤더 셀이 없으면 현재 위치 유지
+      return { rowIndex: currentRow, colIndex: currentCol };
+    } else {
+      // 바디에서는 기존 로직 (환자여부(1) 열까지만)
+      return { rowIndex: currentRow, colIndex: Math.max(1, currentCol - 1) };
+    }
+      
+  case 'right':
+    // 헤더에서 오른쪽으로 이동
+    if (currentRow < 0) {
+      for (let col = currentCol + 1; col < totalCols; col++) {
+        if (isCellNavigable(currentRow, col, allColumnsMeta)) {
+          return { rowIndex: currentRow, colIndex: col };
+        }
+      }
+      // 더 이상 네비게이션 가능한 헤더 셀이 없으면 바디로 이동
+      return { rowIndex: 0, colIndex: 0 };
+    } else {
+      // 바디에서는 기존 로직
+      return { rowIndex: currentRow, colIndex: Math.min(totalCols - 1, currentCol + 1) };
+    }
+      
+  case 'up':
+    if (currentRow > 0) {
+      return { rowIndex: currentRow - 1, colIndex: currentCol };
+    } else if (currentRow === 0) {
+      // 바디에서 헤더로 이동 시, 네비게이션 가능한 헤더 셀 찾기
+      if (isCellNavigable(-1, currentCol, allColumnsMeta)) {
+        return { rowIndex: -1, colIndex: currentCol };
+      } else {
+        // 현재 열이 네비게이션 불가능하면 가장 가까운 네비게이션 가능한 헤더 셀 찾기
+        for (let col = currentCol; col >= 0; col--) {
+          if (isCellNavigable(-1, col, allColumnsMeta)) {
+            return { rowIndex: -1, colIndex: col };
           }
         }
-        // 더 이상 네비게이션 가능한 헤더 셀이 없으면 현재 위치 유지
-        return { rowIndex: currentRow, colIndex: currentCol };
-      } else {
-        // 바디에서는 기존 로직 (환자여부(1) 열까지만)
-        return { rowIndex: currentRow, colIndex: Math.max(1, currentCol - 1) };
-      }
-      
-    case 'right':
-      // 헤더에서 오른쪽으로 이동
-      if (currentRow < 0) {
         for (let col = currentCol + 1; col < totalCols; col++) {
-          if (isCellNavigable(currentRow, col, allColumnsMeta)) {
-            return { rowIndex: currentRow, colIndex: col };
+          if (isCellNavigable(-1, col, allColumnsMeta)) {
+            return { rowIndex: -1, colIndex: col };
           }
         }
-        // 더 이상 네비게이션 가능한 헤더 셀이 없으면 바디로 이동
-        return { rowIndex: 0, colIndex: 0 };
-      } else {
-        // 바디에서는 기존 로직
-        return { rowIndex: currentRow, colIndex: Math.min(totalCols - 1, currentCol + 1) };
+        // 네비게이션 가능한 헤더 셀이 없으면 현재 위치 유지
+        return { rowIndex: currentRow, colIndex: currentCol };
       }
+    }
+    return { rowIndex: currentRow, colIndex: currentCol };
       
-    case 'up':
-      if (currentRow > 0) {
-        return { rowIndex: currentRow - 1, colIndex: currentCol };
-      } else if (currentRow === 0) {
-        // 바디에서 헤더로 이동 시, 네비게이션 가능한 헤더 셀 찾기
-        if (isCellNavigable(-1, currentCol, allColumnsMeta)) {
-          return { rowIndex: -1, colIndex: currentCol };
-        } else {
-          // 현재 열이 네비게이션 불가능하면 가장 가까운 네비게이션 가능한 헤더 셀 찾기
-          for (let col = currentCol; col >= 0; col--) {
-            if (isCellNavigable(-1, col, allColumnsMeta)) {
-              return { rowIndex: -1, colIndex: col };
-            }
-          }
-          for (let col = currentCol + 1; col < totalCols; col++) {
-            if (isCellNavigable(-1, col, allColumnsMeta)) {
-              return { rowIndex: -1, colIndex: col };
-            }
-          }
-          // 네비게이션 가능한 헤더 셀이 없으면 현재 위치 유지
-          return { rowIndex: currentRow, colIndex: currentCol };
-        }
-      }
-      return { rowIndex: currentRow, colIndex: currentCol };
-      
-    case 'down':
-      if (currentRow === -1) {
-        return { rowIndex: 0, colIndex: currentCol };
-      } else if (currentRow < totalRows - 1) {
-        return { rowIndex: currentRow + 1, colIndex: currentCol };
-      }
-      return { rowIndex: currentRow, colIndex: currentCol };
+  case 'down':
+    if (currentRow === -1) {
+      return { rowIndex: 0, colIndex: currentCol };
+    } else if (currentRow < totalRows - 1) {
+      return { rowIndex: currentRow + 1, colIndex: currentCol };
+    }
+    return { rowIndex: currentRow, colIndex: currentCol };
   }
   
   return { rowIndex: currentRow, colIndex: currentCol };
@@ -108,6 +109,82 @@ function isTypingKey(key) {
   // 한 자리 문자이거나, 숫자이거나, 일부 특수문자 등.
   // Ctrl, Alt, Meta 키가 눌리지 않은 상태여야 함.
   return key.length === 1 && !/[`~]/.test(key);
+}
+
+/**
+ * 날짜/시간 컬럼에서 타이핑을 시작하면 데이트피커를 활성화합니다.
+ * @param {KeyboardEvent} event 
+ * @param {object} context 
+ * @param {number} rowIndex 
+ * @param {number} colIndex 
+ */
+async function handleDateTimeTypeToEdit(event, context, rowIndex, colIndex) {
+  const { selectionSystem, allColumnsMeta, startEditing, getCellValue, rows } = context;
+  const { state } = selectionSystem;
+  
+  // 이미 편집 중이면 처리하지 않음
+  if (state.isEditing) return;
+  
+  const column = allColumnsMeta.find(c => c.colIndex === colIndex);
+  if (!column || !column.isEditable) return;
+  
+  console.log(`[DateTimeTypeToEdit] 날짜/시간 컬럼 타이핑 시작: ${rowIndex}, ${colIndex}, 입력: ${event.key}`);
+  
+  // 편집 모드 시작
+  const row = rowIndex >= 0 ? rows.value[rowIndex] : null;
+  startEditing(rowIndex, colIndex, getCellValue, row);
+  
+  await nextTick();
+  
+  // 현재 셀 값 가져오기
+  const currentValue = context.getCellValue(row, column, rowIndex);
+  
+  // 날짜/시간 파싱
+  const { parseDateTime } = await import('../utils/dateTimeUtils.js');
+  const parsedDateTime = parseDateTime(currentValue);
+  
+  // 셀 위치 계산
+  let cellRect;
+  const cellSelector = rowIndex < 0 
+    ? `[data-col="${colIndex}"]` 
+    : `[data-row="${rowIndex}"][data-col="${colIndex}"]`;
+  const cellElement = document.querySelector(cellSelector);
+  if (cellElement) {
+    cellRect = cellElement.getBoundingClientRect();
+  } else {
+    cellRect = event.target.getBoundingClientRect(); // 폴백
+  }
+  const pickerPosition = calculatePickerPosition(cellRect);
+  
+  // 편집 모드 중 입력 셀 요소 가져오기
+  if (cellElement) {
+    setupDateTimeInputHandling(cellElement, event.key, null, context);
+  }
+  
+  // 편집 상태 설정
+  selectionSystem.startEditing(rowIndex, colIndex, context.getCellValue, 
+    rowIndex >= 0 ? context.rows.value[rowIndex] : null, 
+    context.cellInputState, allColumnsMeta);
+  
+  // 메인 컴포넌트의 상태 업데이트 (반응형 방식)
+  if (context.dateTimePickerState) {
+    context.dateTimePickerState.visible = true;
+    context.dateTimePickerState.position = pickerPosition;
+    context.dateTimePickerState.initialValue = parsedDateTime;
+    
+    // 현재 편집 중인 셀 정보 저장 (나중에 값 저장 시 사용)
+    context.dateTimePickerState.currentEdit = {
+      rowIndex,
+      colIndex,
+      columnMeta: column
+    };
+    
+    console.log('[DateTimePicker] Position set to:', pickerPosition);
+  } else {
+    console.warn('[DateTimePicker] dateTimePickerState not found in context');
+    // 폴백: 인라인 편집으로 전환
+    await handleInlineEdit(rowIndex, colIndex, event, context);
+  }
 }
 
 /**
@@ -127,6 +204,9 @@ async function handleTypeToEdit(event, context) {
   
   const column = allColumnsMeta.find(c => c.colIndex === colIndex);
   if (!column || !column.isEditable) return;
+  
+  // 날짜/시간 컬럼인지 확인
+  const isDateTimeColumn = column.type === 'symptomOnset' || column.type === 'individualExposureTime';
   
   try {
     if (rowIndex < 0) {
@@ -151,24 +231,278 @@ async function handleTypeToEdit(event, context) {
     if (cellElement) {
       cellElement.focus();
       
-      // 기존 내용을 지우고 새로운 문자로 교체
-      cellElement.textContent = event.key;
-      
-      // 커서를 맨 끝으로 이동
-      const range = document.createRange();
-      const selection = window.getSelection();
-      range.selectNodeContents(cellElement);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      
-      // input 이벤트를 발생시켜 값 업데이트
-      const inputEvent = new Event('input', { bubbles: true });
-      cellElement.dispatchEvent(inputEvent);
+      // 날짜/시간 컬럼인 경우 특별한 처리
+      if (isDateTimeColumn) {
+        // 날짜/시간 컬럼에서는 자동 구분자 삽입 기능 추가
+        setupDateTimeInputHandling(cellElement, event.key, null, context);
+      } else {
+        // 일반 컬럼은 기존 방식
+        cellElement.textContent = event.key;
+        
+        // 커서를 맨 끝으로 이동
+        const range = document.createRange();
+        const selection = window.getSelection();
+        range.selectNodeContents(cellElement);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // input 이벤트를 발생시켜 값 업데이트
+        const inputEvent = new Event('input', { bubbles: true });
+        cellElement.dispatchEvent(inputEvent);
+      }
     }
   } catch (error) {
     console.error('Error in handleTypeToEdit:', error);
   }
+}
+
+/**
+ * 날짜/시간 컬럼에서 자동 구분자 삽입 기능을 설정합니다.
+ * @param {HTMLElement} cellElement - 셀 요소
+ * @param {string} initialKey - 초기 입력 키
+ */
+export function setupDateTimeInputHandling(cellElement, initialKey, clickX = null, context = null) {
+  // Clean up 기존 리스너가 있으면 제거
+  if (cellElement.__dtKeyHandler) {
+    cellElement.removeEventListener('keydown', cellElement.__dtKeyHandler);
+  }
+
+  // 현재 입력된 내용을 digits 로 저장 (구분자 제거)
+  let digits = '';
+
+  const DIGIT_RE = /\d/;
+
+  // 전역 스타일 한 번만 주입
+  const ensureSepStyle = () => {
+    if (!document.getElementById('sep-style')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'sep-style';
+      styleEl.textContent = '.sep.dim{color:#bbb;}.sep.on{color:#000;}';
+      document.head.appendChild(styleEl);
+    }
+  };
+  ensureSepStyle();
+
+  const buildHTML = () => {
+    const parts = [];
+
+    const pushDigit = (idx) => {
+      parts.push(idx < digits.length ? digits[idx] : '&nbsp;');
+    };
+
+    // 연, 월, 일, 시, 분
+    for (let i = 0; i < 4; i++) pushDigit(i); // YYYY
+    parts.push(`<span class="sep ${digits.length >= 4 ? 'on' : 'dim'}">-</span>`);
+    for (let i = 4; i < 6; i++) pushDigit(i); // MM
+    parts.push(`<span class="sep ${digits.length >= 6 ? 'on' : 'dim'}">-</span>`);
+    for (let i = 6; i < 8; i++) pushDigit(i); // DD
+    parts.push(`<span class="sep ${digits.length >= 8 ? 'on' : 'dim'}">&nbsp;</span>`);
+    for (let i = 8; i < 10; i++) pushDigit(i); // HH
+    parts.push(`<span class="sep ${digits.length >= 10 ? 'on' : 'dim'}">:</span>`);
+    for (let i = 10; i < 12; i++) pushDigit(i); // mm
+
+    return parts.join('');
+  };
+
+  const setCaretByDigitPosition = (digitPosition) => {
+    // 현재 digits 길이를 기준으로 캐럿 위치 결정
+    const maxPosition = Math.min(digitPosition, 12); // 최대 12자리
+    
+    // YYYY-MM-DD HH:MM 형식에서 실제 문자 위치 계산
+    // digits의 각 위치가 최종 문자열의 어느 위치에 해당하는지 매핑
+    const getTextPosition = (pos) => {
+      if (pos <= 4) return pos; // YYYY: 0,1,2,3
+      if (pos <= 6) return pos + 1; // MM: 5,6 (- 구분자 1개 추가)
+      if (pos <= 8) return pos + 2; // DD: 7,8 (- 구분자 2개 추가)  
+      if (pos <= 10) return pos + 3; // HH: 9,10 (공백 구분자 3개 추가)
+      return pos + 4; // MM: 11,12 (: 구분자 4개 추가)
+    };
+    
+    const targetTextPosition = getTextPosition(maxPosition);
+    
+    // DOM에서 실제 텍스트 위치 찾기
+    let currentPosition = 0;
+    const walker = document.createTreeWalker(
+      cellElement,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      const nodeLength = textNode.textContent.length;
+      if (currentPosition + nodeLength >= targetTextPosition) {
+        // 이 텍스트 노드 내에서 위치 설정
+        const offsetInNode = targetTextPosition - currentPosition;
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.setStart(textNode, Math.min(offsetInNode, nodeLength));
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
+      currentPosition += nodeLength;
+    }
+    
+    // fallback: 맨 끝으로
+    const range = document.createRange();
+    range.selectNodeContents(cellElement);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+
+  const applyFormattedText = (useClick = false) => {
+    cellElement.innerHTML = buildHTML();
+
+    if (useClick && clickX !== null) {
+      // 클릭 위치 기반 caret
+      for (const node of cellElement.childNodes) {
+        const rect = node.getBoundingClientRect();
+        if (clickX <= rect.left + rect.width / 2) {
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.setStartBefore(node);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          return;
+        }
+      }
+    } else {
+      // 디폴트: digits 뒤
+      setCaretByDigitPosition(digits.length);
+    }
+
+    // input 이벤트 트리거
+    cellElement.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // DateTimePicker와 동기화
+    if (context && context.dateTimePickerState) {
+      updateDateTimePickerValue();
+    }
+  };
+
+  // DateTimePicker 값 업데이트 함수
+  const updateDateTimePickerValue = () => {
+    if (!context || !context.dateTimePickerState) return;
+    
+    // digits를 YYYY-MM-DD HH:MM 형식으로 변환
+    const formattedValue = formatDigitsToDateTime(digits);
+    
+    // DateTimePicker의 initialValue 업데이트
+    if (formattedValue) {
+      import('../utils/dateTimeUtils.js').then(({ parseDateTime }) => {
+        const parsedDateTime = parseDateTime(formattedValue);
+        context.dateTimePickerState.initialValue = parsedDateTime;
+      });
+    }
+  };
+  
+  // digits를 날짜시간 문자열로 변환하는 함수
+  const formatDigitsToDateTime = (digits) => {
+    if (digits.length === 0) return '';
+    
+    const padded = digits.padEnd(12, '0'); // 12자리로 패딩
+    const year = padded.slice(0, 4);
+    const month = padded.slice(4, 6);
+    const day = padded.slice(6, 8);
+    const hour = padded.slice(8, 10);
+    const minute = padded.slice(10, 12);
+    
+    // 유효한 날짜인지 확인
+    const date = new Date(year, month - 1, day, hour, minute);
+    if (isNaN(date.getTime())) return '';
+    
+    return `${year}-${month}-${day} ${hour}:${minute}`;
+  };
+
+  // 현재 값을 저장하는 함수
+  const saveCurrentValue = async () => {
+    if (!context || !context.dateTimePickerState || !context.dateTimePickerState.currentEdit) {
+      console.warn('[DateTimeInput] No context or edit info for saving');
+      return;
+    }
+    
+    const { rowIndex, colIndex, columnMeta } = context.dateTimePickerState.currentEdit;
+    
+    try {
+      // digits를 날짜/시간 형식으로 변환
+      const formattedValue = formatDigitsToDateTime(digits);
+      
+      if (formattedValue) {
+        // 값 저장
+        context.storeBridge.saveCellValue(rowIndex, colIndex, formattedValue, columnMeta);
+        console.log(`[DateTimeInput] Auto-saved value: ${formattedValue} for cell: ${rowIndex}, ${colIndex}`);
+        
+        // 편집 완료
+        context.cellInputState.confirmEditing();
+        context.selectionSystem.stopEditing(true);
+        
+        // DateTimePicker 닫기
+        if (context.dateTimePickerState.visible) {
+          context.dateTimePickerState.visible = false;
+          context.dateTimePickerState.currentEdit = null;
+        }
+      } else {
+        console.warn('[DateTimeInput] Invalid date format, cannot save');
+      }
+    } catch (error) {
+      console.error('[DateTimeInput] Error saving value:', error);
+    }
+  };
+
+  // 최초 렌더링 (clickX 여부 적용)
+  applyFormattedText(true);
+
+  // 초기 키 반영
+  if (DIGIT_RE.test(initialKey)) {
+    digits += initialKey;
+    applyFormattedText();
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      digits = digits.slice(0, -1);
+      applyFormattedText();
+      return;
+    }
+    // Tab/Enter 처리는 handleVirtualKeyDown에서 통합 처리
+    if (DIGIT_RE.test(e.key)) {
+      e.preventDefault();
+      if (digits.length < 12) {
+        digits += e.key;
+        applyFormattedText();
+      }
+      return;
+    }
+  };
+
+  cellElement.__dtKeyHandler = handleKeyDown;
+  cellElement.__dtSaveValue = saveCurrentValue; // 외부에서 저장 함수 호출 가능하게 함
+  cellElement.addEventListener('keydown', handleKeyDown);
+
+  // cleanup on blur
+  const cleanup = async () => {
+    // blur 시 자동 저장 (다른 셀로 이동할 때)
+    await saveCurrentValue();
+    
+    cellElement.removeEventListener('keydown', handleKeyDown);
+    cellElement.removeEventListener('blur', cleanup);
+    delete cellElement.__dtKeyHandler;
+    delete cellElement.__dtSaveValue;
+  };
+  cellElement.addEventListener('blur', cleanup);
+
+  if (!cellElement.getAttribute('contenteditable')) {
+    cellElement.setAttribute('contenteditable', 'true');
+  }
+  cellElement.focus();
 }
 
 async function handleCopy(context) {
@@ -181,7 +515,7 @@ async function handleCopy(context) {
   let clipboardData = '';
 
   for (let r = start.rowIndex; r <= end.rowIndex; r++) {
-    let rowData = [];
+    const rowData = [];
     for (let c = start.colIndex; c <= end.colIndex; c++) {
       const columnMeta = allColumnsMeta.find(meta => meta.colIndex === c);
       if (!columnMeta) continue;
@@ -230,7 +564,7 @@ async function handlePaste(context) {
     await context.storeBridge.dispatch('pasteData', {
       startRowIndex: startRow,
       startColIndex: startCol,
-      data: parsedData,
+      data: parsedData
     });
 
     // UX 개선: 붙여넣기된 영역을 시각적으로 선택하고 첫 번째 셀 활성화
@@ -271,7 +605,8 @@ export async function handleVirtualKeyDown(event, context) {
       stopEditing(false); // UI 상태와 데이터 상태 모두 정리
       await nextTick();
       focusGrid();
-    } 
+      return;
+    }
     else if (key === 'Enter') {
       event.preventDefault();
       const tempValue = context.cellInputState.getTempValue(editRow, editCol);
@@ -285,7 +620,11 @@ export async function handleVirtualKeyDown(event, context) {
       const nextRow = editRow < totalRows - 1 ? editRow + 1 : editRow;
       selectionSystem.selectCell(nextRow, editCol);
       await ensureCellIsVisible(nextRow, editCol);
+      
+      // 포커스 설정을 다음 틱에서 실행하여 안정적인 이벤트 처리 보장
+      await nextTick();
       focusGrid();
+      return;
     }
     else if (key === 'Tab') {
       event.preventDefault();
@@ -298,20 +637,93 @@ export async function handleVirtualKeyDown(event, context) {
       context.cellInputState.confirmEditing();
       stopEditing(true);
       
-      if (editRow < 0) {
-        // 헤더에서 편집 중일 때의 Tab 처리
-        const tabTarget = findNextNavigableCell(editRow, editCol, 'right', allColumnsMeta, totalRows, totalCols);
-        selectionSystem.selectCell(tabTarget.rowIndex, tabTarget.colIndex);
-        await ensureCellIsVisible(tabTarget.rowIndex, tabTarget.colIndex);
-      } else {
-        // 바디에서 편집 중일 때의 기존 Tab 처리
-        const nextCol = editCol < totalCols - 1 ? editCol + 1 : editCol;
-        selectionSystem.selectCell(editRow, nextCol);
-        await ensureCellIsVisible(editRow, nextCol);
-      }
+      // 편집 모드에서 Tab 처리 후 일반 모드 Tab 처리로 넘어감
+      // 현재 편집 중인 셀을 기준으로 다음 셀 찾기
+      const currentRow = editRow;
+      const currentCol = editCol;
+      
+      // 일반 모드의 Tab 처리 로직 재사용
+      const tabTarget = findNextNavigableCell(currentRow, currentCol, 'right', allColumnsMeta, totalRows, totalCols);
+      selectionSystem.selectCell(tabTarget.rowIndex, tabTarget.colIndex);
+      await ensureCellIsVisible(tabTarget.rowIndex, tabTarget.colIndex);
+      
+      // 포커스 설정을 다음 틱에서 실행하여 안정적인 이벤트 처리 보장
+      await nextTick();
       focusGrid();
+      return;
     }
-    return; // 편집 모드에서는 네비게이션 로직을 실행하지 않음
+    
+    // 편집 모드에서 날짜/시간 컬럼인지 확인
+    const columnMeta = allColumnsMeta.find(col => col.colIndex === editCol);
+    const isDateTimeColumn = columnMeta && (
+      columnMeta.type === 'symptomOnset' || 
+      columnMeta.type === 'individualExposureTime'
+    );
+    
+    // 날짜/시간 컬럼 처리
+    if (isDateTimeColumn) {
+      const cellSelector = editRow < 0 
+        ? `[data-col="${editCol}"]` 
+        : `[data-row="${editRow}"][data-col="${editCol}"]`;
+      const cellElement = document.querySelector(cellSelector);
+      
+      // 숫자 입력 처리
+      if (/\d/.test(key)) {
+        event.preventDefault();
+        if (cellElement && cellElement.__dtKeyHandler) {
+          const keyEvent = new KeyboardEvent('keydown', { key });
+          cellElement.__dtKeyHandler(keyEvent);
+        }
+        return;
+      }
+      
+      // 백스페이스 처리
+      if (key === 'Backspace') {
+        event.preventDefault();
+        if (cellElement && cellElement.__dtKeyHandler) {
+          const keyEvent = new KeyboardEvent('keydown', { key });
+          cellElement.__dtKeyHandler(keyEvent);
+        }
+        return;
+      }
+      
+      // Tab/Enter 처리 - 날짜/시간 컬럼에서는 통합 처리
+      if (key === 'Tab' || key === 'Enter') {
+        event.preventDefault();
+        
+        // 현재 날짜/시간 값 저장
+        if (cellElement && cellElement.__dtSaveValue) {
+          await cellElement.__dtSaveValue();
+        }
+        
+        // 편집 상태 종료
+        const tempValue = context.cellInputState.getTempValue(editRow, editCol);
+        const column = allColumnsMeta.find(c => c.colIndex === editCol);
+        if (tempValue !== null && column) {
+          context.storeBridge.saveCellValue(editRow, editCol, tempValue, column);
+        }
+        context.cellInputState.confirmEditing();
+        stopEditing(true);
+        
+        // 네비게이션 처리
+        if (key === 'Tab') {
+          const tabTarget = findNextNavigableCell(editRow, editCol, 'right', allColumnsMeta, totalRows, totalCols);
+          selectionSystem.selectCell(tabTarget.rowIndex, tabTarget.colIndex);
+          await ensureCellIsVisible(tabTarget.rowIndex, tabTarget.colIndex);
+        } else if (key === 'Enter') {
+          const enterTarget = findNextNavigableCell(editRow, editCol, 'down', allColumnsMeta, totalRows, totalCols);
+          selectionSystem.selectCell(enterTarget.rowIndex, enterTarget.colIndex);
+          await ensureCellIsVisible(enterTarget.rowIndex, enterTarget.colIndex);
+        }
+        
+        // 포커스 설정을 다음 틱에서 실행하여 안정적인 이벤트 처리 보장
+        await nextTick();
+        focusGrid();
+        return;
+      }
+    }
+    
+    return; // 편집 모드에서는 다른 키 처리하지 않음
   }
 
   // --- 일반 모드 처리 ---
@@ -377,53 +789,53 @@ export async function handleVirtualKeyDown(event, context) {
 
   // --- 일반 네비게이션 ---
   switch (key) {
-    case 'ArrowUp': {
-      const upTarget = findNextNavigableCell(currentRow, currentCol, 'up', allColumnsMeta, totalRows, totalCols);
-      nextRow = upTarget.rowIndex;
-      nextCol = upTarget.colIndex;
-      navigationHandled = true;
-      break;
-    }
+  case 'ArrowUp': {
+    const upTarget = findNextNavigableCell(currentRow, currentCol, 'up', allColumnsMeta, totalRows, totalCols);
+    nextRow = upTarget.rowIndex;
+    nextCol = upTarget.colIndex;
+    navigationHandled = true;
+    break;
+  }
 
-    case 'ArrowDown':
-    case 'Enter': { // Enter 키를 ArrowDown과 동일하게 처리
-      const downTarget = findNextNavigableCell(currentRow, currentCol, 'down', allColumnsMeta, totalRows, totalCols);
-      nextRow = downTarget.rowIndex;
-      nextCol = downTarget.colIndex;
-      navigationHandled = true;
-      break;
-    }
+  case 'ArrowDown':
+  case 'Enter': { // Enter 키를 ArrowDown과 동일하게 처리
+    const downTarget = findNextNavigableCell(currentRow, currentCol, 'down', allColumnsMeta, totalRows, totalCols);
+    nextRow = downTarget.rowIndex;
+    nextCol = downTarget.colIndex;
+    navigationHandled = true;
+    break;
+  }
 
-    case 'ArrowLeft': {
-      const leftTarget = findNextNavigableCell(currentRow, currentCol, 'left', allColumnsMeta, totalRows, totalCols);
-      nextRow = leftTarget.rowIndex;
-      nextCol = leftTarget.colIndex;
-      navigationHandled = true;
-      break;
-    }
+  case 'ArrowLeft': {
+    const leftTarget = findNextNavigableCell(currentRow, currentCol, 'left', allColumnsMeta, totalRows, totalCols);
+    nextRow = leftTarget.rowIndex;
+    nextCol = leftTarget.colIndex;
+    navigationHandled = true;
+    break;
+  }
 
-    case 'ArrowRight': {
-      const rightTarget = findNextNavigableCell(currentRow, currentCol, 'right', allColumnsMeta, totalRows, totalCols);
-      nextRow = rightTarget.rowIndex;
-      nextCol = rightTarget.colIndex;
-      navigationHandled = true;
-      break;
-    }
+  case 'ArrowRight': {
+    const rightTarget = findNextNavigableCell(currentRow, currentCol, 'right', allColumnsMeta, totalRows, totalCols);
+    nextRow = rightTarget.rowIndex;
+    nextCol = rightTarget.colIndex;
+    navigationHandled = true;
+    break;
+  }
     
-    case 'Tab': {
-      isNavigationOnly = true; // Tab은 순수 네비게이션으로 처리
-      navigationHandled = true;
-      if (event.shiftKey) { // Shift + Tab
-        const shiftTabTarget = findNextNavigableCell(currentRow, currentCol, 'left', allColumnsMeta, totalRows, totalCols);
-        nextRow = shiftTabTarget.rowIndex;
-        nextCol = shiftTabTarget.colIndex;
-      } else { // Tab
-        const tabTarget = findNextNavigableCell(currentRow, currentCol, 'right', allColumnsMeta, totalRows, totalCols);
-        nextRow = tabTarget.rowIndex;
-        nextCol = tabTarget.colIndex;
-      }
-      break;
+  case 'Tab': {
+    isNavigationOnly = true; // Tab은 순수 네비게이션으로 처리
+    navigationHandled = true;
+    if (event.shiftKey) { // Shift + Tab
+      const shiftTabTarget = findNextNavigableCell(currentRow, currentCol, 'left', allColumnsMeta, totalRows, totalCols);
+      nextRow = shiftTabTarget.rowIndex;
+      nextCol = shiftTabTarget.colIndex;
+    } else { // Tab
+      const tabTarget = findNextNavigableCell(currentRow, currentCol, 'right', allColumnsMeta, totalRows, totalCols);
+      nextRow = tabTarget.rowIndex;
+      nextCol = tabTarget.colIndex;
     }
+    break;
+  }
   }
 
   if (navigationHandled) {
@@ -444,6 +856,10 @@ export async function handleVirtualKeyDown(event, context) {
       if (ensureCellIsVisible) {
         await ensureCellIsVisible(nextRow, nextCol);
       }
+      
+      // 포커스 설정을 다음 틱에서 실행하여 안정적인 이벤트 처리 보장
+      await nextTick();
+      focusGrid();
     }
   }
 
@@ -470,7 +886,21 @@ export async function handleVirtualKeyDown(event, context) {
   // --- 타이핑으로 편집 시작 ---
   else if (isTypingKey(key) && !ctrlKey && !event.metaKey) {
     event.preventDefault();
-    handleTypeToEdit(event, context);
+    
+    // 날짜/시간 컬럼인지 확인
+    const columnMeta = allColumnsMeta.find(col => col.colIndex === currentCol);
+    const isDateTimeColumn = columnMeta && (
+      columnMeta.type === 'symptomOnset' || 
+      columnMeta.type === 'individualExposureTime'
+    );
+    
+    if (isDateTimeColumn) {
+      // 날짜/시간 컬럼에서는 데이트피커로 처리
+      handleDateTimeTypeToEdit(event, context, currentRow, currentCol);
+    } else {
+      // 일반 컬럼에서는 기존 방식으로 처리
+      handleTypeToEdit(event, context);
+    }
   }
 
   // --- Delete / Backspace : clear selected data ---------------------
@@ -514,8 +944,8 @@ function findNextCellForFastNavigation(currentRow, currentCol, direction, rows, 
     return row[columnMeta.dataKey];
   }
 
-  let r = currentRow;
-  let c = currentCol;
+  const r = currentRow;
+  const c = currentCol;
   const dr = direction === 'up' ? -1 : direction === 'down' ? 1 : 0;
   const dc = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
 
@@ -632,7 +1062,7 @@ async function handleClearSelectedData(context) {
       rowIndex: rowIdx,
       key: meta.dataKey,
       value: '',
-      cellIndex: meta.cellIndex,
+      cellIndex: meta.cellIndex
     });
   };
 

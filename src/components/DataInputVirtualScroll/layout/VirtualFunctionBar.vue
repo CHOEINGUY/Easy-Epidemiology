@@ -10,6 +10,7 @@
         v-model="inputValue"
         class="current-cell-input"
         aria-label="현재 셀 값"
+        tabindex="-1"
         @input="onInput"
         @keydown.enter.prevent="onEnterKeyDown"
       />
@@ -19,6 +20,7 @@
           class="undo-redo-button" 
           :disabled="!canUndo"
           aria-label="실행 취소"
+          tabindex="-1"
           @click="onUndo"
           @mouseenter="showTooltip('undo', '실행 취소 (Ctrl+Z)', $event)"
           @mouseleave="hideTooltip"
@@ -31,6 +33,7 @@
           class="undo-redo-button" 
           :disabled="!canRedo"
           aria-label="다시 실행"
+          tabindex="-1"
           @click="onRedo"
           @mouseenter="showTooltip('redo', '다시 실행 (Ctrl+Y)', $event)"
           @mouseleave="hideTooltip"
@@ -48,6 +51,7 @@
           <button
             :class="['function-button', { active: isIndividualExposureColumnVisible }]"
             aria-label="개별 노출시간 토글"
+            tabindex="-1"
             @click="onToggleExposureColumn"
             @mouseenter="showTooltip('toggleExposure', '개별 노출시간 열을 표시하거나 숨깁니다', $event)"
             @mouseleave="hideTooltip"
@@ -84,6 +88,7 @@
           <button 
             class="function-button" 
             aria-label="양식 다운로드"
+            tabindex="-1"
           >
             <span class="material-icons-outlined function-button-icon">
               description
@@ -91,14 +96,15 @@
             양식 다운로드
           </button>
           <div v-if="showTemplateMenu" class="template-menu" @mouseenter="showTemplateMenuHover" @mouseleave="hideTemplateMenuHover" @click.stop>
-            <button class="template-menu-button" @click="onSelectTemplate('basic')">기본 양식</button>
-            <button class="template-menu-button" @click="onSelectTemplate('individual')">개별 노출시간 양식</button>
+            <button class="template-menu-button" tabindex="-1" @click="onSelectTemplate('basic')">기본 양식</button>
+            <button class="template-menu-button" tabindex="-1" @click="onSelectTemplate('individual')">개별 노출시간 양식</button>
           </div>
         </div>
         <div class="control-button-wrapper">
           <button 
             class="function-button" 
             aria-label="데이터 내보내기"
+            tabindex="-1"
             @click="onExportData"
             @mouseenter="showTooltip('exportData', '현재 입력된 모든 데이터를 Excel 파일로 다운로드합니다', $event)"
             @mouseleave="hideTooltip"
@@ -120,6 +126,7 @@
           <button 
             class="function-button" 
             aria-label="전체 데이터 복사"
+            tabindex="-1"
             @click="onCopyEntireData"
             @mouseenter="showTooltip('copyData', '모든 데이터를 클립보드에 복사합니다', $event)"
             @mouseleave="hideTooltip"
@@ -134,6 +141,7 @@
           <button 
             class="function-button" 
             aria-label="빈 열 삭제"
+            tabindex="-1"
             @click="onDeleteEmptyCols"
             @mouseenter="showTooltip('deleteEmptyCols', '데이터가 없는 빈 열들을 모두 삭제합니다', $event)"
             @mouseleave="hideTooltip"
@@ -148,6 +156,7 @@
           <button 
             class="function-button" 
             aria-label="전체 초기화"
+            tabindex="-1"
             @click="onResetSheet"
             @mouseenter="showTooltip('resetSheet', '모든 데이터와 설정을 초기화하여 빈 시트로 되돌립니다', $event)"
             @mouseleave="hideTooltip"
@@ -232,7 +241,7 @@ const tooltipStyle = computed(() => ({
   left: `${tooltipPos.value.x}px`,
   top: `${tooltipPos.value.y}px`,
   transform: 'translateX(-50%)',
-  zIndex: 10002,
+  zIndex: 10002
 }));
 
 function showTooltip(key, text, event) {

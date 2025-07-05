@@ -1,14 +1,14 @@
-import { createStore } from "vuex";
+import { createStore } from 'vuex';
 
 // 빈 열인지 확인하는 함수
 function isColumnEmpty(headers, rows, headerType, columnIndex) {
-  if (headers[headerType]?.[columnIndex]?.trim() !== "") {
+  if (headers[headerType]?.[columnIndex]?.trim() !== '') {
     return false;
   }
   const rowKeyMap = {
-    basic: "basicInfo",
-    clinical: "clinicalSymptoms",
-    diet: "dietInfo",
+    basic: 'basicInfo',
+    clinical: 'clinicalSymptoms',
+    diet: 'dietInfo'
   };
   const rowKey = rowKeyMap[headerType];
   if (!rowKey) return true;
@@ -18,7 +18,7 @@ function isColumnEmpty(headers, rows, headerType, columnIndex) {
       !row[rowKey] ||
       row[rowKey][columnIndex] === null ||
       row[rowKey][columnIndex] === undefined ||
-      String(row[rowKey][columnIndex]).trim() === ""
+      String(row[rowKey][columnIndex]).trim() === ''
   );
 }
 
@@ -29,9 +29,9 @@ function isColumnEmpty(headers, rows, headerType, columnIndex) {
  */
 function syncRowDataWithHeaders(state) {
   const rowKeyMap = {
-    basic: "basicInfo",
-    clinical: "clinicalSymptoms",
-    diet: "dietInfo",
+    basic: 'basicInfo',
+    clinical: 'clinicalSymptoms',
+    diet: 'dietInfo'
   };
   
   state.rows.forEach((row) => {
@@ -50,7 +50,7 @@ function syncRowDataWithHeaders(state) {
       } else {
         // 짧은 경우 빈 문자열로 채우기
         while (row[rowKey].length < headerLength) {
-          row[rowKey].push("");
+          row[rowKey].push('');
         }
       }
     });
@@ -60,17 +60,17 @@ function syncRowDataWithHeaders(state) {
 // 기본 헤더 및 행 구조 생성 함수
 function createInitialState() {
   const initialHeaders = {
-    basic: ["", ""],
-    clinical: ["", "", "", "", ""],
-    diet: ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+    basic: ['', ''],
+    clinical: ['', '', '', '', ''],
+    diet: ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
   };
   const initialRows = Array.from({ length: 10 }, () => ({
-    isPatient: "",
-    basicInfo: Array(initialHeaders.basic.length).fill(""),
-    clinicalSymptoms: Array(initialHeaders.clinical.length).fill(""),
-    symptomOnset: "",
-    individualExposureTime: "",
-    dietInfo: Array(initialHeaders.diet.length).fill(""),
+    isPatient: '',
+    basicInfo: Array(initialHeaders.basic.length).fill(''),
+    clinicalSymptoms: Array(initialHeaders.clinical.length).fill(''),
+    symptomOnset: '',
+    individualExposureTime: '',
+    dietInfo: Array(initialHeaders.diet.length).fill('')
   }));
   return { headers: initialHeaders, rows: initialRows };
 }
@@ -85,9 +85,14 @@ const store = createStore({
 
     // --- 유행곡선 탭 관련 상태 추가 ---
     selectedSymptomInterval: 6, // 증상발현 시간간격 (기본값: 6시간)
-    exposureDateTime: "2023-04-07T20:00", // 의심원 노출시간 (기본값, YYYY-MM-DDTHH:MM 형식)
+    exposureDateTime: '2023-04-07T20:00', // 의심원 노출시간 (기본값, YYYY-MM-DDTHH:MM 형식)
     selectedIncubationInterval: 6, // 잠복기 간격 (기본값: 6시간)
     isIndividualExposureColumnVisible: false,
+    // === Validation ===
+    validationState: {
+      errors: new Map(), // key: "row_col" , value: { message, timestamp }
+      version: 0
+    }
   },
   getters: {
     // --- 기존 Getters ---
@@ -111,24 +116,27 @@ const store = createStore({
     // --- 유행곡선 탭 관련 Getters 추가 ---
     getSelectedSymptomInterval: (state) => state.selectedSymptomInterval,
     getExposureDateTime: (state) => state.exposureDateTime,
-    getSelectedIncubationInterval: (state) => state.selectedIncubationInterval,
+    getSelectedIncubationInterval: (state) => state.selectedIncubationInterval
   },
   mutations: {
     // --- 기존 Mutations ---
     SET_INITIAL_DATA(state, { headers, rows }) {
       state.headers = headers;
       state.rows = rows;
+      // 유효성 검사 오류는 별도로 관리하므로 여기서 초기화하지 않음
+      // state.validationState.errors = new Map();
+      // state.validationState.version++;
     },
     ADD_ROWS(state, count) {
       const newRows = [];
       for (let i = 0; i < count; i++) {
         newRows.push({
-          isPatient: "",
-          basicInfo: Array(state.headers.basic?.length || 0).fill(""),
-          clinicalSymptoms: Array(state.headers.clinical?.length || 0).fill(""),
-          symptomOnset: "",
-          individualExposureTime: "",
-          dietInfo: Array(state.headers.diet?.length || 0).fill(""),
+          isPatient: '',
+          basicInfo: Array(state.headers.basic?.length || 0).fill(''),
+          clinicalSymptoms: Array(state.headers.clinical?.length || 0).fill(''),
+          symptomOnset: '',
+          individualExposureTime: '',
+          dietInfo: Array(state.headers.diet?.length || 0).fill('')
         });
       }
       state.rows = state.rows.concat(newRows);
@@ -137,7 +145,7 @@ const store = createStore({
       if (!state.headers[type]) return;
       
       // 헤더에 새 열 추가
-      state.headers[type].push("");
+      state.headers[type].push('');
       
       // 모든 행 데이터와 헤더 길이 동기화
       syncRowDataWithHeaders(state);
@@ -146,74 +154,88 @@ const store = createStore({
       if (!state.headers[type] || count <= 0) return;
       
       const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
+        basic: 'basicInfo',
+        clinical: 'clinicalSymptoms',
+        diet: 'dietInfo'
       };
       const rowKey = rowKeyMap[type];
       if (!rowKey) return;
       
       // 지정된 개수만큼 열 추가
       for (let i = 0; i < count; i++) {
-        state.headers[type].push("");
+        state.headers[type].push('');
         state.rows.forEach((row) => {
           if (!row[rowKey]) row[rowKey] = [];
-          row[rowKey].push("");
+          row[rowKey].push('');
         });
       }
     },
     INSERT_COLUMN_AT(state, { type, index }) {
-      if (!state.headers[type] || index < 0 || index > state.headers[type].length) return;
+      // 타입 매핑: 실제 타입을 store의 헤더 타입으로 변환
+      let headerType = type;
+      let rowKey = type;
       
-      const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
-      };
-      const rowKey = rowKeyMap[type];
-      if (!rowKey) return;
+      if (type === 'clinicalSymptoms') {
+        headerType = 'clinical';
+        rowKey = 'clinicalSymptoms';
+      } else if (type === 'dietInfo') {
+        headerType = 'diet';
+        rowKey = 'dietInfo';
+      } else if (type === 'basic') {
+        headerType = 'basic';
+        rowKey = 'basicInfo';
+      }
+      
+      if (!state.headers[headerType] || index < 0 || index > state.headers[headerType].length) return;
       
       // 헤더에 특정 위치에 빈 열 삽입
-      state.headers[type].splice(index, 0, "");
+      state.headers[headerType].splice(index, 0, '');
       
       // 모든 행의 해당 위치에 빈 데이터 삽입
       state.rows.forEach((row) => {
         if (!row[rowKey]) row[rowKey] = [];
         // 배열 길이를 맞춤
-        while (row[rowKey].length < state.headers[type].length - 1) {
-          row[rowKey].push("");
+        while (row[rowKey].length < state.headers[headerType].length - 1) {
+          row[rowKey].push('');
         }
         // 특정 인덱스에 빈 값 삽입
-        row[rowKey].splice(index, 0, "");
+        row[rowKey].splice(index, 0, '');
       });
     },
     INSERT_MULTIPLE_COLUMNS_AT(state, { type, count, index }) {
-      if (!state.headers[type] || count <= 0 || index < 0 || index > state.headers[type].length) return;
+      // 타입 매핑: 실제 타입을 store의 헤더 타입으로 변환
+      let headerType = type;
+      let rowKey = type;
       
-      const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
-      };
-      const rowKey = rowKeyMap[type];
-      if (!rowKey) return;
+      if (type === 'clinicalSymptoms') {
+        headerType = 'clinical';
+        rowKey = 'clinicalSymptoms';
+      } else if (type === 'dietInfo') {
+        headerType = 'diet';
+        rowKey = 'dietInfo';
+      } else if (type === 'basic') {
+        headerType = 'basic';
+        rowKey = 'basicInfo';
+      }
+      
+      if (!state.headers[headerType] || count <= 0 || index < 0 || index > state.headers[headerType].length) return;
       
       // 지정된 개수만큼 특정 위치에 열 삽입
       for (let i = 0; i < count; i++) {
         // 헤더에 빈 열 삽입 (같은 인덱스에 계속 삽입하면 순서대로 들어감)
-        state.headers[type].splice(index + i, 0, "");
+        state.headers[headerType].splice(index + i, 0, '');
       }
       
       // 모든 행의 해당 위치에 빈 데이터 삽입
       state.rows.forEach((row) => {
         if (!row[rowKey]) row[rowKey] = [];
         // 배열 길이를 맞춤
-        while (row[rowKey].length < state.headers[type].length - count) {
-          row[rowKey].push("");
+        while (row[rowKey].length < state.headers[headerType].length - count) {
+          row[rowKey].push('');
         }
         // 지정된 개수만큼 빈 값 삽입
         for (let i = 0; i < count; i++) {
-          row[rowKey].splice(index + i, 0, "");
+          row[rowKey].splice(index + i, 0, '');
         }
       });
     },
@@ -227,31 +249,32 @@ const store = createStore({
       syncRowDataWithHeaders(state);
     },
     DELETE_COLUMN_BY_INDEX(state, { type, index }) {
-      if (!state.headers[type] || index < 0 || index >= state.headers[type].length) return;
+      // 타입 매핑: 실제 타입을 store의 헤더 타입으로 변환
+      let headerType = type;
+      let rowKey = type;
       
-      const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
-      };
-      const rowKey = rowKeyMap[type];
-      if (!rowKey) return;
+      if (type === 'clinicalSymptoms') {
+        headerType = 'clinical';
+        rowKey = 'clinicalSymptoms';
+      } else if (type === 'dietInfo') {
+        headerType = 'diet';
+        rowKey = 'dietInfo';
+      } else if (type === 'basic') {
+        headerType = 'basic';
+        rowKey = 'basicInfo';
+      }
+      
+      if (!state.headers[headerType] || index < 0 || index >= state.headers[headerType].length) return;
       
       // 헤더에서 특정 인덱스 삭제
-      state.headers[type].splice(index, 1);
+      state.headers[headerType].splice(index, 1);
       
       state.rows.forEach((row) => row[rowKey]?.splice(index, 1));
     },
     DELETE_MULTIPLE_COLUMNS_BY_INDEX(state, { columns }) {
       if (!columns || columns.length === 0) return;
 
-      const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
-      };
-
-      // 1. 타입별로 그룹화
+      // 1. 타입별로 그룹화 (실제 타입으로 그룹화)
       const groupedByType = columns.reduce((acc, { type, index }) => {
         if (!acc[type]) {
           acc[type] = [];
@@ -263,75 +286,105 @@ const store = createStore({
       // 2. 타입별로 처리
       for (const type in groupedByType) {
         const indices = groupedByType[type];
-        const rowKey = rowKeyMap[type];
-        if (!rowKey || !state.headers[type]) continue;
+        
+        // 타입 매핑: 실제 타입을 store의 헤더 타입으로 변환
+        let headerType = type;
+        let rowKey = type;
+        
+        if (type === 'clinicalSymptoms') {
+          headerType = 'clinical';
+          rowKey = 'clinicalSymptoms';
+        } else if (type === 'dietInfo') {
+          headerType = 'diet';
+          rowKey = 'dietInfo';
+        } else if (type === 'basic') {
+          headerType = 'basic';
+          rowKey = 'basicInfo';
+        }
+        
+        if (!rowKey || !state.headers[headerType]) continue;
 
         // 3. 인덱스를 내림차순으로 정렬하여 뒤에서부터 삭제
         const sortedIndices = indices.sort((a, b) => b - a);
 
         sortedIndices.forEach(index => {
-          if (index >= 0 && index < state.headers[type].length) {
-            state.headers[type].splice(index, 1);
+          if (index >= 0 && index < state.headers[headerType].length) {
+            state.headers[headerType].splice(index, 1);
             state.rows.forEach(row => row[rowKey]?.splice(index, 1));
           }
         });
       }
     },
     CLEAR_COLUMN_DATA(state, { type, index }) {
-      if (!state.headers[type] || index < 0 || index >= state.headers[type].length) return;
+      // 타입 매핑: 실제 타입을 store의 헤더 타입으로 변환
+      let headerType = type;
+      let rowKey = type;
       
-      const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
-      };
-      const rowKey = rowKeyMap[type];
-      if (!rowKey) return;
+      if (type === 'clinicalSymptoms') {
+        headerType = 'clinical';
+        rowKey = 'clinicalSymptoms';
+      } else if (type === 'dietInfo') {
+        headerType = 'diet';
+        rowKey = 'dietInfo';
+      } else if (type === 'basic') {
+        headerType = 'basic';
+        rowKey = 'basicInfo';
+      }
+      
+      if (!state.headers[headerType] || index < 0 || index >= state.headers[headerType].length) return;
       
       // 헤더 텍스트를 빈 문자열로 설정
-      state.headers[type][index] = "";
+      state.headers[headerType][index] = '';
       
       // 모든 행의 해당 인덱스 데이터를 빈 문자열로 설정
       state.rows.forEach((row) => {
         if (row[rowKey] && Array.isArray(row[rowKey]) && index < row[rowKey].length) {
-          row[rowKey][index] = "";
+          row[rowKey][index] = '';
         }
       });
     },
     CLEAR_MULTIPLE_COLUMNS_DATA(state, { columns }) {
       if (!columns || columns.length === 0) return;
       
-      const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
-      };
-      
       // 각 열의 헤더와 데이터를 빈 문자열로 설정
       columns.forEach(col => {
         const { type, cellIndex } = col;
-        const rowKey = rowKeyMap[type];
         
-        if (!state.headers[type] || !rowKey || cellIndex < 0 || cellIndex >= state.headers[type].length) return;
+        // 타입 매핑: 실제 타입을 store의 헤더 타입으로 변환
+        let headerType = type;
+        let rowKey = type;
+        
+        if (type === 'clinicalSymptoms') {
+          headerType = 'clinical';
+          rowKey = 'clinicalSymptoms';
+        } else if (type === 'dietInfo') {
+          headerType = 'diet';
+          rowKey = 'dietInfo';
+        } else if (type === 'basic') {
+          headerType = 'basic';
+          rowKey = 'basicInfo';
+        }
+        
+        if (!state.headers[headerType] || !rowKey || cellIndex < 0 || cellIndex >= state.headers[headerType].length) return;
         
         // 헤더 텍스트를 빈 문자열로 설정
-        state.headers[type][cellIndex] = "";
+        state.headers[headerType][cellIndex] = '';
         
         // 모든 행의 해당 인덱스 데이터를 빈 문자열로 설정
         state.rows.forEach((row) => {
           if (row[rowKey] && Array.isArray(row[rowKey]) && cellIndex < row[rowKey].length) {
-            row[rowKey][cellIndex] = "";
+            row[rowKey][cellIndex] = '';
           }
         });
       });
     },
     CLEAR_FIXED_COLUMN_DATA(state, { type }) {
-      if (type === "isPatient") {
-        state.rows.forEach((row) => (row.isPatient = ""));
-      } else if (type === "symptomOnset") {
-        state.rows.forEach((row) => (row.symptomOnset = ""));
-      } else if (type === "individualExposureTime") {
-        state.rows.forEach((row) => (row.individualExposureTime = ""));
+      if (type === 'isPatient') {
+        state.rows.forEach((row) => (row.isPatient = ''));
+      } else if (type === 'symptomOnset') {
+        state.rows.forEach((row) => (row.symptomOnset = ''));
+      } else if (type === 'individualExposureTime') {
+        state.rows.forEach((row) => (row.individualExposureTime = ''));
       }
     },
     UPDATE_HEADER(state, { headerType, index, text }) {
@@ -351,7 +404,7 @@ const store = createStore({
         // 배열 타입 (basicInfo, clinicalSymptoms, dietInfo)
         if (!state.rows[rowIndex][key]) state.rows[rowIndex][key] = [];
         while (state.rows[rowIndex][key].length <= cellIndex)
-          state.rows[rowIndex][key].push("");
+          state.rows[rowIndex][key].push('');
         state.rows[rowIndex][key][cellIndex] = value;
         console.log('✅ 배열 저장 완료:', `${key}[${cellIndex}] =`, value);
       } else {
@@ -369,15 +422,15 @@ const store = createStore({
     DELETE_EMPTY_ROWS(state) {
       const emptyRowIndices = [];
       const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
+        basic: 'basicInfo',
+        clinical: 'clinicalSymptoms',
+        diet: 'dietInfo'
       };
 
       state.rows.forEach((row, index) => {
         let isEmpty = true;
-        if (row.isPatient && String(row.isPatient).trim() !== "") isEmpty = false;
-        if (row.symptomOnset && String(row.symptomOnset).trim() !== "") isEmpty = false;
+        if (row.isPatient && String(row.isPatient).trim() !== '') isEmpty = false;
+        if (row.symptomOnset && String(row.symptomOnset).trim() !== '') isEmpty = false;
         
         for (const key in rowKeyMap) {
           const dataKey = rowKeyMap[key];
@@ -398,12 +451,12 @@ const store = createStore({
     },
     DELETE_EMPTY_COLUMNS(state) {
       const rowKeyMap = {
-        basic: "basicInfo",
-        clinical: "clinicalSymptoms",
-        diet: "dietInfo",
+        basic: 'basicInfo',
+        clinical: 'clinicalSymptoms',
+        diet: 'dietInfo'
       };
 
-      for (const headerType of ["basic", "clinical", "diet"]) {
+      for (const headerType of ['basic', 'clinical', 'diet']) {
         if (!state.headers[headerType]) continue;
 
         const emptyIndices = [];
@@ -431,11 +484,11 @@ const store = createStore({
 
         // 만약 모든 열이 삭제되어 0개가 될 상황이라면, 빈 열 1개를 추가하여 최소 1개 보장
         if (state.headers[headerType].length === 0) {
-          state.headers[headerType].push("");
+          state.headers[headerType].push('');
           state.rows.forEach((row) => {
             const rowKey = rowKeyMap[headerType];
             if (!row[rowKey]) row[rowKey] = [];
-            row[rowKey].push("");
+            row[rowKey].push('');
           });
         }
       }
@@ -466,21 +519,21 @@ const store = createStore({
         const currentRowIndex = startRowIndex + i;
         if (currentRowIndex >= state.rows.length) {
           state.rows.push({
-            isPatient: "",
-            basicInfo: Array(state.headers.basic?.length || 0).fill(""),
+            isPatient: '',
+            basicInfo: Array(state.headers.basic?.length || 0).fill(''),
             clinicalSymptoms: Array(state.headers.clinical?.length || 0).fill(
-              ""
+              ''
             ),
-            symptomOnset: "",
-            individualExposureTime: "",
-            dietInfo: Array(state.headers.diet?.length || 0).fill(""),
+            symptomOnset: '',
+            individualExposureTime: '',
+            dietInfo: Array(state.headers.diet?.length || 0).fill('')
           });
         }
         const targetRow = state.rows[currentRowIndex];
         if (!targetRow) continue;
         let currentColumn = startColIndex;
         for (let j = 0; j < rowData.length; j++) {
-          const cellValue = rowData[j] ?? "";
+          const cellValue = rowData[j] ?? '';
           if (currentColumn === 1) {
             targetRow.isPatient = cellValue;
           } else if (
@@ -498,7 +551,7 @@ const store = createStore({
             if (idx < (state.headers.basic?.length || 0)) {
               if (!targetRow.basicInfo) targetRow.basicInfo = [];
               while (targetRow.basicInfo.length <= idx)
-                targetRow.basicInfo.push("");
+                targetRow.basicInfo.push('');
               targetRow.basicInfo[idx] = cellValue;
             }
           } else if (
@@ -512,7 +565,7 @@ const store = createStore({
             if (idx < (state.headers.clinical?.length || 0)) {
               if (!targetRow.clinicalSymptoms) targetRow.clinicalSymptoms = [];
               while (targetRow.clinicalSymptoms.length <= idx)
-                targetRow.clinicalSymptoms.push("");
+                targetRow.clinicalSymptoms.push('');
               targetRow.clinicalSymptoms[idx] = cellValue;
             }
           } else if (currentColumn >= dietStartIndex) {
@@ -520,7 +573,7 @@ const store = createStore({
             if (idx < (state.headers.diet?.length || 0)) {
               if (!targetRow.dietInfo) targetRow.dietInfo = [];
               while (targetRow.dietInfo.length <= idx)
-                targetRow.dietInfo.push("");
+                targetRow.dietInfo.push('');
               targetRow.dietInfo[idx] = cellValue;
             }
           }
@@ -561,12 +614,12 @@ const store = createStore({
     INSERT_ROW_AT(state, { index, count = 1 }) {
       // 새로운 빈 행 생성
       const newRows = Array(count).fill().map(() => ({
-        isPatient: "",
-        basicInfo: Array(state.headers.basic?.length || 0).fill(""),
-        clinicalSymptoms: Array(state.headers.clinical?.length || 0).fill(""),
-        symptomOnset: "",
-        individualExposureTime: "",
-        dietInfo: Array(state.headers.diet?.length || 0).fill("")
+        isPatient: '',
+        basicInfo: Array(state.headers.basic?.length || 0).fill(''),
+        clinicalSymptoms: Array(state.headers.clinical?.length || 0).fill(''),
+        symptomOnset: '',
+        individualExposureTime: '',
+        dietInfo: Array(state.headers.diet?.length || 0).fill('')
       }));
       
       // 지정된 위치에 행 삽입
@@ -585,11 +638,11 @@ const store = createStore({
       const dietStartIndex =
         clinicalStartIndex + (state.headers.clinical?.length || 0) + 1;
       let currentHeaderArrayIndex = -1;
-      if (headerType === "basic")
+      if (headerType === 'basic')
         currentHeaderArrayIndex = startColIndex - basicStartIndex;
-      else if (headerType === "clinical")
+      else if (headerType === 'clinical')
         currentHeaderArrayIndex = startColIndex - clinicalStartIndex;
-      else if (headerType === "diet")
+      else if (headerType === 'diet')
         currentHeaderArrayIndex = startColIndex - dietStartIndex;
       if (currentHeaderArrayIndex < 0) return;
       for (let i = 0; i < data.length; i++) {
@@ -598,7 +651,7 @@ const store = createStore({
           targetIndex >= 0 &&
           targetIndex < state.headers[headerType].length
         ) {
-          state.headers[headerType][targetIndex] = data[i] ?? "";
+          state.headers[headerType][targetIndex] = data[i] ?? '';
         }
       }
     },
@@ -608,7 +661,7 @@ const store = createStore({
         if (cellIndex !== null && cellIndex !== undefined) {
           if (!state.rows[rowIndex][key]) state.rows[rowIndex][key] = [];
           while (state.rows[rowIndex][key].length <= cellIndex)
-            state.rows[rowIndex][key].push("");
+            state.rows[rowIndex][key].push('');
           state.rows[rowIndex][key][cellIndex] = value;
         } else {
           state.rows[rowIndex][key] = value;
@@ -645,8 +698,8 @@ const store = createStore({
      * 엑셀에서 읽어온 헤더로 전체 업데이트
      */
     UPDATE_HEADERS_FROM_EXCEL(state, headers) {
-      if (!headers || typeof headers !== "object") {
-        console.error("Invalid headers format");
+      if (!headers || typeof headers !== 'object') {
+        console.error('Invalid headers format');
         return;
       }
 
@@ -654,7 +707,7 @@ const store = createStore({
       state.headers = {
         basic: headers.basic || [],
         clinical: headers.clinical || [],
-        diet: headers.diet || [],
+        diet: headers.diet || []
       };
 
       // 기존 행들의 배열 크기를 새로운 헤더에 맞게 조정
@@ -662,14 +715,14 @@ const store = createStore({
         // basicInfo 배열 조정
         if (!row.basicInfo) row.basicInfo = [];
         while (row.basicInfo.length < state.headers.basic.length) {
-          row.basicInfo.push("");
+          row.basicInfo.push('');
         }
         row.basicInfo = row.basicInfo.slice(0, state.headers.basic.length);
 
         // clinicalSymptoms 배열 조정
         if (!row.clinicalSymptoms) row.clinicalSymptoms = [];
         while (row.clinicalSymptoms.length < state.headers.clinical.length) {
-          row.clinicalSymptoms.push("");
+          row.clinicalSymptoms.push('');
         }
         row.clinicalSymptoms = row.clinicalSymptoms.slice(
           0,
@@ -679,7 +732,7 @@ const store = createStore({
         // dietInfo 배열 조정
         if (!row.dietInfo) row.dietInfo = [];
         while (row.dietInfo.length < state.headers.diet.length) {
-          row.dietInfo.push("");
+          row.dietInfo.push('');
         }
         row.dietInfo = row.dietInfo.slice(0, state.headers.diet.length);
       });
@@ -690,7 +743,7 @@ const store = createStore({
      */
     ADD_ROWS_FROM_EXCEL(state, rows) {
       if (!rows || !Array.isArray(rows)) {
-        console.error("Invalid rows format");
+        console.error('Invalid rows format');
         return;
       }
 
@@ -705,12 +758,12 @@ const store = createStore({
       if (!row) return;
       
       // 행의 모든 데이터를 초기값으로 설정
-      row.isPatient = "";
-      row.basicInfo = Array(state.headers.basic?.length || 0).fill("");
-      row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill("");
-      row.symptomOnset = "";
-      row.individualExposureTime = "";
-      row.dietInfo = Array(state.headers.diet?.length || 0).fill("");
+      row.isPatient = '';
+      row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
+      row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
+      row.symptomOnset = '';
+      row.individualExposureTime = '';
+      row.dietInfo = Array(state.headers.diet?.length || 0).fill('');
     },
 
     // 여러 행 데이터 삭제 (연속 범위)
@@ -722,12 +775,12 @@ const store = createStore({
         if (!row) continue;
         
         // 각 행의 데이터를 초기값으로 설정
-        row.isPatient = "";
-        row.basicInfo = Array(state.headers.basic?.length || 0).fill("");
-        row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill("");
-        row.symptomOnset = "";
-        row.individualExposureTime = "";
-        row.dietInfo = Array(state.headers.diet?.length || 0).fill("");
+        row.isPatient = '';
+        row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
+        row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
+        row.symptomOnset = '';
+        row.individualExposureTime = '';
+        row.dietInfo = Array(state.headers.diet?.length || 0).fill('');
       }
     },
 
@@ -742,14 +795,67 @@ const store = createStore({
         if (!row) return;
         
         // 행의 모든 데이터를 초기값으로 설정
-        row.isPatient = "";
-        row.basicInfo = Array(state.headers.basic?.length || 0).fill("");
-        row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill("");
-        row.symptomOnset = "";
-        row.individualExposureTime = "";
-        row.dietInfo = Array(state.headers.diet?.length || 0).fill("");
+        row.isPatient = '';
+        row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
+        row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
+        row.symptomOnset = '';
+        row.individualExposureTime = '';
+        row.dietInfo = Array(state.headers.diet?.length || 0).fill('');
       });
     },
+
+    /* ===== Validation mutations ===== */
+    ADD_VALIDATION_ERROR(state, { rowIndex, colIndex, message }) {
+      const key = `${rowIndex}_${colIndex}`;
+      const newMap = new Map(state.validationState.errors);
+      newMap.set(key, { message, timestamp: Date.now() });
+      state.validationState.errors = newMap;
+      state.validationState.version++;
+      
+      // 유효성 검사 오류가 변경되면 자동 저장
+      if (window.storeBridge) {
+        window.storeBridge.saveCurrentState();
+      }
+    },
+    
+    REMOVE_VALIDATION_ERROR(state, { rowIndex, colIndex }) {
+      const key = `${rowIndex}_${colIndex}`;
+      if (!state.validationState.errors.has(key)) {
+        return;
+      }
+      const newMap = new Map(state.validationState.errors);
+      newMap.delete(key);
+      state.validationState.errors = newMap;
+      state.validationState.version++;
+      
+      // 유효성 검사 오류가 변경되면 자동 저장
+      if (window.storeBridge) {
+        window.storeBridge.saveCurrentState();
+      }
+    },
+    
+    CLEAR_VALIDATION_ERRORS(state) {
+      state.validationState.errors = new Map();
+      state.validationState.version++;
+      
+      // 유효성 검사 오류가 변경되면 자동 저장
+      if (window.storeBridge) {
+        window.storeBridge.saveCurrentState();
+      }
+    },
+    
+    SET_VALIDATION_ERRORS(state, errors) {
+      state.validationState.errors = errors;
+      state.validationState.version++;
+      
+      // 유효성 검사 오류가 변경되면 자동 저장
+      if (window.storeBridge) {
+        window.storeBridge.saveCurrentState();
+      }
+    },
+    SET_VALIDATION_VERSION(state, version) {
+      state.validationState.version = version;
+    }
   },
   actions: {
     // --- 기존 Actions (SAVE_HISTORY 호출 등 유지) ---
@@ -757,135 +863,135 @@ const store = createStore({
       // 새로운 시스템에서는 StoreBridge를 통해 데이터 로드
       // 이 액션은 App.vue에서만 호출되므로 기본 상태로 설정
       const initialState = createInitialState();
-      commit("SET_INITIAL_DATA", initialState);
-      commit("SET_INDIVIDUAL_EXPOSURE_COLUMN_VISIBILITY", false);
+      commit('SET_INITIAL_DATA', initialState);
+      commit('SET_INDIVIDUAL_EXPOSURE_COLUMN_VISIBILITY', false);
     },
     addRows({ commit }, count) {
-      commit("ADD_ROWS", count);
+      commit('ADD_ROWS', count);
     },
     addColumn({ commit }, type) {
-      commit("ADD_COLUMN", type);
+      commit('ADD_COLUMN', type);
     },
     addMultipleColumns({ commit }, { type, count }) {
-      commit("ADD_MULTIPLE_COLUMNS", { type, count });
+      commit('ADD_MULTIPLE_COLUMNS', { type, count });
     },
     insertColumnAt({ commit }, { type, index }) {
-      commit("INSERT_COLUMN_AT", { type, index });
+      commit('INSERT_COLUMN_AT', { type, index });
     },
     insertMultipleColumnsAt({ commit }, { type, count, index }) {
-      commit("INSERT_MULTIPLE_COLUMNS_AT", { type, count, index });
+      commit('INSERT_MULTIPLE_COLUMNS_AT', { type, count, index });
     },
     deleteColumn({ commit }, type) {
-      commit("DELETE_COLUMN", type);
+      commit('DELETE_COLUMN', type);
     },
     deleteColumnByIndex({ commit }, { type, index }) {
-      commit("DELETE_COLUMN_BY_INDEX", { type, index });
+      commit('DELETE_COLUMN_BY_INDEX', { type, index });
     },
     deleteMultipleColumnsByIndex({ commit }, { columns }) {
-      commit("DELETE_MULTIPLE_COLUMNS_BY_INDEX", { columns });
+      commit('DELETE_MULTIPLE_COLUMNS_BY_INDEX', { columns });
     },
     clearColumnData({ commit }, { type, index }) {
-      commit("CLEAR_COLUMN_DATA", { type, index });
+      commit('CLEAR_COLUMN_DATA', { type, index });
     },
     clearMultipleColumnsData({ commit }, { columns }) {
-      commit("CLEAR_MULTIPLE_COLUMNS_DATA", { columns });
+      commit('CLEAR_MULTIPLE_COLUMNS_DATA', { columns });
     },
     clearFixedColumnData({ commit }, { type }) {
-      commit("CLEAR_FIXED_COLUMN_DATA", { type });
+      commit('CLEAR_FIXED_COLUMN_DATA', { type });
     },
     updateHeader({ commit }, payload) {
-      commit("UPDATE_HEADER", payload);
+      commit('UPDATE_HEADER', payload);
     },
     updateCell({ commit }, payload) {
-      commit("UPDATE_CELL", payload);
+      commit('UPDATE_CELL', payload);
     },
     handleEnter(context, { rowIndex, key, cellIndex }) {
       const getColumnIndex = (k, cIdx) => {
         switch (k) {
-          case "isPatient":
-            return 1;
-          case "basicInfo":
-            return context.getters.basicInfoStartIndex + cIdx;
-          case "clinicalSymptoms":
-            return context.getters.clinicalSymptomsStartIndex + cIdx;
-          case "symptomOnset":
-            return context.getters.symptomOnsetStartIndex;
-          case "individualExposureTime":
-            return context.getters.individualExposureTimeStartIndex;
-          case "dietInfo":
-            return context.getters.dietInfoStartIndex + cIdx;
-          default:
-            return -1;
+        case 'isPatient':
+          return 1;
+        case 'basicInfo':
+          return context.getters.basicInfoStartIndex + cIdx;
+        case 'clinicalSymptoms':
+          return context.getters.clinicalSymptomsStartIndex + cIdx;
+        case 'symptomOnset':
+          return context.getters.symptomOnsetStartIndex;
+        case 'individualExposureTime':
+          return context.getters.individualExposureTimeStartIndex;
+        case 'dietInfo':
+          return context.getters.dietInfoStartIndex + cIdx;
+        default:
+          return -1;
         }
       };
       const currentColumnIndex = getColumnIndex(key, cellIndex);
       if (currentColumnIndex === -1) return;
       const nextRowIndex = rowIndex + 1;
       if (nextRowIndex < context.state.rows.length) {
-        context.commit("FOCUS_NEXT_CELL", {
+        context.commit('FOCUS_NEXT_CELL', {
           rowIndex: nextRowIndex,
-          columnIndex: currentColumnIndex,
+          columnIndex: currentColumnIndex
         });
       } else {
-        context.dispatch("addRows", 1).then(() => {
+        context.dispatch('addRows', 1).then(() => {
           setTimeout(() => {
-            context.commit("FOCUS_NEXT_CELL", {
+            context.commit('FOCUS_NEXT_CELL', {
               rowIndex: nextRowIndex,
-              columnIndex: currentColumnIndex,
+              columnIndex: currentColumnIndex
             });
           }, 0);
         });
       }
     },
     deleteEmptyRows({ commit }) {
-      commit("DELETE_EMPTY_ROWS");
+      commit('DELETE_EMPTY_ROWS');
     },
     deleteEmptyColumns({ commit }) {
-      commit("DELETE_EMPTY_COLUMNS");
+      commit('DELETE_EMPTY_COLUMNS');
     },
     resetSheet({ commit }) {
       const { headers, rows } = createInitialState();
-      commit("SET_INITIAL_DATA", { headers, rows });
+      commit('SET_INITIAL_DATA', { headers, rows });
     },
     pasteData({ commit }, payload) {
-      commit("PASTE_DATA", payload);
+      commit('PASTE_DATA', payload);
     },
     deleteRow({ commit }, rowIndex) {
-      commit("DELETE_ROW", rowIndex);
-      commit("CLEAR_DELETED_ROW_INDEX");
+      commit('DELETE_ROW', rowIndex);
+      commit('CLEAR_DELETED_ROW_INDEX');
     },
     deleteMultipleRows({ commit }, { startRow, endRow }) {
-      commit("DELETE_MULTIPLE_ROWS", { startRow, endRow });
-      commit("CLEAR_DELETED_ROW_INDEX");
+      commit('DELETE_MULTIPLE_ROWS', { startRow, endRow });
+      commit('CLEAR_DELETED_ROW_INDEX');
     },
     deleteIndividualRows({ commit }, { rows }) {
-      commit("DELETE_INDIVIDUAL_ROWS", { rows });
-      commit("CLEAR_DELETED_ROW_INDEX");
+      commit('DELETE_INDIVIDUAL_ROWS', { rows });
+      commit('CLEAR_DELETED_ROW_INDEX');
     },
     insertRowAt({ commit }, { index, count = 1 }) {
-      commit("INSERT_ROW_AT", { index, count });
+      commit('INSERT_ROW_AT', { index, count });
     },
     pasteHeaderData({ commit }, payload) {
-      commit("PASTE_HEADER_DATA", payload);
+      commit('PASTE_HEADER_DATA', payload);
     },
     updateCellsBatch({ commit }, updates) {
-      commit("UPDATE_CELLS_BATCH", updates);
+      commit('UPDATE_CELLS_BATCH', updates);
     },
 
 
     // --- 유행곡선 탭 관련 Actions 추가 ---
     updateSymptomInterval({ commit }, value) {
       // 이 설정 변경은 Undo/Redo 대상이 아님
-      commit("SET_SYMPTOM_INTERVAL", value);
+      commit('SET_SYMPTOM_INTERVAL', value);
       // 이 설정값을 localStorage에 저장할 필요가 있다면 여기에 로직 추가
       // 예: storage.save({...state, selectedSymptomInterval: value }); (save 함수 수정 필요)
     },
     updateExposureDateTime({ commit }, value) {
-      commit("SET_EXPOSURE_DATETIME", value);
+      commit('SET_EXPOSURE_DATETIME', value);
       // 필요하다면 localStorage 저장 로직 추가
     },
     updateIncubationInterval({ commit }, value) {
-      commit("SET_INCUBATION_INTERVAL", value);
+      commit('SET_INCUBATION_INTERVAL', value);
       // 필요하다면 localStorage 저장 로직 추가
     },
     toggleIndividualExposureColumn({ commit }) {
@@ -906,14 +1012,14 @@ const store = createStore({
      */
     updateHeadersFromExcel({ commit }, headers) {
       // 새 헤더로 업데이트
-      commit("UPDATE_HEADERS_FROM_EXCEL", headers);
+      commit('UPDATE_HEADERS_FROM_EXCEL', headers);
     },
 
     /**
      * 엑셀에서 읽어온 데이터로 행 추가
      */
     addRowsFromExcel({ commit }, rows) {
-      commit("ADD_ROWS_FROM_EXCEL", rows);
+      commit('ADD_ROWS_FROM_EXCEL', rows);
     },
 
     /**
@@ -921,25 +1027,25 @@ const store = createStore({
      */
     updateHeadersBatch({ commit }, headerUpdates) {
       headerUpdates.forEach(update => {
-        commit("UPDATE_HEADER", update);
+        commit('UPDATE_HEADER', update);
       });
     },
 
     // 행 데이터 삭제 (행은 유지, 데이터만 초기화)
     clearRowData({ commit }, { rowIndex }) {
-      commit("CLEAR_ROW_DATA", { rowIndex });
+      commit('CLEAR_ROW_DATA', { rowIndex });
     },
 
     // 여러 행 데이터 삭제 (연속 범위)
     clearMultipleRowsData({ commit }, { startRow, endRow }) {
-      commit("CLEAR_MULTIPLE_ROWS_DATA", { startRow, endRow });
+      commit('CLEAR_MULTIPLE_ROWS_DATA', { startRow, endRow });
     },
 
     // 개별 선택된 행들 데이터 삭제
     clearIndividualRowsData({ commit }, { rowIndices }) {
-      commit("CLEAR_INDIVIDUAL_ROWS_DATA", { rowIndices });
-    },
-  },
+      commit('CLEAR_INDIVIDUAL_ROWS_DATA', { rowIndices });
+    }
+  }
 });
 
 export default store;

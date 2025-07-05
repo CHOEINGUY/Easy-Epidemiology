@@ -5,7 +5,7 @@ const state = reactive({
   x: 0,
   y: 0,
   items: [],
-  target: null, // 우클릭된 대상 정보 { rowIndex, colIndex, type }
+  target: null // 우클릭된 대상 정보 { rowIndex, colIndex, type }
 });
 
 export function useContextMenu() {
@@ -36,6 +36,6 @@ export function useContextMenu() {
   return {
     contextMenuState: readonly(state),
     showContextMenu,
-    hideContextMenu,
+    hideContextMenu
   };
 } 

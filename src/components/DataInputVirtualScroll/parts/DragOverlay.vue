@@ -15,7 +15,7 @@ import { defineProps } from 'vue';
 
 defineProps({
   visible: { type: Boolean, default: false },
-  progress: { type: Number, default: 0 },
+  progress: { type: Number, default: 0 }
 });
 </script>
 

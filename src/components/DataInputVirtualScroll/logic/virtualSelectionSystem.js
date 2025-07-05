@@ -12,7 +12,7 @@ export function useVirtualSelectionSystem() {
     /** 드래그 중인 범위 */
     selectedRange: {
       start: { rowIndex: null, colIndex: null },
-      end: { rowIndex: null, colIndex: null },
+      end: { rowIndex: null, colIndex: null }
     },
     /** 드래그 중인지 여부 */
     isDragging: false,
@@ -29,7 +29,7 @@ export function useVirtualSelectionSystem() {
     selectedCellsIndividual: new Set(), // key: `${r}_${c}`
 
     /** Ctrl+Click 등으로 개별 선택된 행 집합 (serial 열 클릭) */
-    selectedRowsIndividual: new Set(), // value: rowIndex
+    selectedRowsIndividual: new Set() // value: rowIndex
   });
 
   /**
@@ -42,7 +42,7 @@ export function useVirtualSelectionSystem() {
     state.selectionAnchor = { rowIndex, colIndex };
     state.selectedRange = {
       start: { rowIndex, colIndex },
-      end: { rowIndex, colIndex },
+      end: { rowIndex, colIndex }
     };
     console.log(`[VirtualSelection] Cell selected: ${rowIndex}, ${colIndex}`);
   }
@@ -135,7 +135,7 @@ export function useVirtualSelectionSystem() {
     state.selectionAnchor = { rowIndex: null, colIndex: null };
     state.selectedRange = {
       start: { rowIndex: null, colIndex: null },
-      end: { rowIndex: null, colIndex: null },
+      end: { rowIndex: null, colIndex: null }
     };
     state.selectedCellsIndividual.clear();
     state.selectedRowsIndividual.clear();
@@ -338,7 +338,7 @@ export function useVirtualSelectionSystem() {
     toggleIndividualCell,
     toggleIndividualRow,
     selectRowRange,
-    clearIndividualSelections,
+    clearIndividualSelections
   };
 }
 

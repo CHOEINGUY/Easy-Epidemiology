@@ -15,26 +15,26 @@ export function processExcelFile(file, onProgress = () => {}) {
       .then((buffer) => {
         // Dynamically create worker
         const worker = new Worker(new URL('../workers/excelWorker.js', import.meta.url), {
-          type: 'module',
+          type: 'module'
         });
 
         worker.onmessage = (e) => {
           const { type, data, progress, error } = e.data || {};
           switch (type) {
-            case 'progress':
-              onProgress(progress);
-              break;
-            case 'complete':
-              onProgress(100);
-              worker.terminate();
-              resolve(data);
-              break;
-            case 'error':
-              worker.terminate();
-              reject(new Error(error || 'Excel 파싱 실패'));
-              break;
-            default:
-              break;
+          case 'progress':
+            onProgress(progress);
+            break;
+          case 'complete':
+            onProgress(100);
+            worker.terminate();
+            resolve(data);
+            break;
+          case 'error':
+            worker.terminate();
+            reject(new Error(error || 'Excel 파싱 실패'));
+            break;
+          default:
+            break;
           }
         };
 

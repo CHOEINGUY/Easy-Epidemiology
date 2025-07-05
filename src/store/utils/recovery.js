@@ -9,9 +9,9 @@
  */
 export function createDefaultHeaders() {
   return {
-    basic: ["", ""],
-    clinical: ["", "", "", "", ""],
-    diet: Array(30).fill("")
+    basic: ['', ''],
+    clinical: ['', '', '', '', ''],
+    diet: Array(30).fill('')
   };
 }
 
@@ -22,12 +22,12 @@ export function createDefaultHeaders() {
  */
 export function createDefaultRow(headers) {
   return {
-    isPatient: "",
-    basicInfo: Array(headers?.basic?.length || 2).fill(""),
-    clinicalSymptoms: Array(headers?.clinical?.length || 5).fill(""),
-    symptomOnset: "",
-    individualExposureTime: "",
-    dietInfo: Array(headers?.diet?.length || 30).fill("")
+    isPatient: '',
+    basicInfo: Array(headers?.basic?.length || 2).fill(''),
+    clinicalSymptoms: Array(headers?.clinical?.length || 5).fill(''),
+    symptomOnset: '',
+    individualExposureTime: '',
+    dietInfo: Array(headers?.diet?.length || 30).fill('')
   };
 }
 
@@ -42,8 +42,8 @@ export function createDefaultData() {
   return {
     version: '1.0',
     timestamp: Date.now(),
-    headers: headers,
-    rows: rows,
+    headers,
+    rows,
     settings: { 
       isIndividualExposureColumnVisible: false 
     }
@@ -62,15 +62,15 @@ export function repairHeaders(headers) {
   }
   
   const repaired = {
-    basic: Array.isArray(headers.basic) ? headers.basic : ["", ""],
-    clinical: Array.isArray(headers.clinical) ? headers.clinical : ["", "", "", "", ""],
-    diet: Array.isArray(headers.diet) ? headers.diet : Array(30).fill("")
+    basic: Array.isArray(headers.basic) ? headers.basic : ['', ''],
+    clinical: Array.isArray(headers.clinical) ? headers.clinical : ['', '', '', '', ''],
+    diet: Array.isArray(headers.diet) ? headers.diet : Array(30).fill('')
   };
   
   // 빈 배열이거나 null/undefined 값들을 빈 문자열로 정규화
-  repaired.basic = repaired.basic.map(item => item || "");
-  repaired.clinical = repaired.clinical.map(item => item || "");
-  repaired.diet = repaired.diet.map(item => item || "");
+  repaired.basic = repaired.basic.map(item => item || '');
+  repaired.clinical = repaired.clinical.map(item => item || '');
+  repaired.diet = repaired.diet.map(item => item || '');
   
   return repaired;
 }
@@ -94,15 +94,15 @@ export function repairRows(rows, headers) {
     }
     
     const repairedRow = {
-      isPatient: row.isPatient || "",
+      isPatient: row.isPatient || '',
       basicInfo: Array.isArray(row.basicInfo) ? 
-        row.basicInfo : Array(headers?.basic?.length || 2).fill(""),
+        row.basicInfo : Array(headers?.basic?.length || 2).fill(''),
       clinicalSymptoms: Array.isArray(row.clinicalSymptoms) ? 
-        row.clinicalSymptoms : Array(headers?.clinical?.length || 5).fill(""),
-      symptomOnset: row.symptomOnset || "",
-      individualExposureTime: row.individualExposureTime || "",
+        row.clinicalSymptoms : Array(headers?.clinical?.length || 5).fill(''),
+      symptomOnset: row.symptomOnset || '',
+      individualExposureTime: row.individualExposureTime || '',
       dietInfo: Array.isArray(row.dietInfo) ? 
-        row.dietInfo : Array(headers?.diet?.length || 30).fill("")
+        row.dietInfo : Array(headers?.diet?.length || 30).fill('')
     };
     
     // 배열 길이를 헤더에 맞게 조정
@@ -131,14 +131,14 @@ export function repairRows(rows, headers) {
  */
 function adjustArrayLength(array, targetLength) {
   if (!Array.isArray(array)) {
-    return Array(targetLength).fill("");
+    return Array(targetLength).fill('');
   }
   
   const adjusted = [...array];
   
   // 길이가 부족하면 빈 문자열로 채움
   while (adjusted.length < targetLength) {
-    adjusted.push("");
+    adjusted.push('');
   }
   
   // 길이가 초과하면 자름
@@ -147,7 +147,7 @@ function adjustArrayLength(array, targetLength) {
   }
   
   // null/undefined 값을 빈 문자열로 변환
-  return adjusted.map(item => item || "");
+  return adjusted.map(item => item || '');
 }
 
 /**
@@ -200,9 +200,9 @@ export function repairData(rawData) {
  */
 export function safeLoadFromStorage() {
   try {
-    const headersData = localStorage.getItem("headers");
-    const rowsData = localStorage.getItem("rows");
-    const visibilityData = localStorage.getItem("isIndividualExposureColumnVisible");
+    const headersData = localStorage.getItem('headers');
+    const rowsData = localStorage.getItem('rows');
+    const visibilityData = localStorage.getItem('isIndividualExposureColumnVisible');
     
     if (!headersData || !rowsData) {
       console.warn('[Recovery] localStorage에 데이터가 없어 기본값을 사용합니다.');
@@ -215,8 +215,8 @@ export function safeLoadFromStorage() {
       JSON.parse(visibilityData) : false;
     
     const rawData = {
-      headers: headers,
-      rows: rows,
+      headers,
+      rows,
       settings: { isIndividualExposureColumnVisible }
     };
     
@@ -277,7 +277,7 @@ export function validateDataIntegrity(data) {
   
   return {
     valid: issues.length === 0,
-    issues: issues
+    issues
   };
 }
 

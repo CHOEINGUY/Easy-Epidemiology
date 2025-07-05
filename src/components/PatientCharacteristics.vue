@@ -208,9 +208,9 @@
 
 <script setup>
 // === 원본 스크립트 ===
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
-import { useStore } from "vuex";
-import * as echarts from "echarts";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { useStore } from 'vuex';
+import * as echarts from 'echarts';
 // === 원본 스크립트 끝 ===
 
 // +++ 신규: lodash-es 임포트 +++
@@ -222,16 +222,16 @@ const store = useStore();
 const headers = computed(() => store.getters.headers || { basic: [] }); // 기본값 보강
 const rows = computed(() => store.getters.rows || []); // 기본값 보강
 const selectedVariableIndex = ref(null);
-const selectedChartType = ref("total");
-const selectedDataType = ref("count"); // 'count' | 'percentage'
+const selectedChartType = ref('total');
+const selectedDataType = ref('count'); // 'count' | 'percentage'
 const chartInstance = ref(null);
 const chartContainer = ref(null);
 const fontSizes = [12, 15, 18, 21, 24];
 const chartWidths = [500, 700, 900, 1100];
 const barWidthPercents = [30, 50, 70];
 const barColors = [
-  "#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de",
-  "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc",
+  '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
+  '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'
 ];
 const chartFontSize = ref(18);
 const chartWidth = ref(700);
@@ -251,11 +251,11 @@ const tooltipText = ref('');
 
 // +++ 신규: 툴팁 제어 함수 +++
 const showTooltip = (key, text) => {
-    activeTooltip.value = key;
-    tooltipText.value = text;
+  activeTooltip.value = key;
+  tooltipText.value = text;
 };
 const hideTooltip = () => {
-    activeTooltip.value = null;
+  activeTooltip.value = null;
 };
 
 // === 원본 스크립트 ===
@@ -306,11 +306,11 @@ const filteredRows = computed(() => {
   return currentRows.filter((row) => {
     if (!row) return false;
     return (
-      (row.isPatient !== undefined && row.isPatient !== "") ||
-      (row.basicInfo && row.basicInfo.some(cell => cell !== "" && cell !== null && cell !== undefined)) ||
-      (row.clinicalSymptoms && row.clinicalSymptoms.some(cell => cell !== "" && cell !== null && cell !== undefined)) ||
-      (row.symptomOnset !== undefined && row.symptomOnset !== "") ||
-      (row.dietInfo && row.dietInfo.some(cell => cell !== "" && cell !== null && cell !== undefined))
+      (row.isPatient !== undefined && row.isPatient !== '') ||
+      (row.basicInfo && row.basicInfo.some(cell => cell !== '' && cell !== null && cell !== undefined)) ||
+      (row.clinicalSymptoms && row.clinicalSymptoms.some(cell => cell !== '' && cell !== null && cell !== undefined)) ||
+      (row.symptomOnset !== undefined && row.symptomOnset !== '') ||
+      (row.dietInfo && row.dietInfo.some(cell => cell !== '' && cell !== null && cell !== undefined))
     );
   });
 });
@@ -323,7 +323,7 @@ const totalPatients = computed(() => {
   
   let count = 0;
   for (const row of currentRows) {
-    if (row && String(row.isPatient) === "1") {
+    if (row && String(row.isPatient) === '1') {
       count++;
     }
   }
@@ -333,26 +333,26 @@ const frequencyData = computed(() => { // 원본 로직 유지
   if (!headers.value?.basic || !Array.isArray(headers.value.basic)) return [];
   const currentFilteredRows = filteredRows.value;
   const currentTotalParticipants = totalParticipants.value;
-  const currentTotalPatients = totalPatients.value;
   return headers.value.basic.map((header, headerIndex) => {
     const categories = {};
     currentFilteredRows.forEach((row) => {
       if (!row?.basicInfo || headerIndex >= row.basicInfo.length) return;
       const value = row.basicInfo[headerIndex];
-      if (value === "" || value === null || value === undefined) return;
+      if (value === '' || value === null || value === undefined) return;
       const categoryKey = String(value);
       if (!categories[categoryKey]) {
         categories[categoryKey] = { count: 0, patientCount: 0 };
       }
       categories[categoryKey].count++;
-      if (String(row.isPatient) === "1") {
+      if (String(row.isPatient) === '1') {
         categories[categoryKey].patientCount++;
       }
     });
     for (const category in categories) {
       const data = categories[category]; // 변수 선언
       data.totalPercentage = currentTotalParticipants > 0 ? (data.count / currentTotalParticipants) * 100 : 0;
-      data.patientPercentage = currentTotalPatients > 0 ? (data.patientCount / currentTotalPatients) * 100 : 0;
+      // 환자비율 수정: 해당 카테고리의 전체 대상자 중 환자 비율
+      data.patientPercentage = data.count > 0 ? (data.patientCount / data.count) * 100 : 0;
     }
     const sortedCategories = {};
     Object.keys(categories)
@@ -389,13 +389,13 @@ const currentCategories = computed(() => {
 
 // +++ 신규: 라벨 매핑 적용 헬퍼 함수 +++
 const getMappedLabel = (originalCat) => {
-    if (Object.prototype.hasOwnProperty.call(labelMappings.value, originalCat)) {
-        const mapped = labelMappings.value[originalCat];
-        if (mapped && String(mapped).trim()) {
-            return String(mapped).trim();
-        }
+  if (Object.prototype.hasOwnProperty.call(labelMappings.value, originalCat)) {
+    const mapped = labelMappings.value[originalCat];
+    if (mapped && String(mapped).trim()) {
+      return String(mapped).trim();
     }
-    return originalCat;
+  }
+  return originalCat;
 };
 
 
@@ -407,42 +407,42 @@ const getMappedLabel = (originalCat) => {
 const updateCharts = () => {
   if (!chartInstance.value || selectedVariableIndex.value === null) return;
   if (!headers.value?.basic || !frequencyData.value || frequencyData.value.length <= selectedVariableIndex.value) {
-    console.warn("차트 업데이트 건너뛰기: 데이터 준비 안됨"); 
+    console.warn('차트 업데이트 건너뛰기: 데이터 준비 안됨'); 
     return;
   }
   
-  const header = headers.value.basic[selectedVariableIndex.value] || "(없음)";
+  const header = headers.value.basic[selectedVariableIndex.value] || '(없음)';
   const data = frequencyData.value[selectedVariableIndex.value];
   
   // 데이터가 비어있으면 업데이트 건너뛰기
   if (!data || Object.keys(data).length === 0) {
-    console.warn("차트 업데이트 건너뛰기: 빈 데이터");
+    console.warn('차트 업데이트 건너뛰기: 빈 데이터');
     return;
   }
   
-  let options = selectedChartType.value === "total"
-                  ? generateTotalChartOptions(header, data, selectedDataType.value)
-                  : generatePatientChartOptions(header, data, selectedDataType.value);
+  const options = selectedChartType.value === 'total'
+    ? generateTotalChartOptions(header, data, selectedDataType.value)
+    : generatePatientChartOptions(header, data, selectedDataType.value);
   
   try {
-    if (chartInstance.value && typeof chartInstance.value.setOption === "function") {
+    if (chartInstance.value && typeof chartInstance.value.setOption === 'function') {
       // notMerge: false로 설정하여 기존 옵션과 병합 (성능 향상)
       chartInstance.value.setOption(options, false);
-      console.log("Chart options updated efficiently.");
+      console.log('Chart options updated efficiently.');
     } else { 
-      console.error("차트 인스턴스 유효하지 않음"); 
+      console.error('차트 인스턴스 유효하지 않음'); 
     }
   } catch (error) { 
-    console.error("ECharts setOption 오류:", error, options); 
+    console.error('ECharts setOption 오류:', error, options); 
   }
 };
 
 // --- 차트 재생성 함수 ---
 const recreateChart = () => { // 원본 로직 유지
-  console.log("Attempting to recreate chart...");
-  if (chartInstance.value && typeof chartInstance.value.dispose === "function") {
-    try { chartInstance.value.dispose(); console.log("Previous chart instance disposed."); }
-    catch (e) { console.error("Error disposing chart instance:", e); }
+  console.log('Attempting to recreate chart...');
+  if (chartInstance.value && typeof chartInstance.value.dispose === 'function') {
+    try { chartInstance.value.dispose(); console.log('Previous chart instance disposed.'); }
+    catch (e) { console.error('Error disposing chart instance:', e); }
     finally { chartInstance.value = null; }
   }
   nextTick(() => {
@@ -450,10 +450,10 @@ const recreateChart = () => { // 원본 로직 유지
       try {
         console.log(`Initializing new chart in container with width: ${chartContainer.value.offsetWidth}px`);
         chartInstance.value = echarts.init(chartContainer.value);
-        console.log("New chart instance initialized.");
+        console.log('New chart instance initialized.');
         updateCharts(); // 원본 로직 유지 (updateCharts 호출)
-      } catch (error) { console.error("ECharts 재초기화 실패:", error); alert("차트를 다시 그리는 중 오류가 발생했습니다."); }
-    } else { console.error("차트 컨테이너 DOM 요소를 찾을 수 없습니다."); }
+      } catch (error) { console.error('ECharts 재초기화 실패:', error); alert('차트를 다시 그리는 중 오류가 발생했습니다.'); }
+    } else { console.error('차트 컨테이너 DOM 요소를 찾을 수 없습니다.'); }
   });
 };
 // === 원본 스크립트 끝 ===
@@ -461,12 +461,12 @@ const recreateChart = () => { // 원본 로직 유지
 
 // +++ 신규: 차트 업데이트 트리거 함수 (성능 최적화) +++
 const triggerChartUpdate = debounce(() => {
-    console.log("Debounced chart update triggered.");
-    if (chartInstance.value && selectedVariableIndex.value !== null) {
-         updateCharts();
-    } else {
-        console.log("Chart instance not found or no variable selected, skipping update trigger.");
-    }
+  console.log('Debounced chart update triggered.');
+  if (chartInstance.value && selectedVariableIndex.value !== null) {
+    updateCharts();
+  } else {
+    console.log('Chart instance not found or no variable selected, skipping update trigger.');
+  }
 }, 200); // 200ms로 단축하여 더 빠른 반응성
 
 
@@ -474,10 +474,10 @@ const triggerChartUpdate = debounce(() => {
 // --- 차트 리사이즈 핸들러 (성능 최적화) ---
 const handleResize = debounce(() => {
   if (chartInstance.value && 
-      typeof chartInstance.value.resize === "function" && 
+      typeof chartInstance.value.resize === 'function' && 
       selectedVariableIndex.value !== null) {
     try { 
-      console.log("Resizing chart due to window resize..."); 
+      console.log('Resizing chart due to window resize...'); 
       chartInstance.value.resize({
         animation: {
           duration: 200,
@@ -486,7 +486,7 @@ const handleResize = debounce(() => {
       });
     }
     catch (error) { 
-      console.error("ECharts resize 오류 (window):", error); 
+      console.error('ECharts resize 오류 (window):', error); 
     }
   }
 }, 150); // 150ms로 단축하여 더 빠른 반응성
@@ -497,29 +497,29 @@ const handleResize = debounce(() => {
 // --- 차트 내보내기/복사 함수 수정 ---
 const exportChart = async () => {
   const instance = chartInstance.value;
-  if (!instance || typeof instance.getDataURL !== "function") {
-    alert("차트 내보내기 불가");
+  if (!instance || typeof instance.getDataURL !== 'function') {
+    alert('차트 내보내기 불가');
     return;
   }
-  const header = headers.value?.basic?.[selectedVariableIndex.value] || "(없음)";
-  const chartKind = selectedChartType.value === "total" ? "전체" : "환자";
+  const header = headers.value?.basic?.[selectedVariableIndex.value] || '(없음)';
+  const chartKind = selectedChartType.value === 'total' ? '전체' : '환자';
   const filename = `${header}_${chartKind}_분포_고화질.png`;
   try {
     const dataUrl = instance.getDataURL({
-      type: "png",
+      type: 'png',
       pixelRatio: 3,
-      backgroundColor: "#fff",
+      backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith("data:image/png"))
-      throw new Error("유효하지 않은 이미지 데이터 URL");
-    const link = document.createElement("a");
+    if (!dataUrl || !dataUrl.startsWith('data:image/png'))
+      throw new Error('유효하지 않은 이미지 데이터 URL');
+    const link = document.createElement('a');
     link.href = dataUrl;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   } catch (error) {
-    console.error("차트 내보내기 오류:", error);
+    console.error('차트 내보내기 오류:', error);
     alert(`차트 내보내기 오류: ${error.message}`);
   }
 };
@@ -601,7 +601,7 @@ const copyTableToClipboard = async () => {
 
 const copyChartToClipboard = async () => {
   const instance = chartInstance.value;
-  if (!instance || typeof instance.getDataURL !== "function") {
+  if (!instance || typeof instance.getDataURL !== 'function') {
     isChartCopied.value = false;
     return;
   }
@@ -609,22 +609,22 @@ const copyChartToClipboard = async () => {
     isChartCopied.value = false;
     return;
   }
-  if (typeof ClipboardItem === "undefined") {
+  if (typeof ClipboardItem === 'undefined') {
     isChartCopied.value = false;
     return;
   }
   try {
     const dataUrl = instance.getDataURL({
-      type: "png",
+      type: 'png',
       pixelRatio: 3,
-      backgroundColor: "#fff",
+      backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith("data:image/png")) throw new Error("유효하지 않은 이미지 데이터 URL");
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) throw new Error('유효하지 않은 이미지 데이터 URL');
     const response = await fetch(dataUrl);
     if (!response.ok) throw new Error(`이미지 로드 실패: ${response.statusText}`);
     const blob = await response.blob();
     await navigator.clipboard.write([
-      new ClipboardItem({ [blob.type]: blob }),
+      new ClipboardItem({ [blob.type]: blob })
     ]);
     isChartCopied.value = true;
     setTimeout(() => (isChartCopied.value = false), 1500);
@@ -641,22 +641,22 @@ onMounted(() => { // 원본 로직 유지
   if (selectedVariableIndex.value !== null) {
     recreateChart();
   }
-  window.addEventListener("resize", handleResize);
+  window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => { // 메모리 누수 방지 강화
   // 이벤트 리스너 제거
-  window.removeEventListener("resize", handleResize);
+  window.removeEventListener('resize', handleResize);
   
   // 차트 인스턴스 정리
-  if (chartInstance.value && typeof chartInstance.value.dispose === "function") {
+  if (chartInstance.value && typeof chartInstance.value.dispose === 'function') {
     try { 
       chartInstance.value.dispose(); 
       chartInstance.value = null; 
-      console.log("ECharts 인스턴스 정리 완료."); 
+      console.log('ECharts 인스턴스 정리 완료.'); 
     }
     catch (error) { 
-      console.error("ECharts 인스턴스 정리 오류:", error); 
+      console.error('ECharts 인스턴스 정리 오류:', error); 
     }
   }
   
@@ -671,7 +671,7 @@ onUnmounted(() => { // 메모리 누수 방지 강화
   // 참조 정리
   chartContainer.value = null;
   
-  console.log("컴포넌트 cleanup 완료");
+  console.log('컴포넌트 cleanup 완료');
 });
 // === 원본 스크립트 끝 ===
 
@@ -692,7 +692,7 @@ const generateGradientColors = (baseColor) => {
   
   // RGB를 HEX로 변환
   const rgb2hex = (r, g, b) => {
-    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
   };
   
   // 밝기 조절 함수
@@ -754,7 +754,7 @@ const cycleHighlight = () => {
 
 // --- 차트 옵션 생성 함수 (수정됨: 라벨 매핑 적용, 강조 기능 추가) ---
 const generateTotalChartOptions = (header, data, dataType = 'count') => { // 원본 함수 구조 유지, 내부 수정
-  if (!data || typeof data !== "object" || Object.keys(data).length === 0) {
+  if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
     // 원본 데이터 없음 처리
     return { /* ... */ };
   }
@@ -797,24 +797,24 @@ const generateTotalChartOptions = (header, data, dataType = 'count') => { // 원
       fontFamily: 'Noto Sans KR, sans-serif'
     },
     title: { 
-      text: `전체 대상자 ${header || "(알 수 없음)"} 분포 ${dataType === 'percentage' ? '(비율)' : '(수)'}`, 
-      left: "center", 
+      text: `전체 대상자 ${header || '(알 수 없음)'} 분포 ${dataType === 'percentage' ? '(비율)' : '(수)'}`, 
+      left: 'center', 
       textStyle: { 
         fontSize: chartFontSize.value, 
         fontFamily: 'Noto Sans KR, sans-serif' 
       }
     },
     tooltip: {
-      trigger: "axis", axisPointer: { type: "shadow" },
-      formatter: function (params) {
-        if (!params || params.length === 0) return "";
+      trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter (params) {
+        if (!params || params.length === 0) return '';
         const param = params[0];
         const dataIndex = param.dataIndex;
         const originalCategory = originalCategories[dataIndex];
         const displayLabel = getMappedLabel(originalCategory);
         const categoryData = data[originalCategory];
 
-        if (!categoryData) return "";
+        if (!categoryData) return '';
         
         const value = param.value;
         const seriesName = param.seriesName;
@@ -822,57 +822,57 @@ const generateTotalChartOptions = (header, data, dataType = 'count') => { // 원
         let tooltipText = `<strong>${displayLabel}</strong><br/>`;
 
         if (dataType === 'percentage') {
-            tooltipText += `${seriesName}: <strong>${value}</strong>%`;
-            if (categoryData.count !== undefined) {
-                tooltipText += ` (${categoryData.count}명)`;
-            }
+          tooltipText += `${seriesName}: <strong>${value}</strong>%`;
+          if (categoryData.count !== undefined) {
+            tooltipText += ` (${categoryData.count}명)`;
+          }
         } else { // count
-            tooltipText += `${seriesName}: <strong>${value}</strong>명`;
-            if (categoryData.totalPercentage !== undefined) {
-                tooltipText += ` (${categoryData.totalPercentage.toFixed(1)}%)`;
-            }
+          tooltipText += `${seriesName}: <strong>${value}</strong>명`;
+          if (categoryData.totalPercentage !== undefined) {
+            tooltipText += ` (${categoryData.totalPercentage.toFixed(1)}%)`;
+          }
         }
         return tooltipText;
-      },
+      }
     },
     legend: { 
       data: [{
-        name: dataType === 'percentage' ? "대상자 비율" : "대상자 수",
+        name: dataType === 'percentage' ? '대상자 비율' : '대상자 수',
         icon: 'rect',
         itemStyle: {
           color: selectedBarColor.value
         }
       }], 
-      top: "bottom", 
+      top: 'bottom', 
       selectedMode: false, 
       textStyle: { 
         fontSize: chartFontSize.value,
         fontFamily: 'Noto Sans KR, sans-serif'
       }
     },
-    grid: { left: "3%", right: "4%", bottom: "10%", top: "15%", containLabel: true },
+    grid: { left: '3%', right: '4%', bottom: '10%', top: '15%', containLabel: true },
     xAxis: {
-      type: "category",
+      type: 'category',
       data: originalCategories.map(cat => getMappedLabel(cat)),
       axisLabel: {
         interval: 0, rotate: originalCategories.length > 10 ? 30 : 0,
         fontSize: chartFontSize.value, hideOverlap: true,
         fontFamily: 'Noto Sans KR, sans-serif'
-      },
+      }
     },
     yAxis: { 
-      type: "value", 
+      type: 'value', 
       axisLabel: { 
         fontSize: chartFontSize.value,
         fontFamily: 'Noto Sans KR, sans-serif'
       }
     },
     series: [{
-      name: dataType === 'percentage' ? "대상자 비율" : "대상자 수", 
-      type: "bar", 
+      name: dataType === 'percentage' ? '대상자 비율' : '대상자 수', 
+      type: 'bar', 
       data: chartData,
       itemStyle: { 
-        color: function(params) {
+        color(params) {
           const baseColor = getBarColor(params.dataIndex);
           const colors = generateGradientColors(baseColor);
           return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -881,9 +881,9 @@ const generateTotalChartOptions = (header, data, dataType = 'count') => { // 원
           ]);
         }
       },
-      barWidth: barWidthPercent.value + "%",
+      barWidth: `${barWidthPercent.value}%`,
       emphasis: { 
-        focus: "series",
+        focus: 'series',
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: '#FDB813' }, 
@@ -892,10 +892,10 @@ const generateTotalChartOptions = (header, data, dataType = 'count') => { // 원
         }
       },
       label: {
-        show: chartData.length < 15, position: "top",
-        fontSize: Math.max(10, chartFontSize.value - 4), color: "#333",
+        show: chartData.length < 15, position: 'top',
+        fontSize: Math.max(10, chartFontSize.value - 4), color: '#333',
         fontFamily: 'Noto Sans KR, sans-serif',
-        formatter: function(params) {
+        formatter(params) {
           const dataIndex = params.dataIndex;
           const count = totalCounts[dataIndex];
           const percentage = totalPercentages[dataIndex].toFixed(1);
@@ -904,13 +904,13 @@ const generateTotalChartOptions = (header, data, dataType = 'count') => { // 원
           }
           return `${count} (${percentage}%)`;
         }
-      },
-    }],
+      }
+    }]
   };
 };
 
 const generatePatientChartOptions = (header, data, dataType = 'count') => { // 원본 함수 구조 유지, 내부 수정
-  if (!data || typeof data !== "object" || Object.keys(data).length === 0) {
+  if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
     // 원본 데이터 없음 처리
     return { /* ... */ };
   }
@@ -970,24 +970,24 @@ const generatePatientChartOptions = (header, data, dataType = 'count') => { // �
       fontFamily: 'Noto Sans KR, sans-serif'
     },
     title: { 
-      text: `환자 ${header || "(알 수 없음)"} 분포 ${dataType === 'percentage' ? '(비율)' : '(수)'}`, 
-      left: "center", 
+      text: `환자 ${header || '(알 수 없음)'} 분포 ${dataType === 'percentage' ? '(비율)' : '(수)'}`, 
+      left: 'center', 
       textStyle: { 
         fontSize: chartFontSize.value,
         fontFamily: 'Noto Sans KR, sans-serif'
       }
     },
     tooltip: {
-      trigger: "axis", axisPointer: { type: "shadow" },
-      formatter: function (params) {
-        if (!params || params.length === 0) return "";
+      trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter (params) {
+        if (!params || params.length === 0) return '';
         const param = params[0];
         const dataIndex = param.dataIndex;
         const originalCategory = filteredOriginalCategories[dataIndex];
         const displayLabel = getMappedLabel(originalCategory);
         const categoryData = filteredDataMap[originalCategory];
 
-        if (!categoryData) return "";
+        if (!categoryData) return '';
         
         const value = param.value;
         const seriesName = param.seriesName;
@@ -995,57 +995,57 @@ const generatePatientChartOptions = (header, data, dataType = 'count') => { // �
         let tooltipText = `<strong>${displayLabel}</strong><br/>`;
 
         if (dataType === 'percentage') {
-            tooltipText += `${seriesName}: <strong>${value}</strong>%`;
-            if (categoryData.patientCount !== undefined) {
-                tooltipText += ` (${categoryData.patientCount}명)`;
-            }
+          tooltipText += `${seriesName}: <strong>${value}</strong>%`;
+          if (categoryData.patientCount !== undefined) {
+            tooltipText += ` (${categoryData.patientCount}명)`;
+          }
         } else { // count
-            tooltipText += `${seriesName}: <strong>${value}</strong>명`;
-            if (categoryData.patientPercentage !== undefined) {
-                tooltipText += ` (${categoryData.patientPercentage.toFixed(1)}%)`;
-            }
+          tooltipText += `${seriesName}: <strong>${value}</strong>명`;
+          if (categoryData.patientPercentage !== undefined) {
+            tooltipText += ` (${categoryData.patientPercentage.toFixed(1)}%)`;
+          }
         }
         return tooltipText;
-      },
+      }
     },
     legend: { 
       data: [{
-        name: dataType === 'percentage' ? "환자 비율" : "환자 수",
+        name: dataType === 'percentage' ? '환자 비율' : '환자 수',
         icon: 'rect',
         itemStyle: {
           color: selectedBarColor.value
         }
       }], 
-      top: "bottom", 
+      top: 'bottom', 
       selectedMode: false, 
       textStyle: { 
         fontSize: chartFontSize.value,
         fontFamily: 'Noto Sans KR, sans-serif'
       }
     },
-    grid: { left: "3%", right: "4%", bottom: "10%", containLabel: true },
+    grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
     xAxis: {
-      type: "category",
+      type: 'category',
       data: filteredOriginalCategories.map(cat => getMappedLabel(cat)),
       axisLabel: {
         interval: 0, rotate: filteredOriginalCategories.length > 10 ? 30 : 0,
         fontSize: chartFontSize.value, hideOverlap: true,
         fontFamily: 'Noto Sans KR, sans-serif'
-      },
+      }
     },
     yAxis: { 
-      type: "value", 
+      type: 'value', 
       axisLabel: { 
         fontSize: chartFontSize.value,
         fontFamily: 'Noto Sans KR, sans-serif'
       }
     },
     series: [{
-      name: dataType === 'percentage' ? "환자 비율" : "환자 수", 
-      type: "bar", 
+      name: dataType === 'percentage' ? '환자 비율' : '환자 수', 
+      type: 'bar', 
       data: chartData,
       itemStyle: { 
-        color: function(params) {
+        color(params) {
           const baseColor = getPatientBarColor(params.dataIndex);
           const colors = generateGradientColors(baseColor);
           return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -1054,9 +1054,9 @@ const generatePatientChartOptions = (header, data, dataType = 'count') => { // �
           ]);
         }
       },
-      barWidth: barWidthPercent.value + "%",
+      barWidth: `${barWidthPercent.value}%`,
       emphasis: { 
-        focus: "series",
+        focus: 'series',
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: '#FDB813' }, 
@@ -1065,10 +1065,10 @@ const generatePatientChartOptions = (header, data, dataType = 'count') => { // �
         }
       },
       label: {
-        show: chartData.length < 15, position: "top",
-        fontSize: Math.max(10, chartFontSize.value - 4), color: "#333",
+        show: chartData.length < 15, position: 'top',
+        fontSize: Math.max(10, chartFontSize.value - 4), color: '#333',
         fontFamily: 'Noto Sans KR, sans-serif',
-        formatter: function(params) {
+        formatter(params) {
           const dataIndex = params.dataIndex;
           const count = filteredPatientCounts[dataIndex];
           const percentage = filteredPatientPercentages[dataIndex].toFixed(1);
@@ -1077,8 +1077,8 @@ const generatePatientChartOptions = (header, data, dataType = 'count') => { // �
           }
           return `${count} (${percentage}%)`;
         }
-      },
-    }],
+      }
+    }]
   };
 };
 
@@ -1105,10 +1105,10 @@ watch(
     chartFontSize,
     barWidthPercent,
     selectedBarColor,
-    currentHighlight,
+    currentHighlight
   ],
-     ([newIndex, newChartType, newDataType, newFreqData, newFontSize, newBarWidth, newBarColor, newHighlight], 
-   [oldIndex, oldChartType, oldDataType, oldFreqData, oldFontSize, oldBarWidth, oldBarColor, oldHighlight]) => {
+  ([newIndex, newChartType, newDataType, newFreqData, newFontSize, newBarWidth, newBarColor, newHighlight], 
+    [oldIndex, oldChartType, oldDataType, oldFreqData, oldFontSize, oldBarWidth, oldBarColor, oldHighlight]) => {
     
     // 실제 변경사항이 있는지 확인 (불필요한 업데이트 방지)
     const hasIndexChange = newIndex !== oldIndex;
@@ -1124,7 +1124,7 @@ watch(
       return; // 변경사항 없으면 조기 종료
     }
 
-    console.log("Watcher triggered with changes:", { 
+    console.log('Watcher triggered with changes:', { 
       hasIndexChange, hasChartTypeChange, hasDataTypeChange, hasStyleChange, hasDataChange 
     });
 
@@ -1139,18 +1139,18 @@ watch(
         const newMappings = {};
         categories.forEach(cat => { newMappings[cat] = ''; });
         labelMappings.value = newMappings;
-        console.log("Initialized mappings efficiently");
+        console.log('Initialized mappings efficiently');
       }
     }
 
     // 차트 업데이트 (조건부 최적화)
     if (chartInstance.value && newIndex !== null) {
-      console.log("Triggering optimized chart update");
+      console.log('Triggering optimized chart update');
       nextTick(() => {
         updateCharts();
       });
     } else if (!chartInstance.value && newIndex !== null) {
-      console.log("Chart instance not found, recreating chart");
+      console.log('Chart instance not found, recreating chart');
       nextTick(() => {
         recreateChart();
       });

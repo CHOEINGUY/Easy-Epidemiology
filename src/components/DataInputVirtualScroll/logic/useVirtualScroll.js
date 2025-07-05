@@ -33,7 +33,7 @@ export function useVirtualScroll(allRows, options) {
   const visibleRows = computed(() => {
     return allRows.value.slice(startIndex.value, endIndex.value + 1).map((data, index) => ({
       data,
-      originalIndex: startIndex.value + index,
+      originalIndex: startIndex.value + index
     }));
   });
   
@@ -60,6 +60,6 @@ export function useVirtualScroll(allRows, options) {
     paddingTop,
     onScroll,
     getOriginalIndex,
-    getVirtualIndex,
+    getVirtualIndex
   };
 } 

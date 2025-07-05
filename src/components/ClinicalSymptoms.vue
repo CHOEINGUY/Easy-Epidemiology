@@ -156,9 +156,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick, markRaw } from "vue";
-import { useStore } from "vuex";
-import * as echarts from "echarts";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, markRaw } from 'vue';
+import { useStore } from 'vuex';
+import * as echarts from 'echarts';
 // 성능 최적화: lodash-es 임포트
 import { debounce } from 'lodash-es';
 
@@ -191,7 +191,7 @@ const hasValidClinicalHeaders = computed(() => {
 const hasValidPatientData = computed(() => {
   try {
     if (!hasValidData.value) return false;
-    return rows.value.some(row => row.isPatient === "1" && row.clinicalSymptoms);
+    return rows.value.some(row => row.isPatient === '1' && row.clinicalSymptoms);
   } catch (error) {
     console.error('hasValidPatientData 계산 오류:', error);
     return false;
@@ -248,13 +248,13 @@ const symptomStats = computed(() => {
           if (row && 
               row.clinicalSymptoms && 
               Array.isArray(row.clinicalSymptoms) && 
-              row.clinicalSymptoms[idx] === "1") {
+              row.clinicalSymptoms[idx] === '1') {
             count++;
           }
         }
         
         const total = totalPatients.value;
-        const percent = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+        const percent = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
         
         return { 
           name: name || `증상${idx + 1}`, 
@@ -279,8 +279,8 @@ const fontSizes = [14, 16, 18, 20, 24];
 const chartWidths = [500, 700, 900, 1100];
 const barWidthPercents = [30, 50, 70];
 const barColors = [
-  "#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de",
-  "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc",
+  '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
+  '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'
 ];
 const chartFontSize = ref(16);
 const chartWidth = ref(700);
@@ -304,7 +304,7 @@ const generateGradientColors = (baseColor) => {
 
   // RGB를 HEX로 변환
   const rgb2hex = (r, g, b) => {
-    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
   };
 
   // 밝기 조절 함수
@@ -342,12 +342,12 @@ const activeTooltip = ref(null);
 const tooltipText = ref('');
 
 const showTooltip = (key, text) => {
-    activeTooltip.value = key;
-    tooltipText.value = text;
+  activeTooltip.value = key;
+  tooltipText.value = text;
 };
 
 const hideTooltip = () => {
-    activeTooltip.value = null;
+  activeTooltip.value = null;
 };
 
 /**
@@ -523,7 +523,7 @@ const chartOptions = computed(() => {
     
     if (!Array.isArray(stats) || stats.length === 0) {
       console.warn('chartOptions: 유효하지 않은 증상 데이터');
-      return { title: { text: "데이터 없음" } };
+      return { title: { text: '데이터 없음' } };
     }
     
     const isHorizontal = barDirection.value === 'horizontal';
@@ -536,7 +536,7 @@ const chartOptions = computed(() => {
     
     if (!hasValidNames) {
       console.error('chartOptions: 유효하지 않은 증상명 데이터');
-      return { title: { text: "데이터 형식 오류" } };
+      return { title: { text: '데이터 형식 오류' } };
     }
     
     // 차트 데이터 준비
@@ -584,19 +584,19 @@ const chartOptions = computed(() => {
         fontFamily: 'Noto Sans KR, sans-serif'
       },
       title: {
-        text: "환자의 임상증상 분포",
-        left: "center",
-        textStyle: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' },
+        text: '환자의 임상증상 분포',
+        left: 'center',
+        textStyle: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }
       },
       tooltip: { 
-        trigger: "axis",
-        formatter: function(params) {
+        trigger: 'axis',
+        formatter(params) {
           if (params && params[0]) {
             const data = params[0];
             const statsData = symptomStats.value.find(s => s.name === data.name);
             let result = `<strong>${data.name}</strong><br/>${data.seriesName}: <strong>${data.value}</strong>%`;
             if(statsData) {
-                result += ` (${statsData.count}명)`;
+              result += ` (${statsData.count}명)`;
             }
             return result;
           }
@@ -604,52 +604,52 @@ const chartOptions = computed(() => {
         }
       },
       grid: { 
-        left: "8%", 
-        right: isHorizontal ? "20%" : "8%", 
-        bottom: isHorizontal ? "15%" : "10%", 
-        top: "15%", 
+        left: '8%', 
+        right: isHorizontal ? '20%' : '8%', 
+        bottom: isHorizontal ? '15%' : '10%', 
+        top: '15%', 
         containLabel: true 
       },
       xAxis: isHorizontal
         ? { 
-            type: "value", 
-            name: "백분율(%)", 
-            nameTextStyle: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }, 
-            axisLabel: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }, 
-            max: 100,
-            min: 0
-          }
+          type: 'value', 
+          name: '백분율(%)', 
+          nameTextStyle: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }, 
+          axisLabel: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }, 
+          max: 100,
+          min: 0
+        }
         : { 
-            type: "category", 
-            data: names, 
-            axisLabel: { 
-              interval: 0, 
-              rotate: stats.length > 10 ? 30 : 0, 
-              fontSize,
-              fontFamily: 'Noto Sans KR, sans-serif'
-            } 
-          },
+          type: 'category', 
+          data: names, 
+          axisLabel: { 
+            interval: 0, 
+            rotate: stats.length > 10 ? 30 : 0, 
+            fontSize,
+            fontFamily: 'Noto Sans KR, sans-serif'
+          } 
+        },
       yAxis: isHorizontal
         ? { 
-            type: "category", 
-            data: names, 
-            axisLabel: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' } 
-          }
+          type: 'category', 
+          data: names, 
+          axisLabel: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' } 
+        }
         : { 
-            type: "value", 
-            name: "백분율(%)", 
-            nameTextStyle: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }, 
-            axisLabel: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }, 
-            max: 100,
-            min: 0
-          },
+          type: 'value', 
+          name: '백분율(%)', 
+          nameTextStyle: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }, 
+          axisLabel: { fontSize, fontFamily: 'Noto Sans KR, sans-serif' }, 
+          max: 100,
+          min: 0
+        },
       series: [
         {
-          name: "백분율",
-          type: "bar",
+          name: '백분율',
+          type: 'bar',
           data: percentData,
           itemStyle: { 
-            color: function(params) {
+            color(params) {
               const baseColor = getBarColor(params.dataIndex);
               const colors = generateGradientColors(baseColor);
               if (barDirection.value === 'horizontal') {
@@ -665,17 +665,17 @@ const chartOptions = computed(() => {
             }
           },
           emphasis: {
-            focus: "series",
+            focus: 'series',
             itemStyle: {
               color: isHorizontal
                 ? new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                    { offset: 0, color: '#F9A825' },
-                    { offset: 1, color: '#FDB813' }
-                  ])
+                  { offset: 0, color: '#F9A825' },
+                  { offset: 1, color: '#FDB813' }
+                ])
                 : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#FDB813' },
-                    { offset: 1, color: '#F9A825' }
-                  ])
+                  { offset: 0, color: '#FDB813' },
+                  { offset: 1, color: '#F9A825' }
+                ])
             }
           },
           label: { 
@@ -686,20 +686,20 @@ const chartOptions = computed(() => {
             fontFamily: 'Noto Sans KR, sans-serif',
             color: '#333'
           },
-          barWidth: barWidthPercent.value + "%",
-          orientation: isHorizontal ? 'horizontal' : 'vertical',
-        },
-      ],
+          barWidth: `${barWidthPercent.value}%`,
+          orientation: isHorizontal ? 'horizontal' : 'vertical'
+        }
+      ]
     };
   } catch (error) {
     console.error('chartOptions 생성 오류:', error);
-    return { title: { text: "차트 생성 오류" } };
+    return { title: { text: '차트 생성 오류' } };
   }
 });
 
 // 성능 최적화: debounced 차트 렌더링
 const debouncedRenderChart = debounce(() => {
-  console.log("Debounced chart render triggered");
+  console.log('Debounced chart render triggered');
   renderChart();
 }, 150);
 
@@ -708,14 +708,14 @@ const debouncedRenderChart = debounce(() => {
  * @returns {void}
  */
 const recreateChart = () => {
-  console.log("Attempting to recreate chart...");
-  if (chartInstance.value && typeof chartInstance.value.dispose === "function") {
+  console.log('Attempting to recreate chart...');
+  if (chartInstance.value && typeof chartInstance.value.dispose === 'function') {
     try { 
       chartInstance.value.dispose(); 
-      console.log("Previous chart instance disposed."); 
+      console.log('Previous chart instance disposed.'); 
     }
     catch (e) { 
-      console.error("Error disposing chart instance:", e); 
+      console.error('Error disposing chart instance:', e); 
     }
     finally { 
       chartInstance.value = null; 
@@ -726,14 +726,14 @@ const recreateChart = () => {
       try {
         console.log(`Initializing new chart in container with width: ${chartContainer.value.offsetWidth}px`);
         chartInstance.value = markRaw(echarts.init(chartContainer.value));
-        console.log("New chart instance initialized.");
+        console.log('New chart instance initialized.');
         renderChart();
       } catch (error) { 
-        console.error("ECharts 재초기화 실패:", error); 
-        alert("차트를 다시 그리는 중 오류가 발생했습니다."); 
+        console.error('ECharts 재초기화 실패:', error); 
+        alert('차트를 다시 그리는 중 오류가 발생했습니다.'); 
       }
     } else { 
-      console.error("차트 컨테이너 DOM 요소를 찾을 수 없습니다."); 
+      console.error('차트 컨테이너 DOM 요소를 찾을 수 없습니다.'); 
     }
   });
 };
@@ -791,9 +791,9 @@ onUnmounted(() => {
     try {
       chartInstance.value.dispose();
       chartInstance.value = null;
-      console.log("차트 인스턴스 정리 완료");
+      console.log('차트 인스턴스 정리 완료');
     } catch (error) {
-      console.error("차트 정리 오류:", error);
+      console.error('차트 정리 오류:', error);
     }
   }
   
@@ -805,7 +805,7 @@ onUnmounted(() => {
   // 참조 정리
   chartContainer.value = null;
   
-  console.log("ClinicalSymptoms 컴포넌트 cleanup 완료");
+  console.log('ClinicalSymptoms 컴포넌트 cleanup 완료');
 });
 
 // Watcher 최적화 (성능 향상)
@@ -827,9 +827,9 @@ watch([
   selectedBarColor,
   chartFontSize,
   currentHighlight,
-  barWidthPercent,
+  barWidthPercent
 ], ([newStats, newDirection, newColor, newFontSize, newHighlight, newBarWidth],
-   [oldStats, oldDirection, oldColor, oldFontSize, oldHighlight, oldBarWidth]) => {
+  [oldStats, oldDirection, oldColor, oldFontSize, oldHighlight, oldBarWidth]) => {
   
   try {
     // 실제 변경사항 확인 (불필요한 업데이트 방지)
@@ -844,7 +844,7 @@ watch([
       return; // 변경사항 없으면 조기 종료
     }
     
-    console.log("차트 업데이트 triggered:", {
+    console.log('차트 업데이트 triggered:', {
       hasStatsChange, hasDirectionChange, hasColorChange, hasFontChange, hasHighlightChange, hasBarWidthChange
     });
     
@@ -956,7 +956,7 @@ const copyTableToClipboard = async () => {
 const copyChartToClipboard = async () => {
   const instance = chartInstance.value;
   
-  if (!instance || typeof instance.getDataURL !== "function") {
+  if (!instance || typeof instance.getDataURL !== 'function') {
     console.warn('copyChartToClipboard: 차트 인스턴스가 없거나 getDataURL 함수가 없음');
     isChartCopied.value = false;
     return;
@@ -968,7 +968,7 @@ const copyChartToClipboard = async () => {
     return;
   }
   
-  if (typeof ClipboardItem === "undefined") {
+  if (typeof ClipboardItem === 'undefined') {
     console.warn('copyChartToClipboard: ClipboardItem을 사용할 수 없음');
     isChartCopied.value = false;
     return;
@@ -976,13 +976,13 @@ const copyChartToClipboard = async () => {
   
   try {
     const dataUrl = instance.getDataURL({ 
-      type: "png", 
+      type: 'png', 
       pixelRatio: 3, 
-      backgroundColor: "#fff" 
+      backgroundColor: '#fff' 
     });
     
-    if (!dataUrl || !dataUrl.startsWith("data:image/png")) {
-      throw new Error("유효하지 않은 이미지 데이터 URL");
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
+      throw new Error('유효하지 않은 이미지 데이터 URL');
     }
     
     const response = await fetch(dataUrl);
@@ -1009,8 +1009,8 @@ const copyChartToClipboard = async () => {
 const exportChart = async () => {
   const instance = chartInstance.value;
   
-  if (!instance || typeof instance.getDataURL !== "function") {
-    const message = "차트 내보내기 불가: 차트 인스턴스가 없습니다";
+  if (!instance || typeof instance.getDataURL !== 'function') {
+    const message = '차트 내보내기 불가: 차트 인스턴스가 없습니다';
     console.error(message);
     alert(message);
     return;
@@ -1020,16 +1020,16 @@ const exportChart = async () => {
   
   try {
     const dataUrl = instance.getDataURL({ 
-      type: "png", 
+      type: 'png', 
       pixelRatio: 3, 
-      backgroundColor: "#fff" 
+      backgroundColor: '#fff' 
     });
     
-    if (!dataUrl || !dataUrl.startsWith("data:image/png")) {
-      throw new Error("유효하지 않은 이미지 데이터 URL");
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
+      throw new Error('유효하지 않은 이미지 데이터 URL');
     }
     
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = dataUrl;
     link.download = filename;
     document.body.appendChild(link);

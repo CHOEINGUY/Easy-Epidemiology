@@ -34,7 +34,7 @@ function handleDragLeave(event) {
 function isExcelFile(file) {
   const allowedTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-excel',
+    'application/vnd.ms-excel'
   ];
   const exts = ['.xlsx', '.xls'];
   const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));

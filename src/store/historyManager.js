@@ -48,7 +48,7 @@ export class HistoryManager {
       timestamp: Date.now(),
       action,
       data: snapshotData,
-      meta,
+      meta
     };
 
     this.undoStack.push(snapshot);
@@ -68,6 +68,8 @@ export class HistoryManager {
    * @returns {object|null} headers, rows, settings 객체 또는 null (스택이 없을 때)
    */
   undo() {
+    console.log('[HistoryManager] undo() 호출 - undoStack length:', this.undoStack.length, 'redoStack length:', this.redoStack.length);
+    
     if (this.undoStack.length === 0) return null;
 
     this.isRestoring = true;
@@ -75,6 +77,7 @@ export class HistoryManager {
     const snapshot = this.undoStack.pop();
     if (snapshot) {
       this.redoStack.push(snapshot);
+      console.log('[HistoryManager] undo 후 - undoStack length:', this.undoStack.length, 'redoStack length:', this.redoStack.length);
       this._persist();
     }
 
@@ -106,7 +109,9 @@ export class HistoryManager {
   }
 
   canRedo() {
-    return this.redoStack.length > 0;
+    const result = this.redoStack.length > 0;
+    console.log('[HistoryManager] canRedo() 호출 - redoStack length:', this.redoStack.length, 'result:', result);
+    return result;
   }
 
   clear() {
@@ -125,7 +130,7 @@ export class HistoryManager {
         version: '1.0',
         lastSaved: Date.now(),
         undoStack: this.undoStack,
-        redoStack: this.redoStack,
+        redoStack: this.redoStack
       };
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(payload));
     } catch (err) {

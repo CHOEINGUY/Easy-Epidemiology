@@ -1,14 +1,13 @@
 <template>
   <div class="grid-body-virtual" ref="bodyContainer" @scroll.passive="handleScroll">
-    <div :style="{ height: containerHeight + 'px', position: 'relative', width: tableWidth, minWidth: '100%' }">
-      <table 
-        class="data-table" 
-        :style="{ 
-          transform: `translateY(${paddingTop}px)`,
-          width: tableWidth,
-          minWidth: '100%'
-        }"
-      >
+          <div :style="{ height: containerHeight + 'px', position: 'relative', width: tableWidth }">
+        <table 
+          class="data-table" 
+          :style="{ 
+            transform: `translateY(${paddingTop}px)`,
+            width: tableWidth
+          }"
+        >
         <colgroup>
           <col 
             v-for="column in allColumnsMeta" 
@@ -28,12 +27,15 @@
               :data-row="item.originalIndex"
               :data-col="column.colIndex"
               :class="getCellClasses(item.originalIndex, column.colIndex)"
+              :data-validation-message="getValidationMessage(item.originalIndex, column.colIndex)"
               :contenteditable="isCellEditing(item.originalIndex, column.colIndex)"
               @input="$emit('cell-input', $event, item.originalIndex, column.colIndex)"
               @dblclick="$emit('cell-dblclick', index, column.colIndex, $event)"
               @mousedown="$emit('cell-mousedown', index, column.colIndex, $event)"
               @mousemove="$emit('cell-mousemove', index, column.colIndex, $event)"
               @contextmenu.prevent="$emit('cell-contextmenu', $event, index, column.colIndex)"
+              @mouseenter="handleCellMouseEnter($event, item.originalIndex, column.colIndex)"
+              @mouseleave="handleCellMouseLeave"
             >
               {{ getCellValue(item.data, column, item.originalIndex) }}
             </td>
@@ -52,6 +54,15 @@
           @clear-selection="$emit('clear-selection')" 
         />
       </div>
+    </div>
+    
+    <!-- Validation Tooltip -->
+    <div 
+      v-if="tooltipVisible" 
+      class="validation-tooltip"
+      :style="tooltipStyle"
+    >
+      {{ tooltipMessage }}
     </div>
   </div>
 </template>
@@ -72,14 +83,15 @@ const props = defineProps({
     type: Object,
     default: () => ({
       start: { rowIndex: null, colIndex: null },
-      end: { rowIndex: null, colIndex: null },
-    }),
+      end: { rowIndex: null, colIndex: null }
+    })
   },
   isEditing: { type: Boolean, default: false },
   editingCell: { type: Object, default: () => ({ rowIndex: null, colIndex: null }) },
   individualSelectedCells: { type: Object, default: null },
   individualSelectedRows: { type: Object, default: null },
   bufferSize: { type: Number, default: 4 },
+  validationErrors: { type: Object, default: null }
 });
 
 const emit = defineEmits(['scroll', 'cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-rows', 'delete-empty-rows', 'clear-selection']);
@@ -95,6 +107,11 @@ const addRowsTop = computed(() => props.totalHeight + props.bufferSize * ROW_HEI
 
 // 스크롤 컨테이너 높이 = 데이터 전체 높이 + 버퍼 영역 + AddRowsControls 높이
 const containerHeight = computed(() => props.totalHeight + props.bufferSize * ROW_HEIGHT + ADD_ROWS_HEIGHT);
+
+// Validation Tooltip 상태
+const tooltipVisible = ref(false);
+const tooltipMessage = ref('');
+const tooltipStyle = ref({});
 
 function handleScroll(event) {
   emit('scroll', event);
@@ -177,7 +194,52 @@ function getCellClasses(rowIndex, colIndex) {
   ) {
     classes.push('cell-selected');
   }
+
+  // --- Validation error --------------------------------------------
+  if (props.validationErrors && props.validationErrors.has(`${rowIndex}_${colIndex}`)) {
+    console.log(`[CSS Debug] Adding validation-error class to cell ${rowIndex}_${colIndex}`);
+    classes.push('validation-error');
+  }
   return classes;
+}
+
+function getValidationMessage(rowIndex, colIndex) {
+  if (props.validationErrors && props.validationErrors.has(`${rowIndex}_${colIndex}`)) {
+    const error = props.validationErrors.get(`${rowIndex}_${colIndex}`);
+    const message = error.message || '유효성 검사 오류';
+    console.log(`[Tooltip Debug] Validation message for ${rowIndex}_${colIndex}:`, message);
+    return message;
+  }
+  return '';
+}
+
+function handleCellMouseEnter(event, rowIndex, colIndex) {
+  const message = getValidationMessage(rowIndex, colIndex);
+  if (message) {
+    const rect = event.target.getBoundingClientRect();
+    
+    tooltipMessage.value = message;
+    tooltipStyle.value = {
+      position: 'fixed',
+      top: `${rect.top - 40}px`,
+      left: `${rect.left + (rect.width / 2)}px`,
+      transform: 'translateX(-50%)',
+      background: '#333333',
+      color: 'white',
+      padding: '6px 10px',
+      borderRadius: '4px',
+      fontSize: '12px',
+      whiteSpace: 'nowrap',
+      zIndex: '1000',
+      pointerEvents: 'none',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+    };
+    tooltipVisible.value = true;
+  }
+}
+
+function handleCellMouseLeave() {
+  tooltipVisible.value = false;
 }
 
 defineExpose({ bodyContainer });
@@ -189,6 +251,7 @@ defineExpose({ bodyContainer });
   position: relative;
   height: 100%;
   will-change: scroll-position;
+  background-color: #f8f9fa; /* 헤더와 동일한 배경색 */
 }
 
 .data-table {
@@ -197,7 +260,6 @@ defineExpose({ bodyContainer });
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
   z-index: 1;
 }
 
@@ -217,6 +279,7 @@ td {
   text-align: center;
   vertical-align: middle;
   cursor: default;
+  background-color: white; /* 명시적으로 흰색 배경 설정 */
 }
 
 .cell-selected {
@@ -248,7 +311,50 @@ td {
 .add-rows-wrapper {
   padding: 6px 0;
   background-color: transparent;
-  border-bottom: 1px solid #ced4da; /* 셀과 동일한 하단 테두리 */
   z-index: 0;
+}
+
+.validation-error {
+  /* Show clear red border with light red background */
+  box-shadow: 0 0 0 2px #ff4444 inset !important;
+  background-color: rgba(255, 68, 68, 0.1) !important;
+  position: relative;
+}
+
+/* When the cell is also in editing state, layer red border inside blue border */
+.cell-editing.validation-error {
+  box-shadow: 0 0 0 2px #1a73e8 inset, 0 0 0 1px #ff4444 inset !important;
+}
+
+/* When the cell is selected or in range selection */
+.cell-selected.validation-error,
+.cell-range-selected.validation-error,
+.cell-multi-selected.validation-error {
+  box-shadow: 0 0 0 1.5px #1a73e8 inset, 0 0 0 1px #ff4444 inset !important;
+}
+
+/* Validation tooltip - JavaScript 기반으로 변경 */
+.validation-tooltip {
+  position: fixed;
+  background: #333333;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.validation-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #333333;
 }
 </style> 

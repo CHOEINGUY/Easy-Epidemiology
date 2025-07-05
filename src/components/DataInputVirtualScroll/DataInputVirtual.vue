@@ -5,7 +5,10 @@
     @keydown="onKeyDown"
     ref="dataContainerRef"
   >
-    <VirtualAppHeader />
+    <VirtualAppHeader 
+      :errorCount="validationErrors.size"
+      @focusFirstError="handleFocusFirstError"
+    />
     <VirtualFunctionBar 
       :cell-address="selectedCellInfo.address"
       :cell-value="selectedCellInfo.value"
@@ -36,6 +39,7 @@
         :individualSelectedCells="selectionSystem.state.selectedCellsIndividual"
         :isEditing="selectionSystem.state.isEditing"
         :editingCell="selectionSystem.state.editingCell"
+        :scrollbarWidth="scrollbarWidth"
         @cell-mousedown="onCellMouseDown"
         @cell-dblclick="onCellDoubleClick"
         @cell-input="onCellInput"
@@ -58,6 +62,7 @@
         :isEditing="selectionSystem.state.isEditing"
         :editingCell="selectionSystem.state.editingCell"
         :individualSelectedRows="selectionSystem.state.selectedRowsIndividual"
+        :validation-errors="validationErrors"
         @scroll="handleGridScroll"
         @cell-mousedown="onCellMouseDown"
         @cell-dblclick="onCellDoubleClick"
@@ -77,16 +82,30 @@
     />
     <DragOverlay :visible="isDragOver" :progress="excelUploadProgress" />
     <ToastContainer />
+    <ValidationProgress 
+      :is-processing="isValidationProcessing"
+      :progress="validationProgress"
+    />
     <AddRowsControls 
       @add-rows="onAddRows" 
       @delete-empty-rows="onDeleteEmptyRows" 
       @clear-selection="onClearSelection"
     />
+    
+    <!-- DateTimePicker 추가 -->
+    <DateTimePicker 
+      ref="dateTimePickerRef"
+      :visible="dateTimePickerState.visible"
+      :position="dateTimePickerState.position"
+      :initialValue="dateTimePickerState.initialValue"
+      @confirm="onDateTimeConfirm"
+      @cancel="onDateTimeCancel"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useStore } from 'vuex';
 import VirtualAppHeader from './layout/VirtualAppHeader.vue';
 import VirtualFunctionBar from './layout/VirtualFunctionBar.vue';
@@ -94,11 +113,13 @@ import VirtualGridHeader from './layout/VirtualGridHeader.vue';
 import VirtualGridBody from './layout/VirtualGridBody.vue';
 import ContextMenu from './parts/ContextMenu.vue';
 import DragOverlay from './parts/DragOverlay.vue';
+import DateTimePicker from './parts/DateTimePicker.vue';
 // --- 새로운 저장 시스템 ---
 import { useStoreBridge } from '../../store/storeBridge.js';
 import { useCellInputState } from '../../store/cellInputState.js';
 import ToastContainer from './parts/ToastContainer.vue';
 import AddRowsControls from './parts/AddRowsControls.vue';
+import ValidationProgress from './parts/ValidationProgress.vue';
 import { useContextMenu } from './logic/useContextMenu.js';
 import { handleContextMenu } from './handlers/contextMenuHandlers.js';
 import { useVirtualScroll } from './logic/useVirtualScroll.js';
@@ -115,6 +136,8 @@ import { useDataExport } from './logic/useDataExport.js';
 import { useDragDrop } from './logic/dragDrop.js';
 import { showToast, showConfirmToast } from './logic/toast.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
+// Validation
+import ValidationManager from '../../validation/ValidationManager.js';
 
 // --- 상수 (기존 컴포넌트에서 가져옴) ---
 import {
@@ -126,7 +149,7 @@ import {
   COL_TYPE_CLINICAL,
   COL_TYPE_ONSET,
   COL_TYPE_DIET,
-  COLUMN_STYLES,
+  COLUMN_STYLES
 } from './constants/index.js';
 
 const COL_TYPE_INDIVIDUAL_EXPOSURE = 'individualExposureTime';
@@ -135,8 +158,21 @@ const COL_TYPE_INDIVIDUAL_EXPOSURE = 'individualExposureTime';
 const store = useStore();
 const getters = store.getters;
 
+// ValidationManager 인스턴스 (개발 환경에서만 디버그 로그 활성화)
+const validationManager = new ValidationManager(store, { 
+  useWorker: process.env.NODE_ENV === 'production', // 프로덕션에서만 Worker 사용
+  chunkSize: 500,
+  debug: process.env.NODE_ENV === 'development', // 개발 환경에서만 디버그 로그
+  onProgress: (progress) => {
+    isValidationProcessing.value = progress < 100;
+    validationProgress.value = progress;
+  }
+});
+
 // --- 새로운 저장 시스템 ---
-const storeBridge = useStoreBridge(store);
+const storeBridge = useStoreBridge(store, validationManager, { 
+  debug: process.env.NODE_ENV === 'development' 
+});
 // 전역 Undo/Redo 키보드 단축키 활성화
 useUndoRedo(storeBridge);
 const cellInputState = useCellInputState();
@@ -145,12 +181,24 @@ const cellInputState = useCellInputState();
 const canUndo = computed(() => storeBridge.canUndo);
 const canRedo = computed(() => storeBridge.canRedo);
 
+// 개별 노출시간 열 토글 시 백업 데이터 저장용
+const individualExposureBackupData = ref([]);
+
 const dataContainerRef = ref(null);
 const gridContainerRef = ref(null);
 const gridHeaderRef = ref(null);
 const gridBodyRef = ref(null);
+const dateTimePickerRef = ref(null);
 const lastScrollLeft = ref(0);
 const viewportHeight = ref(0);
+const scrollbarWidth = ref(0);
+
+// --- DateTimePicker 상태 ---
+const dateTimePickerState = reactive({
+  visible: false,
+  position: { top: 0, left: 0 },
+  initialValue: null
+});
 
 const focusGrid = () => dataContainerRef.value?.focus();
 
@@ -175,7 +223,7 @@ const allColumnsMeta = computed(() => {
     meta.push({
       ...columnData,
       colIndex: currentColIndex,
-      offsetLeft: currentOffsetLeft,
+      offsetLeft: currentOffsetLeft
     });
     currentOffsetLeft += width;
     currentColIndex++;
@@ -184,23 +232,23 @@ const allColumnsMeta = computed(() => {
   // 연번 컬럼
   pushMeta({
     type: COL_TYPE_SERIAL,
-    headerText: "연번",
+    headerText: '연번',
     headerRow: 1,
     isEditable: false,
     style: COLUMN_STYLES[COL_TYPE_SERIAL],
     dataKey: null,
-    cellIndex: null,
+    cellIndex: null
   });
   
   // 환자여부 컬럼
   pushMeta({
     type: COL_TYPE_IS_PATIENT,
-    headerText: "환자여부 <br />(환자 O - 1, 정상 - 0)",
+    headerText: '환자여부 <br />(환자 O - 1, 정상 - 0)',
     headerRow: 1,
     isEditable: true,
     style: COLUMN_STYLES[COL_TYPE_IS_PATIENT],
-    dataKey: "isPatient",
-    cellIndex: null,
+    dataKey: 'isPatient',
+    cellIndex: null
   });
   
   // 기본정보 컬럼들
@@ -212,8 +260,8 @@ const allColumnsMeta = computed(() => {
       headerRow: 2,
       isEditable: true,
       style: COLUMN_STYLES.default,
-      dataKey: "basicInfo",
-      cellIndex: index,
+      dataKey: 'basicInfo',
+      cellIndex: index
     });
   });
   
@@ -221,13 +269,13 @@ const allColumnsMeta = computed(() => {
   const clinicalHeaders = headers.value.clinical || [];
   clinicalHeaders.forEach((header, index) => {
     pushMeta({
-      type: COL_TYPE_CLINICAL,
+      type: 'clinicalSymptoms',
       headerText: header,
       headerRow: 2,
       isEditable: true,
       style: COLUMN_STYLES.default,
-      dataKey: "clinicalSymptoms",
-      cellIndex: index,
+      dataKey: 'clinicalSymptoms',
+      cellIndex: index
     });
   });
   
@@ -235,11 +283,11 @@ const allColumnsMeta = computed(() => {
   if (storeBridge.state.isIndividualExposureColumnVisible) {
     pushMeta({
       type: COL_TYPE_INDIVIDUAL_EXPOSURE,
-      headerText: "의심원 노출시간",
+      headerText: '의심원 노출시간',
       headerRow: 1,
       isEditable: true,
       style: COLUMN_STYLES[COL_TYPE_ONSET],
-      dataKey: "individualExposureTime",
+      dataKey: 'individualExposureTime',
       cellIndex: null,
       isCustom: true
     });
@@ -248,30 +296,41 @@ const allColumnsMeta = computed(() => {
   // 증상발현시간 컬럼
   pushMeta({
     type: COL_TYPE_ONSET,
-    headerText: "증상발현시간",
+    headerText: '증상발현시간',
     headerRow: 1,
     isEditable: true,
     style: COLUMN_STYLES[COL_TYPE_ONSET],
-    dataKey: "symptomOnset",
-    cellIndex: null,
+    dataKey: 'symptomOnset',
+    cellIndex: null
   });
   
   // 식단 컬럼들
   const dietHeaders = headers.value.diet || [];
   dietHeaders.forEach((header, index) => {
     pushMeta({
-      type: COL_TYPE_DIET,
+      type: 'dietInfo',
       headerText: header,
       headerRow: 2,
       isEditable: true,
       style: COLUMN_STYLES.default,
-      dataKey: "dietInfo",
-      cellIndex: index,
+      dataKey: 'dietInfo',
+      cellIndex: index
     });
   });
   
   return meta;
 });
+
+// 컬럼 메타데이터를 StoreBridge에 설정
+watch(allColumnsMeta, (newColumnMetas) => {
+  if (storeBridge.bridge) {
+    storeBridge.bridge.setColumnMetas(newColumnMetas);
+  }
+  // 스크롤바 너비 재계산
+  nextTick(() => {
+    updateHeaderPadding();
+  });
+}, { immediate: true });
 
 // 헤더 그룹
 const headerGroups = computed(() => {
@@ -283,19 +342,19 @@ const headerGroups = computed(() => {
   
   // 연번
   groups.push({
-    text: "연번",
+    text: '연번',
     rowspan: 2,
     startColIndex: COL_IDX_SERIAL,
-    style: COLUMN_STYLES[COL_TYPE_SERIAL],
+    style: COLUMN_STYLES[COL_TYPE_SERIAL]
   });
   currentCol++;
   
   // 환자여부
   groups.push({
-    text: "환자여부 <br />(환자 O - 1, 정상 - 0)",
+    text: '환자여부 <br />(환자 O - 1, 정상 - 0)',
     rowspan: 2,
     startColIndex: COL_IDX_IS_PATIENT,
-    style: COLUMN_STYLES[COL_TYPE_IS_PATIENT],
+    style: COLUMN_STYLES[COL_TYPE_IS_PATIENT]
   });
   currentCol++;
   
@@ -303,25 +362,25 @@ const headerGroups = computed(() => {
   const basicStartCol = currentCol;
   if (basicLength > 0) {
     groups.push({
-      text: "기본정보",
+      text: '기본정보',
       colspan: basicLength,
       startColIndex: basicStartCol,
       type: COL_TYPE_BASIC,
       addable: true,
       deletable: true,
-      columnCount: basicLength,
+      columnCount: basicLength
     });
     currentCol += basicLength;
   } else {
     groups.push({
-      text: "기본정보",
+      text: '기본정보',
       colspan: 1,
       startColIndex: basicStartCol,
       type: COL_TYPE_BASIC,
       addable: true,
       deletable: false,
       columnCount: 0,
-      style: { minWidth: "60px" },
+      style: { minWidth: '60px' }
     });
     currentCol++;
   }
@@ -330,73 +389,73 @@ const headerGroups = computed(() => {
   const clinicalStartCol = currentCol;
   if (clinicalLength > 0) {
     groups.push({
-      text: "임상증상 (증상 O - 1, 증상 X - 0)",
+      text: '임상증상 (증상 O - 1, 증상 X - 0)',
       colspan: clinicalLength,
       startColIndex: clinicalStartCol,
       type: COL_TYPE_CLINICAL,
       addable: true,
       deletable: true,
-      columnCount: clinicalLength,
+      columnCount: clinicalLength
     });
     currentCol += clinicalLength;
   } else {
     groups.push({
-      text: "임상증상 (증상 O - 1, 증상 X - 0)",
+      text: '임상증상 (증상 O - 1, 증상 X - 0)',
       colspan: 1,
       startColIndex: clinicalStartCol,
       type: COL_TYPE_CLINICAL,
       addable: true,
       deletable: false,
       columnCount: 0,
-      style: { minWidth: "60px" },
+      style: { minWidth: '60px' }
     });
     currentCol++;
   }
   
   // '개별 노출시간' 열이 있다면, 여기에 그룹 추가
   if (storeBridge.state.isIndividualExposureColumnVisible) {
-      const exposureStartCol = currentCol;
-      groups.push({
-          text: "의심원 노출시간",
-          rowspan: 2,
-          startColIndex: exposureStartCol,
-          style: COLUMN_STYLES[COL_TYPE_ONSET],
-      });
-      currentCol++;
+    const exposureStartCol = currentCol;
+    groups.push({
+      text: '의심원 노출시간',
+      rowspan: 2,
+      startColIndex: exposureStartCol,
+      style: COLUMN_STYLES[COL_TYPE_ONSET]
+    });
+    currentCol++;
   }
   
   // 증상발현시간
   const onsetStartCol = currentCol;
-    groups.push({
-      text: "증상발현시간",
-      rowspan: 2,
-      startColIndex: onsetStartCol,
-    style: COLUMN_STYLES[COL_TYPE_ONSET],
-    });
-    currentCol++;
+  groups.push({
+    text: '증상발현시간',
+    rowspan: 2,
+    startColIndex: onsetStartCol,
+    style: COLUMN_STYLES[COL_TYPE_ONSET]
+  });
+  currentCol++;
   
   // 식단
   const dietStartCol = currentCol;
   if (dietLength > 0) {
     groups.push({
-      text: "식단 (섭취 O - 1, 섭취 X - 0)",
+      text: '식단 (섭취 O - 1, 섭취 X - 0)',
       colspan: dietLength,
       startColIndex: dietStartCol,
       type: COL_TYPE_DIET,
       addable: true,
       deletable: true,
-      columnCount: dietLength,
+      columnCount: dietLength
     });
   } else {
     groups.push({
-      text: "식단 (섭취 O - 1, 섭취 X - 0)",
+      text: '식단 (섭취 O - 1, 섭취 X - 0)',
       colspan: 1,
       startColIndex: dietStartCol,
       type: COL_TYPE_DIET,
       addable: true,
       deletable: false,
       columnCount: 0,
-      style: { minWidth: "60px" },
+      style: { minWidth: '60px' }
     });
   }
   
@@ -405,10 +464,10 @@ const headerGroups = computed(() => {
 
 const tableWidth = computed(() => {
   return (
-    allColumnsMeta.value.reduce((total, column) => {
+    `${allColumnsMeta.value.reduce((total, column) => {
       const widthString = column.style?.width || '80px';
       return total + parseInt(widthString, 10);
-    }, 0) + "px"
+    }, 0)}px`
   );
 });
 
@@ -470,11 +529,11 @@ const {
   totalHeight,
   paddingTop,
   onScroll,
-  getOriginalIndex,
+  getOriginalIndex
 } = useVirtualScroll(rows, {
   rowHeight: 35, // 기존 행 높이
   bufferSize: 1,
-  viewportHeight: viewportHeight,
+  viewportHeight
 });
 
 // --- Context Menu System ---
@@ -489,17 +548,30 @@ const { downloadXLSX, downloadTemplate } = useDataExport();
 const { isDragOver, setupDragDropListeners } = useDragDrop();
 let cleanupDragDrop = null;
 
+// --- Validation Progress ---
+const isValidationProcessing = ref(false);
+const validationProgress = ref(0);
+
+// === Validation Errors Computed ===
+const validationErrors = computed(() => {
+  const errors = store.state.validationState?.errors;
+  return errors instanceof Map ? errors : new Map();
+});
+
 async function onExcelFileSelected(file) {
   if (isUploadingExcel.value) return;
   isUploadingExcel.value = true;
   excelUploadProgress.value = 0;
   try {
+    // 기존 유효성 검사 오류 초기화
+    validationManager.clearAllErrors();
+    
     const parsed = await processExcelFile(file, (p) => {
       excelUploadProgress.value = Math.round(p);
     });
     // update store headers/rows
-          storeBridge.dispatch('updateHeadersFromExcel', parsed.headers);
-      storeBridge.dispatch('addRowsFromExcel', parsed.rows);
+    storeBridge.dispatch('updateHeadersFromExcel', parsed.headers);
+    storeBridge.dispatch('addRowsFromExcel', parsed.rows);
     // '의심원 노출시간' 열 가시성 토글
     if (parsed.hasIndividualExposureTime) {
       if (!storeBridge.state.isIndividualExposureColumnVisible) {
@@ -510,8 +582,13 @@ async function onExcelFileSelected(file) {
         storeBridge.dispatch('setIndividualExposureColumnVisibility', false);
       }
     }
-    // focus first cell
+    
+    // 데이터 가져온 후 전체 유효성 검사 실행
     await nextTick();
+    const columnMetas = storeBridge.bridge.getColumnMetas();
+    validationManager.revalidateAll(storeBridge.state.rows, columnMetas);
+    
+    // focus first cell
     selectionSystem.selectCell(0, 1);
     await ensureCellIsVisible(0, 1);
   } catch (e) {
@@ -572,6 +649,8 @@ async function onCopyEntireData() {
 
 function onDeleteEmptyCols() {
   const beforeColCount = allColumnsMeta.value.length;
+  const beforeColumnsMeta = [...allColumnsMeta.value]; // 삭제 전 열 메타 정보 백업
+  
   storeBridge.dispatch('deleteEmptyColumns');
   
   // 삭제된 열 개수 계산 (nextTick 후에 계산)
@@ -580,6 +659,30 @@ function onDeleteEmptyCols() {
     const deletedCount = beforeColCount - afterColCount;
     
     if (deletedCount > 0) {
+      // 삭제된 열들의 인덱스 찾기
+      const deletedColumnIndices = [];
+      const afterColumnsMeta = allColumnsMeta.value;
+      
+      // 삭제된 열들의 인덱스를 찾기 위해 beforeColumnsMeta와 afterColumnsMeta 비교
+      for (let i = 0; i < beforeColumnsMeta.length; i++) {
+        const beforeCol = beforeColumnsMeta[i];
+        const afterCol = afterColumnsMeta.find(c => 
+          c.dataKey === beforeCol.dataKey && 
+          c.cellIndex === beforeCol.cellIndex &&
+          c.type === beforeCol.type
+        );
+        
+        if (!afterCol) {
+          // 이 열이 삭제됨
+          deletedColumnIndices.push(beforeCol.colIndex);
+        }
+      }
+      
+      // 유효성 검사 오류 인덱스 재조정
+      if (deletedColumnIndices.length > 0) {
+        validationManager.handleColumnDeletion(deletedColumnIndices);
+      }
+      
       showToast(`빈 열 ${deletedCount}개가 삭제되었습니다.`, 'success');
     } else {
       showToast('삭제할 빈 열이 없습니다.', 'info');
@@ -593,9 +696,12 @@ function onDeleteEmptyCols() {
 
 async function onResetSheet() {
   showConfirmToast(
-    '현재 시트의 모든 데이터를 초기화하시겠습니까? 이 작업은 취소할 수 없습니다.',
+    '모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
     async () => {
       try {
+        // 유효성 검사 오류 초기화
+        validationManager.clearAllErrors();
+        
         storeBridge.dispatch('resetSheet');
         // selection / scroll reset
         selectionSystem.clearSelection();
@@ -616,7 +722,92 @@ async function onResetSheet() {
 
 function onToggleExposureColumn() {
   const current = storeBridge.state.isIndividualExposureColumnVisible;
-  storeBridge.dispatch('setIndividualExposureColumnVisibility', !current);
+  const isAdding = !current; // 열을 추가하는지 여부
+  
+  console.log('onToggleExposureColumn 호출됨');
+  console.log('현재 상태:', current);
+  console.log('isAdding:', isAdding);
+  
+  // === 개별 노출시간 열 삽입 위치 ===
+  // 기존 구현은 clinicalSymptomsStartIndex 가 0 일 때 잘못된 인덱스를 전달했습니다.
+  // "증상발현시간" 열의 현재 위치가 바로 개별-노출시간 열의 삽입 위치가 되므로,
+  // 토글 직전에 계산되는 symptomOnsetStartIndex 를 그대로 사용합니다.
+  // (isIndividualExposureColumnVisible 가 false 인 상태이므로 정확히 임상증상 끝 다음 인덱스)
+
+  const exposureInsertIndex = storeBridge.symptomOnsetStartIndex;
+
+  // clinicalSymptomsEndIndex 변수는 이후에 사용되므로 함께 업데이트합니다.
+  const clinicalSymptomsEndIndex = exposureInsertIndex;
+  
+  // 개별 노출시간 열의 정확한 인덱스 찾기
+  const individualExposureColumnIndex = allColumnsMeta.value.findIndex(col => 
+    col.type === 'individualExposureTime' || 
+    (col.dataKey === 'individualExposureTime' && col.cellIndex === 0)
+  );
+  
+  // 비활성화 전에 해당 열의 데이터 백업 (재활성화 시 검증용)
+  if (!isAdding && individualExposureColumnIndex >= 0) {
+    // 현재 활성화된 데이터에서 개별 노출시간 값 가져오기
+    const currentData = rows.value || [];
+    individualExposureBackupData.value = currentData.map((row, rowIndex) => {
+      // individualExposureTime은 단일 값이므로 배열 접근 제거
+      const value = row.individualExposureTime || '';
+      return { rowIndex, value };
+    }).filter(item => item.value !== '' && item.value !== null && item.value !== undefined);
+    
+    // 디버깅: 백업된 데이터 확인
+    console.log('백업된 개별 노출시간 데이터:', individualExposureBackupData.value);
+  }
+  
+  // StoreBridge에서 유효성 검사 오류 인덱스 재조정도 함께 처리됨
+  storeBridge.setIndividualExposureColumnVisibility(!current);
+  
+  // 재활성화 시: 백업된 데이터에 대해서만 유효성검사 수행
+  if (isAdding && individualExposureBackupData.value.length > 0) {
+    console.log('백업된 데이터가 있음 - 검증 실행');
+    console.log('백업된 데이터:', individualExposureBackupData.value);
+    
+    // 새로 추가된 개별 노출시간 열의 실제 인덱스 찾기
+    const newIndividualExposureColumnIndex = allColumnsMeta.value.findIndex(col => 
+      col.type === 'individualExposureTime' || 
+      (col.dataKey === 'individualExposureTime' && col.cellIndex === 0)
+    );
+    
+    console.log('찾은 새 열 인덱스:', newIndividualExposureColumnIndex);
+    
+    if (newIndividualExposureColumnIndex >= 0) {
+      // 개별 노출시간 열 전용 검증 메서드 사용
+      validationManager.validateIndividualExposureColumn(
+        individualExposureBackupData.value, 
+        newIndividualExposureColumnIndex,
+        (progress) => {
+          // 진행률 표시 (대용량 데이터의 경우)
+          if (individualExposureBackupData.value.length > 100 && progress === 100) {
+            showToast(`개별 노출시간 열 ${individualExposureBackupData.value.length}개 셀의 유효성검사를 완료했습니다.`, 'success');
+          }
+        }
+      );
+    } else {
+      console.error('새로운 개별 노출시간 열 인덱스를 찾을 수 없습니다!');
+      
+      // 대안: clinicalSymptomsEndIndex 사용
+      console.log('대안으로 clinicalSymptomsEndIndex 사용:', clinicalSymptomsEndIndex);
+      validationManager.validateIndividualExposureColumn(
+        individualExposureBackupData.value, 
+        clinicalSymptomsEndIndex,
+        (progress) => {
+          // 진행률 표시 (대용량 데이터의 경우)
+          if (individualExposureBackupData.value.length > 100 && progress === 100) {
+            showToast(`개별 노출시간 열 ${individualExposureBackupData.value.length}개 셀의 유효성검사를 완료했습니다.`, 'success');
+          }
+        }
+      );
+    }
+    
+    // 검증 완료 후 백업 데이터 초기화
+    individualExposureBackupData.value = [];
+  }
+  
   // selection & meta refresh handled by reactive state; clear selection for safety
   selectionSystem.clearSelection();
   nextTick(() => {
@@ -624,19 +815,58 @@ function onToggleExposureColumn() {
   });
 }
 
-// --- 스크롤 동기화 핸들러 ---
-function handleGridScroll(event) {
-  // 가상 스크롤의 수직 스크롤 처리
-  onScroll(event);
+// 스크롤바 너비 계산 함수 추가
+function calculateScrollbarWidth() {
+  const bodyElement = gridBodyRef.value?.bodyContainer;
+  if (!bodyElement) return 0;
+  
+  // 스크롤바가 있는지 확인
+  const hasVerticalScrollbar = bodyElement.scrollHeight > bodyElement.clientHeight;
+  
+  if (hasVerticalScrollbar) {
+    // 스크롤바 너비 계산 (컨테이너 너비 - 실제 콘텐츠 너비)
+    return bodyElement.offsetWidth - bodyElement.clientWidth;
+  }
+  
+  return 0;
+}
 
-  // 헤더와 수평 스크롤 동기화
-  const scrollLeft = event.target.scrollLeft;
+// 스크롤바 너비 감지 및 헤더 패딩 업데이트
+function updateHeaderPadding() {
+  const newScrollbarWidth = calculateScrollbarWidth();
+  
+  if (newScrollbarWidth !== scrollbarWidth.value) {
+    scrollbarWidth.value = newScrollbarWidth;
+    console.log(`[Scrollbar] Width updated: ${scrollbarWidth.value}px`);
+    
+    // 헤더 컨테이너에 패딩 적용
+    nextTick(() => {
+      const headerContainer = gridHeaderRef.value?.headerContainer;
+      if (headerContainer) {
+        headerContainer.style.paddingRight = `${scrollbarWidth.value}px`;
+      }
+    });
+  }
+}
+
+// handleGridScroll 함수 수정
+function handleGridScroll(event) {
+  const { scrollLeft } = event.target;
+  
+  // 수평 스크롤 동기화 (기존 로직)
   if (scrollLeft !== lastScrollLeft.value) {
-    if (gridHeaderRef.value && gridHeaderRef.value.headerContainer) {
-      gridHeaderRef.value.headerContainer.scrollLeft = scrollLeft;
-      lastScrollLeft.value = scrollLeft;
+    lastScrollLeft.value = scrollLeft;
+    const headerContainer = gridHeaderRef.value?.headerContainer;
+    if (headerContainer) {
+      headerContainer.scrollLeft = scrollLeft;
     }
   }
+  
+  // 스크롤바 너비 업데이트
+  updateHeaderPadding();
+  
+  // 기존 가상 스크롤 로직 (scrollTop은 onScroll 내부에서 처리됨)
+  onScroll(event);
 }
 
 // --- 핸들러 래퍼 및 컨텍스트 ---
@@ -700,151 +930,182 @@ function onContextMenuSelect(action) {
   };
 
   switch (action) {
-    case 'add-row-above': {
-      const rowSelection = getEffectiveRowSelection();
-      storeBridge.dispatch('insertRowAt', {
-        index: rowSelection.startRow,
-        count: rowSelection.count,
-      });
-      break;
-    }
-    case 'add-row-below': {
-      const rowSelection = getEffectiveRowSelection();
-      storeBridge.dispatch('insertRowAt', {
-        index: rowSelection.endRow + 1,
-        count: rowSelection.count,
-      });
-      break;
-    }
-    case 'delete-rows': {
-      const rowSelection = getEffectiveRowSelection();
-      if (rowSelection.type === 'individual') {
-        // 개별 선택된 행들을 역순으로 삭제 (인덱스 변화 방지)
-        const sortedRows = rowSelection.rows.sort((a, b) => b - a);
-        for (const rowIndex of sortedRows) {
-          storeBridge.dispatch('deleteMultipleRows', {
-            startRow: rowIndex,
-            endRow: rowIndex,
+  case 'clear-cell-data': {
+    // 개별 셀 선택이 있는 경우 선택된 모든 셀의 데이터 삭제
+    if (selectedCellsIndividual.size > 0) {
+      selectedCellsIndividual.forEach(cellKey => {
+        const [rowStr, colStr] = cellKey.split('_');
+        const rowIndex = parseInt(rowStr, 10);
+        const colIndex = parseInt(colStr, 10);
+        const columnMeta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
+        
+        if (columnMeta) {
+          storeBridge.dispatch('clearCellData', {
+            rowIndex,
+            colIndex,
+            type: columnMeta.type
           });
         }
-      } else {
+      });
+    } else {
+      // 개별 선택이 없는 경우 우클릭한 셀의 데이터만 삭제
+      const columnMeta = allColumnsMeta.value.find(c => c.colIndex === target.colIndex);
+      if (columnMeta) {
+        storeBridge.dispatch('clearCellData', {
+          rowIndex: target.rowIndex,
+          colIndex: target.colIndex,
+          type: columnMeta.type
+        });
+      }
+    }
+    break;
+  }
+  case 'add-row-above': {
+    const rowSelection = getEffectiveRowSelection();
+    storeBridge.dispatch('insertRowAt', {
+      index: rowSelection.startRow,
+      count: rowSelection.count
+    });
+    break;
+  }
+  case 'add-row-below': {
+    const rowSelection = getEffectiveRowSelection();
+    storeBridge.dispatch('insertRowAt', {
+      index: rowSelection.endRow + 1,
+      count: rowSelection.count
+    });
+    break;
+  }
+  case 'delete-rows': {
+    const rowSelection = getEffectiveRowSelection();
+    if (rowSelection.type === 'individual') {
+      // 개별 선택된 행들을 역순으로 삭제 (인덱스 변화 방지)
+      const sortedRows = rowSelection.rows.sort((a, b) => b - a);
+      for (const rowIndex of sortedRows) {
         storeBridge.dispatch('deleteMultipleRows', {
-          startRow: rowSelection.startRow,
-          endRow: rowSelection.endRow,
+          startRow: rowIndex,
+          endRow: rowIndex
         });
       }
-      break;
-    }
-    case 'add-col-left':
-    case 'add-col-right': {
-      const colSelection = getEffectiveColumnSelection();
-      const targetColumn = allColumnsMeta.value.find(c => c.colIndex === target.colIndex);
-      if (!targetColumn || !targetColumn.type || ![COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET].includes(targetColumn.type)) break;
-
-      let insertAtIndex;
-      if (action === 'add-col-right') {
-        const rightmostColumn = allColumnsMeta.value.find(c => c.colIndex === colSelection.endCol);
-        insertAtIndex = rightmostColumn ? rightmostColumn.cellIndex + 1 : 0;
-      } else {
-        const leftmostColumn = allColumnsMeta.value.find(c => c.colIndex === colSelection.startCol);
-        insertAtIndex = leftmostColumn ? leftmostColumn.cellIndex : 0;
-      }
-
-      storeBridge.dispatch('insertMultipleColumnsAt', {
-        type: targetColumn.type,
-        count: colSelection.count,
-        index: insertAtIndex,
+    } else {
+      storeBridge.dispatch('deleteMultipleRows', {
+        startRow: rowSelection.startRow,
+        endRow: rowSelection.endRow
       });
-      break;
     }
-    case 'delete-cols': {
-      const colSelection = getEffectiveColumnSelection();
+    break;
+  }
+  case 'add-col-left':
+  case 'add-col-right': {
+    const colSelection = getEffectiveColumnSelection();
+    const targetColumn = allColumnsMeta.value.find(c => c.colIndex === target.colIndex);
+    if (!targetColumn || !targetColumn.type || ![COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(targetColumn.type)) break;
+
+    let insertAtIndex;
+    if (action === 'add-col-right') {
+      const rightmostColumn = allColumnsMeta.value.find(c => c.colIndex === colSelection.endCol);
+      insertAtIndex = rightmostColumn ? rightmostColumn.cellIndex + 1 : 0;
+    } else {
+      const leftmostColumn = allColumnsMeta.value.find(c => c.colIndex === colSelection.startCol);
+      insertAtIndex = leftmostColumn ? leftmostColumn.cellIndex : 0;
+    }
+
+    storeBridge.dispatch('insertMultipleColumnsAt', {
+      type: targetColumn.type,
+      count: colSelection.count,
+      index: insertAtIndex
+    });
+    break;
+  }
+  case 'delete-cols': {
+    const colSelection = getEffectiveColumnSelection();
       
-      // 1. 각 그룹별 전체 열의 개수를 계산합니다.
-      const totalCounts = allColumnsMeta.value.reduce((acc, col) => {
-        if ([COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET].includes(col.type)) {
-          if (!acc[col.type]) acc[col.type] = 0;
-          acc[col.type]++;
-        }
-        return acc;
-      }, {});
-
-      // 2. 선택된 열들의 개수를 그룹별로 계산합니다.
-      const selectedCounts = {};
-      const columnsToCheck = colSelection.type === 'individual' ? colSelection.columns : 
-        Array.from({length: colSelection.endCol - colSelection.startCol + 1}, (_, i) => colSelection.startCol + i);
-
-      for (const colIndex of columnsToCheck) {
-        const meta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
-        if (meta && [COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET].includes(meta.type)) {
-          if (!selectedCounts[meta.type]) selectedCounts[meta.type] = 0;
-          selectedCounts[meta.type]++;
-        }
+    // 1. 각 그룹별 전체 열의 개수를 계산합니다.
+    const totalCounts = allColumnsMeta.value.reduce((acc, col) => {
+      if ([COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(col.type)) {
+        if (!acc[col.type]) acc[col.type] = 0;
+        acc[col.type]++;
       }
+      return acc;
+    }, {});
 
-      // 3. "최소 1개 열 남기기" 규칙을 위반하지 않는 열만 필터링합니다.
-      const columnsToDelete = [];
-      for (const colIndex of columnsToCheck) {
-        const meta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
-        if (meta && [COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET].includes(meta.type)) {
-          // 해당 그룹의 전체 열 개수에서 선택된 열 개수를 뺐을 때 1개 이상 남는 경우에만 삭제 목록에 추가합니다.
-          if (totalCounts[meta.type] - selectedCounts[meta.type] >= 1) {
-            columnsToDelete.push({ type: meta.type, index: meta.cellIndex });
-          }
-        }
-      }
+    // 2. 선택된 열들의 개수를 그룹별로 계산합니다.
+    const selectedCounts = {};
+    const columnsToCheck = colSelection.type === 'individual' ? colSelection.columns : 
+      Array.from({length: colSelection.endCol - colSelection.startCol + 1}, (_, i) => colSelection.startCol + i);
 
-      if (columnsToDelete.length > 0) {
-        storeBridge.dispatch('deleteMultipleColumnsByIndex', { columns: columnsToDelete });
+    for (const colIndex of columnsToCheck) {
+      const meta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
+      if (meta && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(meta.type)) {
+        if (!selectedCounts[meta.type]) selectedCounts[meta.type] = 0;
+        selectedCounts[meta.type]++;
       }
-      break;
     }
-    case 'delete-empty-rows':
-      storeBridge.dispatch('deleteEmptyRows');
-      break;
-    case 'clear-rows-data': {
-      const rowSelection = getEffectiveRowSelection();
-      if (rowSelection.type === 'individual') {
-        // 개별 선택된 행들의 데이터 삭제
-        for (const rowIndex of rowSelection.rows) {
-          storeBridge.dispatch('clearMultipleRowsData', {
-            startRow: rowIndex,
-            endRow: rowIndex,
-          });
+
+    // 3. "최소 1개 열 남기기" 규칙을 위반하지 않는 열만 필터링합니다.
+    const columnsToDelete = [];
+    for (const colIndex of columnsToCheck) {
+      const meta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
+      if (meta && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(meta.type)) {
+        // 해당 그룹의 전체 열 개수에서 선택된 열 개수를 뺐을 때 1개 이상 남는 경우에만 삭제 목록에 추가합니다.
+        if (totalCounts[meta.type] - selectedCounts[meta.type] >= 1) {
+          columnsToDelete.push({ type: meta.type, index: meta.cellIndex });
         }
-      } else {
+      }
+    }
+
+    if (columnsToDelete.length > 0) {
+      storeBridge.dispatch('deleteMultipleColumnsByIndex', { columns: columnsToDelete });
+    }
+    break;
+  }
+  case 'delete-empty-rows':
+    storeBridge.dispatch('deleteEmptyRows');
+    break;
+  case 'clear-rows-data': {
+    const rowSelection = getEffectiveRowSelection();
+    if (rowSelection.type === 'individual') {
+      // 개별 선택된 행들의 데이터 삭제
+      for (const rowIndex of rowSelection.rows) {
         storeBridge.dispatch('clearMultipleRowsData', {
-          startRow: rowSelection.startRow,
-          endRow: rowSelection.endRow,
+          startRow: rowIndex,
+          endRow: rowIndex
         });
       }
-      break;
-    }
-    case 'clear-cols-data': {
-      const colSelection = getEffectiveColumnSelection();
-      const columnsToCheck = colSelection.type === 'individual' ? colSelection.columns : 
-        Array.from({length: colSelection.endCol - colSelection.startCol + 1}, (_, i) => colSelection.startCol + i);
-      
-      const columnsToClear = [];
-      for (const colIndex of columnsToCheck) {
-        const meta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
-        if(meta) columnsToClear.push(meta);
-      }
-      
-      const fixedColumnTypes = [COL_TYPE_IS_PATIENT, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE];
-
-      columnsToClear.forEach(col => {
-        if (fixedColumnTypes.includes(col.type)) {
-          storeBridge.dispatch("clearFixedColumnData", { type: col.type });
-        } else if (col.type && col.cellIndex !== null && col.cellIndex !== undefined) {
-          storeBridge.dispatch("clearColumnData", {
-            type: col.type,
-            index: col.cellIndex,
-          });
-        }
+    } else {
+      storeBridge.dispatch('clearMultipleRowsData', {
+        startRow: rowSelection.startRow,
+        endRow: rowSelection.endRow
       });
-      break;
     }
+    break;
+  }
+  case 'clear-cols-data': {
+    const colSelection = getEffectiveColumnSelection();
+    const columnsToCheck = colSelection.type === 'individual' ? colSelection.columns : 
+      Array.from({length: colSelection.endCol - colSelection.startCol + 1}, (_, i) => colSelection.startCol + i);
+      
+    const columnsToClear = [];
+    for (const colIndex of columnsToCheck) {
+      const meta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
+      if(meta) columnsToClear.push(meta);
+    }
+      
+    const fixedColumnTypes = [COL_TYPE_IS_PATIENT, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE];
+
+    columnsToClear.forEach(col => {
+      if (fixedColumnTypes.includes(col.type)) {
+        storeBridge.dispatch('clearFixedColumnData', { type: col.type });
+      } else if (col.type && col.cellIndex !== null && col.cellIndex !== undefined) {
+        // 올바른 파라미터로 clearColumnData 호출
+        storeBridge.dispatch('clearColumnData', {
+          type: col.type,
+          index: col.cellIndex
+        });
+      }
+    });
+    break;
+  }
   }
   
   // 작업 완료 후 개별 선택 상태 초기화
@@ -916,13 +1177,13 @@ function createHandlerContext() {
   return {
     getOriginalIndex,
     selectionSystem,
-    rows: rows,
+    rows,
     allColumnsMeta: allColumnsMeta.value,
     gridBodyContainer: gridBodyRef.value?.bodyContainer,
     ensureCellIsVisible,
     getCellValue,
     store: storeBridge, // StoreBridge 사용
-    storeBridge: storeBridge, // StoreBridge 직접 접근용
+    storeBridge, // StoreBridge 직접 접근용
     cellInputState, // 새로운 셀 입력 상태 관리
     isEditing: selectionSystem.state.isEditing,
     editingCell: selectionSystem.state.editingCell,
@@ -931,17 +1192,40 @@ function createHandlerContext() {
     stopEditing: (shouldSaveChanges = true) => 
       selectionSystem.stopEditing(shouldSaveChanges, cellInputState),
     originalCellValue: selectionSystem.state.originalCellValue,
-    focusGrid: focusGrid,
+    focusGrid,
     // 편집 완료 처리 함수 추가
     onCellEditComplete,
     // 컨텍스트 메뉴 제어 함수 추가
     showContextMenu,
     hideContextMenu,
+    // 데이트피커 참조 및 상태 추가
+    dateTimePickerRef,
+    dateTimePickerState
   };
 }
 
 function onCellMouseDown(virtualRowIndex, colIndex, event) {
   const originalRowIndex = getOriginalIndex(virtualRowIndex);
+
+  // 데이트피커가 열려있고 다른 셀을 클릭한 경우 데이트피커 닫기
+  if (dateTimePickerState.visible) {
+    const currentEdit = dateTimePickerState.currentEdit;
+    if (currentEdit && (currentEdit.rowIndex !== originalRowIndex || currentEdit.colIndex !== colIndex)) {
+      console.log('[DataInputVirtual] 다른 셀 클릭으로 데이트피커 닫기');
+      closeDateTimePicker();
+      // return 제거: 데이트피커를 닫고 계속해서 셀 클릭 동작 수행
+    }
+  }
+
+  // 편집 모드에서 같은 셀을 클릭한 경우, 텍스트 커서 이동만 허용하고 다른 동작 차단
+  if (
+    selectionSystem.state.isEditing &&
+    selectionSystem.state.editingCell.rowIndex === originalRowIndex &&
+    selectionSystem.state.editingCell.colIndex === colIndex
+  ) {
+    console.log('[DataInputVirtual] 편집 모드에서 같은 셀 클릭 - 텍스트 커서 이동만 허용');
+    return; // 아무것도 하지 않고 함수 종료
+  }
 
   // BUG FIX: 편집 중일 때 다른 셀 클릭하면 편집 완료 (더블클릭 제외)
   if (
@@ -958,6 +1242,8 @@ function onCellMouseDown(virtualRowIndex, colIndex, event) {
     if (tempValue !== null && columnMeta) {
       storeBridge.saveCellValue(editRow, editCol, tempValue, columnMeta);
       console.log(`[DataInputVirtual] 다른 셀 클릭으로 편집 완료: ${editRow}, ${editCol} = ${tempValue}`);
+      // 검증 호출
+      validationManager.validateCell(editRow, editCol, tempValue, columnMeta.type);
     }
     
     // cellInputState 상태 정리
@@ -995,8 +1281,31 @@ function onDocumentMouseUp(event) {
 }
 
 function onKeyDown(event) {
-    const context = createHandlerContext();
-    handleVirtualKeyDown(event, context);
+  // 데이트피커가 열려 있을 때 키보드 이벤트 우선 처리
+  if (dateTimePickerState.visible) {
+    switch (event.key) {
+    case 'Escape':
+      event.preventDefault();
+      event.stopPropagation();
+      onDateTimeCancel();
+      return;
+
+    case 'Enter':
+      // 데이트피커 내부에서 Enter 키 처리는 DateTimePicker 컴포넌트에서 담당
+      // 여기서는 기본 동작 방지만 수행
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+
+    default:
+      // 다른 키는 데이트피커 컴포넌트가 처리하도록 전파 허용
+      return;
+    }
+  }
+
+  // 데이트피커가 열려 있지 않을 때는 기존 로직 수행
+  const context = createHandlerContext();
+  handleVirtualKeyDown(event, context);
 }
 
 async function onCellDoubleClick(virtualRowIndex, colIndex, event) {
@@ -1032,6 +1341,8 @@ function onCellEditComplete(rowIndex, colIndex, shouldSave = true) {
     if (columnMeta) {
       // 헤더 셀과 바디 셀 모두 동일한 방식으로 처리
       storeBridge.saveCellValue(rowIndex, colIndex, tempValue, columnMeta);
+      console.log(`[DataInputVirtual] Validation 호출: row=${rowIndex}, col=${colIndex}, value="${tempValue}", type="${columnMeta.type}"`);
+      validationManager.validateCell(rowIndex, colIndex, tempValue, columnMeta.type);
     }
   }
 }
@@ -1067,11 +1378,11 @@ function onEnterPressedFromBar() {
 
 // --- 헬퍼 함수 ---
 function getCellValue(row, columnMeta, rowIndex = null) {
-  if (!columnMeta) return "";
+  if (!columnMeta) return '';
   
   if (rowIndex < 0) { // Header cell
     // HTML 태그 제거하여 순수 텍스트만 반환
-    const headerText = columnMeta.headerText || "";
+    const headerText = columnMeta.headerText || '';
     return headerText.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '').trim();
   }
   
@@ -1079,38 +1390,56 @@ function getCellValue(row, columnMeta, rowIndex = null) {
     return rowIndex + 1;
   }
   
-  if (!row || !columnMeta.dataKey) return "";
+  if (!row || !columnMeta.dataKey) return '';
   
   if (columnMeta.cellIndex !== null && columnMeta.cellIndex !== undefined) {
     if (!row[columnMeta.dataKey] || !Array.isArray(row[columnMeta.dataKey])) {
-      return "";
+      return '';
     }
-    return row[columnMeta.dataKey][columnMeta.cellIndex] ?? "";
+    return row[columnMeta.dataKey][columnMeta.cellIndex] ?? '';
   } else {
-    return row[columnMeta.dataKey] ?? "";
+    return row[columnMeta.dataKey] ?? '';
   }
 }
 
 // --- 라이프사이클 훅 ---
 onMounted(() => {
+  // storeBridge를 전역으로 설정하여 유효성 검사 오류 자동 저장
+  window.storeBridge = storeBridge;
+  
   if (gridContainerRef.value) {
     // We only need the body's height for viewport calculation.
     const bodyElement = gridContainerRef.value.querySelector('.grid-body-virtual');
     if(bodyElement) {
-        const ADD_ROWS_CONTROLS_HEIGHT = 5; // reduced offset height
-        viewportHeight.value = bodyElement.clientHeight - ADD_ROWS_CONTROLS_HEIGHT;
+      const ADD_ROWS_CONTROLS_HEIGHT = 5; // reduced offset height
+      viewportHeight.value = bodyElement.clientHeight - ADD_ROWS_CONTROLS_HEIGHT;
     }
   }
   setColumnsMeta(allColumnsMeta.value);
   // 외부 클릭 시 컨텍스트 메뉴 닫기
   document.addEventListener('click', hideContextMenu);
+  // 외부 클릭 시 데이트피커 닫기
+  document.addEventListener('click', handleGlobalClick);
 
   cleanupDragDrop = setupDragDropListeners(onFileDropped);
+  
+  // 초기 스크롤바 너비 계산
+  nextTick(() => {
+    updateHeaderPadding();
+  });
+  
+  // 윈도우 리사이즈 리스너 추가
+  window.addEventListener('resize', handleWindowResize);
 });
+
+// keep-alive로 인해 컴포넌트가 다시 활성화될 때
+// onActivated는 keep-alive와 함께 사용되지만, 현재 구조에서는 불필요하므로 제거
 
 onBeforeUnmount(() => {
   // 전역 리스너 정리
   document.removeEventListener('click', hideContextMenu);
+  document.removeEventListener('click', handleGlobalClick);
+  window.removeEventListener('resize', handleWindowResize);
   if (onDocumentMouseMoveBound.value) {
     document.removeEventListener('mousemove', onDocumentMouseMoveBound.value);
   }
@@ -1118,11 +1447,23 @@ onBeforeUnmount(() => {
     document.removeEventListener('mouseup', onDocumentMouseUpBound.value);
   }
   if (cleanupDragDrop) cleanupDragDrop();
-});
 
+  // ValidationManager 타이머만 정리 (유효성 검사 오류는 유지)
+  if (validationManager && typeof validationManager.clearTimers === 'function') {
+    try {
+      validationManager.clearTimers();
+    } catch (error) {
+      // 정리 중 오류가 발생해도 무시
+    }
+  }
+});
 
 watch(allColumnsMeta, (newMeta) => {
   setColumnsMeta(newMeta);
+  // 스크롤바 너비 재계산
+  nextTick(() => {
+    updateHeaderPadding();
+  });
 }, { immediate: true });
 
 function onFileDropped(file) {
@@ -1130,13 +1471,26 @@ function onFileDropped(file) {
 }
 
 // --- Column Add/Delete Handlers from Group Header ---
+function mapGroupTypeToMetaType(groupType) {
+  if (groupType === COL_TYPE_CLINICAL) return 'clinicalSymptoms';
+  if (groupType === COL_TYPE_DIET) return 'dietInfo';
+  return groupType; // default mapping for 'basic', etc.
+}
+
 function onAddColumn(groupType) {
+  // 데이트피커가 열려있으면 닫기
+  if (dateTimePickerState.visible) {
+    console.log('[DataInputVirtual] 열 추가로 데이트피커 닫기');
+    closeDateTimePicker();
+  }
+
   const arr = getHeaderArrayByType(groupType);
   const insertIndex = arr.length; // append to end
+  const metaType = mapGroupTypeToMetaType(groupType);
   storeBridge.dispatch('insertMultipleColumnsAt', {
-    type: groupType,
+    type: metaType,
     count: 1,
-    index: insertIndex,
+    index: insertIndex
   });
 
   // 선택 영역 초기화 및 포커스 유지
@@ -1147,11 +1501,18 @@ function onAddColumn(groupType) {
 }
 
 function onDeleteColumn(groupType) {
+  // 데이트피커가 열려있으면 닫기
+  if (dateTimePickerState.visible) {
+    console.log('[DataInputVirtual] 열 삭제로 데이트피커 닫기');
+    closeDateTimePicker();
+  }
+
   const arr = getHeaderArrayByType(groupType);
   if (arr.length <= 1) return; // 최소 1개 유지
   const deleteIndex = arr.length - 1; // last column
+  const metaType = mapGroupTypeToMetaType(groupType);
   storeBridge.dispatch('deleteMultipleColumnsByIndex', {
-    columns: [{ type: groupType, index: deleteIndex }],
+    columns: [{ type: metaType, index: deleteIndex }]
   });
   selectionSystem.clearSelection();
   nextTick(() => focusGrid());
@@ -1160,24 +1521,36 @@ function onDeleteColumn(groupType) {
 // Helper to map group type to header array
 function getHeaderArrayByType(type) {
   switch (type) {
-    case COL_TYPE_BASIC:
-      return headers.value.basic || [];
-    case COL_TYPE_CLINICAL:
-      return headers.value.clinical || [];
-    case COL_TYPE_DIET:
-      return headers.value.diet || [];
-    default:
-      return [];
+  case COL_TYPE_BASIC:
+    return headers.value.basic || [];
+  case COL_TYPE_CLINICAL:
+    return headers.value.clinical || [];
+  case COL_TYPE_DIET:
+    return headers.value.diet || [];
+  default:
+    return [];
   }
 }
 
 function onDeleteEmptyRows() {
+  // 데이트피커가 열려있으면 닫기
+  if (dateTimePickerState.visible) {
+    console.log('[DataInputVirtual] 빈 행 삭제로 데이트피커 닫기');
+    closeDateTimePicker();
+  }
+
   storeBridge.dispatch('deleteEmptyRows');
   selectionSystem.clearSelection();
   showToast('빈 행이 삭제되었습니다.', 'success');
 }
 
 function onAddRows(count) {
+  // 데이트피커가 열려있으면 닫기
+  if (dateTimePickerState.visible) {
+    console.log('[DataInputVirtual] 행 추가로 데이트피커 닫기');
+    closeDateTimePicker();
+  }
+
   const insertIndex = rows.value.length;
   storeBridge.dispatch('insertRowAt', { index: insertIndex, count });
   nextTick(() => {
@@ -1187,16 +1560,149 @@ function onAddRows(count) {
 }
 
 function onClearSelection() {
+  // 데이트피커가 열려있으면 닫기
+  if (dateTimePickerState.visible) {
+    console.log('[DataInputVirtual] 선택 영역 초기화로 데이트피커 닫기');
+    closeDateTimePicker();
+  }
+
   selectionSystem.clearSelection();
 }
 
 // --- Undo/Redo 핸들러 ---
 function onUndo() {
-  storeBridge.undo();
+  // 데이트피커가 열려있으면 닫기
+  if (dateTimePickerState.visible) {
+    console.log('[DataInputVirtual] Undo로 데이트피커 닫기');
+    closeDateTimePicker();
+  }
+
+  const success = storeBridge.undo();
+  if (success) {
+    // ValidationManager 타이머만 정리 (오류는 StoreBridge에서 복원됨)
+    if (validationManager && typeof validationManager.onDataReset === 'function') {
+      validationManager.onDataReset();
+    }
+  }
 }
 
 function onRedo() {
-  storeBridge.redo();
+  // 데이트피커가 열려있으면 닫기
+  if (dateTimePickerState.visible) {
+    console.log('[DataInputVirtual] Redo로 데이트피커 닫기');
+    closeDateTimePicker();
+  }
+
+  const success = storeBridge.redo();
+  if (success) {
+    // ValidationManager 타이머만 정리 (오류는 StoreBridge에서 복원됨)
+    if (validationManager && typeof validationManager.onDataReset === 'function') {
+      validationManager.onDataReset();
+    }
+  }
+}
+
+function handleFocusFirstError() {
+  const errors = Array.from(validationErrors.value.entries());
+  if (errors.length === 0) return;
+  const [key] = errors[0];
+  const [rowIndex, colIndex] = key.split('_').map(Number);
+  // 가상 스크롤/그리드에 셀 이동 및 포커스
+  ensureCellIsVisible(rowIndex, colIndex);
+  selectionSystem.selectCell(rowIndex, colIndex);
+  focusGrid();
+}
+
+// --- DateTimePicker 이벤트 핸들러 ---
+async function onDateTimeConfirm(dateTimeObject) {
+  console.log('[DateTimePicker] Date confirmed:', dateTimeObject);
+  
+  // 현재 편집 중인 셀 정보 가져오기
+  const editInfo = dateTimePickerState.currentEdit;
+  if (!editInfo) {
+    console.warn('[DateTimePicker] No edit info found');
+    dateTimePickerState.visible = false;
+    return;
+  }
+  
+  const { rowIndex, colIndex, columnMeta } = editInfo;
+  
+  try {
+    // 날짜/시간 포맷팅
+    const { formatDateTime } = await import('./utils/dateTimeUtils.js');
+    const formattedValue = formatDateTime(dateTimeObject);
+    console.log(`[DateTimePicker] Formatted value: ${formattedValue} for cell: ${rowIndex}, ${colIndex}`);
+    
+    // 값 저장
+    storeBridge.saveCellValue(rowIndex, colIndex, formattedValue, columnMeta);
+    
+    // 편집 완료
+    cellInputState.confirmEditing();
+    selectionSystem.stopEditing(true);
+    
+    // 유효성 검사 실행
+    validationManager.validateCell(rowIndex, colIndex, formattedValue, columnMeta.type);
+    
+    console.log(`[DateTimePicker] Successfully saved date: ${formattedValue}`);
+  } catch (error) {
+    console.error('[DateTimePicker] Error saving date:', error);
+    // 오류 발생 시 편집 취소
+    cellInputState.cancelEditing();
+    selectionSystem.stopEditing(false);
+  }
+  
+  // 데이트피커 숨김 및 상태 정리
+  dateTimePickerState.visible = false;
+  dateTimePickerState.currentEdit = null;
+  
+  // 포커스 복원
+  nextTick(() => {
+    focusGrid();
+  });
+}
+
+// 데이트피커를 닫는 공통 함수
+function closeDateTimePicker() {
+  console.log('[DateTimePicker] Closing date picker');
+  
+  // 편집 취소
+  if (dateTimePickerState.currentEdit) {
+    cellInputState.cancelEditing();
+    selectionSystem.stopEditing(false);
+  }
+  
+  // 데이트피커 숨김 및 상태 정리
+  dateTimePickerState.visible = false;
+  dateTimePickerState.currentEdit = null;
+  
+  // 포커스 복원
+  nextTick(() => {
+    focusGrid();
+  });
+}
+
+function onDateTimeCancel() {
+  console.log('[DateTimePicker] Date selection cancelled');
+  closeDateTimePicker();
+}
+
+// 전역 클릭 핸들러 - 데이트피커 외부 클릭 시 닫기
+function handleGlobalClick(event) {
+  if (dateTimePickerState.visible) {
+    // 데이트피커 요소인지 확인
+    const dateTimePickerElement = dateTimePickerRef.value?.$el;
+    if (dateTimePickerElement && !dateTimePickerElement.contains(event.target)) {
+      console.log('[DataInputVirtual] 외부 클릭으로 데이트피커 닫기');
+      closeDateTimePicker();
+    }
+  }
+}
+
+// 윈도우 리사이즈 핸들러 - 스크롤바 너비 재계산
+function handleWindowResize() {
+  nextTick(() => {
+    updateHeaderPadding();
+  });
 }
 
 </script>

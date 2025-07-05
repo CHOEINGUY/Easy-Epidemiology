@@ -1,17 +1,28 @@
 <template>
   <header class="app-header">
     <h1 class="app-title">Easy-Epidemiology Web v1.0</h1>
-    <!-- Validation error button will be implemented in a later step -->
-    <!-- 
-    <button class="validation-error-button">
-      데이터 유효성 오류 (0)
+    <button 
+      v-if="errorCount > 0"
+      class="validation-error-button"
+      @click="$emit('focusFirstError')"
+    >
+      <svg class="warning-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L1 21H23L12 2Z" fill="#e74c3c"/>
+        <path d="M12 8V14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="12" cy="17" r="1" fill="white"/>
+      </svg>
+      데이터 유효성 오류
+      <span class="badge">{{ errorCount }}</span>
     </button>
-    -->
   </header>
 </template>
 
 <script setup>
-// Props and events will be added in later steps.
+import { defineProps, defineEmits } from 'vue';
+defineProps({
+  errorCount: { type: Number, default: 0 }
+});
+defineEmits(['focusFirstError']);
 </script>
 
 <style scoped>
@@ -35,7 +46,7 @@
 }
 
 .validation-error-button {
-  background: #f4f8ff;
+  background: #ffeaea;
   border: none;
   color: #e74c3c;
   border-radius: 8px;
@@ -49,9 +60,26 @@
   cursor: pointer;
   box-shadow: none;
   transition: none;
+  position: relative;
 }
 
 .validation-error-button:hover {
-  background: #eaf2ff;
+  background: #ffd6d6;
+}
+
+.warning-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.badge {
+  background: #e74c3c;
+  color: #fff;
+  border-radius: 50%;
+  padding: 2px 8px;
+  font-size: 14px;
+  margin-left: 4px;
+  font-weight: bold;
 }
 </style> 

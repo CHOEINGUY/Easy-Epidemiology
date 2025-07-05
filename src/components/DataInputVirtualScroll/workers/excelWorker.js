@@ -91,9 +91,9 @@ function parseAOAData(aoa) {
   const hasIndividualExposureTime = ranges.individualExposureTime !== -1;
 
   const headers = {
-    basic: headerRow2.slice(ranges.basic.start, ranges.basic.end).filter(h=>h?.trim()),
-    clinical: headerRow2.slice(ranges.clinical.start, ranges.clinical.end).filter(h=>h?.trim()),
-    diet: headerRow2.slice(ranges.diet.start, ranges.diet.end).filter(h=>h?.trim()),
+    basic: headerRow2.slice(ranges.basic.start, ranges.basic.end).filter(h => h?.trim()),
+    clinical: headerRow2.slice(ranges.clinical.start, ranges.clinical.end).filter(h => h?.trim()),
+    diet: headerRow2.slice(ranges.diet.start, ranges.diet.end).filter(h => h?.trim())
   };
 
   const rows = dataRows
@@ -108,7 +108,7 @@ function parseAOAData(aoa) {
       clinicalSymptoms: row.slice(ranges.clinical.start, ranges.clinical.end).map(c => (c ?? '').toString().trim()),
       symptomOnset: convertExcelDate(row[ranges.symptomOnset]),
       individualExposureTime: hasIndividualExposureTime ? convertExcelDate(row[ranges.individualExposureTime]) : '',
-      dietInfo: row.slice(ranges.diet.start, ranges.diet.end).map(c => (c ?? '').toString().trim()),
+      dietInfo: row.slice(ranges.diet.start, ranges.diet.end).map(c => (c ?? '').toString().trim())
     }));
 
   return { headers, rows, hasIndividualExposureTime };

@@ -14,7 +14,7 @@ export function useDataExport() {
   const downloadXLSX = (
     worksheetData,
     merges = [],
-    fileName = 'exported_data.xlsx',
+    fileName = 'exported_data.xlsx'
   ) => {
     try {
       if (!worksheetData) throw new Error('워크시트 데이터가 제공되지 않았습니다.');
@@ -40,7 +40,7 @@ export function useDataExport() {
       link.href = '/Easy-Epidemiology_Individual_Exposure_Time_Template.xlsx';
       link.setAttribute(
         'download',
-        'Easy-Epidemiology_Individual_Exposure_Time_Template.xlsx',
+        'Easy-Epidemiology_Individual_Exposure_Time_Template.xlsx'
       );
     } else {
       link.href = '/Easy-Epidemiology_Template.xlsx';
