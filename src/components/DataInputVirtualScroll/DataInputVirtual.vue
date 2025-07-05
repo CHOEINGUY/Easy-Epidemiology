@@ -160,9 +160,9 @@ const getters = store.getters;
 
 // ValidationManager 인스턴스 (개발 환경에서만 디버그 로그 활성화)
 const validationManager = new ValidationManager(store, { 
-  useWorker: process.env.NODE_ENV === 'production', // 프로덕션에서만 Worker 사용
+  useWorker: import.meta.env?.MODE === 'production' || false, // 프로덕션에서만 Worker 사용
   chunkSize: 500,
-  debug: process.env.NODE_ENV === 'development', // 개발 환경에서만 디버그 로그
+  debug: import.meta.env?.MODE === 'development' || false, // 개발 환경에서만 디버그 로그
   onProgress: (progress) => {
     isValidationProcessing.value = progress < 100;
     validationProgress.value = progress;
@@ -171,7 +171,7 @@ const validationManager = new ValidationManager(store, {
 
 // --- 새로운 저장 시스템 ---
 const storeBridge = useStoreBridge(store, validationManager, { 
-  debug: process.env.NODE_ENV === 'development' 
+  debug: import.meta.env?.MODE === 'development' || false
 });
 // 전역 Undo/Redo 키보드 단축키 활성화
 useUndoRedo(storeBridge);
@@ -478,6 +478,11 @@ const selectedCellInfo = computed(() => {
   }
 
   const columnMeta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
+  
+  // columnMeta가 없는 경우 처리
+  if (!columnMeta) {
+    return { address: '', value: '' };
+  }
 
   // If a whole row (serial column) is selected, show empty id
   if (colIndex === 0 && rowIndex >= 0) {
@@ -586,7 +591,7 @@ async function onExcelFileSelected(file) {
     // 데이터 가져온 후 전체 유효성 검사 실행
     await nextTick();
     const columnMetas = storeBridge.bridge.getColumnMetas();
-    validationManager.revalidateAll(storeBridge.state.rows, columnMetas);
+    await validationManager.revalidateAll(storeBridge.state.rows, columnMetas);
     
     // focus first cell
     selectionSystem.selectCell(0, 1);
@@ -729,15 +734,11 @@ function onToggleExposureColumn() {
   console.log('isAdding:', isAdding);
   
   // === 개별 노출시간 열 삽입 위치 ===
-  // 기존 구현은 clinicalSymptomsStartIndex 가 0 일 때 잘못된 인덱스를 전달했습니다.
   // "증상발현시간" 열의 현재 위치가 바로 개별-노출시간 열의 삽입 위치가 되므로,
   // 토글 직전에 계산되는 symptomOnsetStartIndex 를 그대로 사용합니다.
   // (isIndividualExposureColumnVisible 가 false 인 상태이므로 정확히 임상증상 끝 다음 인덱스)
 
   const exposureInsertIndex = storeBridge.symptomOnsetStartIndex;
-
-  // clinicalSymptomsEndIndex 변수는 이후에 사용되므로 함께 업데이트합니다.
-  const clinicalSymptomsEndIndex = exposureInsertIndex;
   
   // 개별 노출시간 열의 정확한 인덱스 찾기
   const individualExposureColumnIndex = allColumnsMeta.value.findIndex(col => 
@@ -768,44 +769,46 @@ function onToggleExposureColumn() {
     console.log('백업된 데이터:', individualExposureBackupData.value);
     
     // 새로 추가된 개별 노출시간 열의 실제 인덱스 찾기
-    const newIndividualExposureColumnIndex = allColumnsMeta.value.findIndex(col => 
-      col.type === 'individualExposureTime' || 
-      (col.dataKey === 'individualExposureTime' && col.cellIndex === 0)
-    );
-    
-    console.log('찾은 새 열 인덱스:', newIndividualExposureColumnIndex);
-    
-    if (newIndividualExposureColumnIndex >= 0) {
-      // 개별 노출시간 열 전용 검증 메서드 사용
-      validationManager.validateIndividualExposureColumn(
-        individualExposureBackupData.value, 
-        newIndividualExposureColumnIndex,
-        (progress) => {
-          // 진행률 표시 (대용량 데이터의 경우)
-          if (individualExposureBackupData.value.length > 100 && progress === 100) {
-            showToast(`개별 노출시간 열 ${individualExposureBackupData.value.length}개 셀의 유효성검사를 완료했습니다.`, 'success');
-          }
-        }
+    nextTick(() => {
+      const newIndividualExposureColumnIndex = allColumnsMeta.value.findIndex(col => 
+        col.type === 'individualExposureTime' || 
+        (col.dataKey === 'individualExposureTime' && col.cellIndex === 0)
       );
-    } else {
-      console.error('새로운 개별 노출시간 열 인덱스를 찾을 수 없습니다!');
       
-      // 대안: clinicalSymptomsEndIndex 사용
-      console.log('대안으로 clinicalSymptomsEndIndex 사용:', clinicalSymptomsEndIndex);
-      validationManager.validateIndividualExposureColumn(
-        individualExposureBackupData.value, 
-        clinicalSymptomsEndIndex,
-        (progress) => {
-          // 진행률 표시 (대용량 데이터의 경우)
-          if (individualExposureBackupData.value.length > 100 && progress === 100) {
-            showToast(`개별 노출시간 열 ${individualExposureBackupData.value.length}개 셀의 유효성검사를 완료했습니다.`, 'success');
+      console.log('찾은 새 열 인덱스:', newIndividualExposureColumnIndex);
+      
+      if (newIndividualExposureColumnIndex >= 0) {
+        // 개별 노출시간 열 전용 검증 메서드 사용
+        validationManager.validateIndividualExposureColumn(
+          individualExposureBackupData.value, 
+          newIndividualExposureColumnIndex,
+          (progress) => {
+            // 진행률 표시 (대용량 데이터의 경우)
+            if (individualExposureBackupData.value.length > 100 && progress === 100) {
+              showToast(`개별 노출시간 열 ${individualExposureBackupData.value.length}개 셀의 유효성검사를 완료했습니다.`, 'success');
+            }
           }
-        }
-      );
-    }
-    
-    // 검증 완료 후 백업 데이터 초기화
-    individualExposureBackupData.value = [];
+        );
+      } else {
+        console.error('새로운 개별 노출시간 열 인덱스를 찾을 수 없습니다!');
+        
+        // 대안: exposureInsertIndex 사용
+        console.log('대안으로 exposureInsertIndex 사용:', exposureInsertIndex);
+        validationManager.validateIndividualExposureColumn(
+          individualExposureBackupData.value, 
+          exposureInsertIndex,
+          (progress) => {
+            // 진행률 표시 (대용량 데이터의 경우)
+            if (individualExposureBackupData.value.length > 100 && progress === 100) {
+              showToast(`개별 노출시간 열 ${individualExposureBackupData.value.length}개 셀의 유효성검사를 완료했습니다.`, 'success');
+            }
+          }
+        );
+      }
+      
+      // 검증 완료 후 백업 데이터 초기화
+      individualExposureBackupData.value = [];
+    });
   }
   
   // selection & meta refresh handled by reactive state; clear selection for safety
@@ -885,6 +888,12 @@ function onContextMenuSelect(action) {
   const getEffectiveRowSelection = () => {
     if (selectedRowsIndividual.size > 0) {
       const rows = Array.from(selectedRowsIndividual).sort((a, b) => a - b);
+      
+      // 빈 배열 체크
+      if (rows.length === 0) {
+        return { type: 'none', startRow: target.rowIndex, endRow: target.rowIndex, count: 0 };
+      }
+      
       return { 
         type: 'individual', 
         rows, 
@@ -911,6 +920,12 @@ function onContextMenuSelect(action) {
         columns.add(parseInt(colStr, 10));
       });
       const colArray = Array.from(columns).sort((a, b) => a - b);
+      
+      // 빈 배열 체크
+      if (colArray.length === 0) {
+        return { type: 'none', startCol: target.colIndex, endCol: target.colIndex, count: 0 };
+      }
+      
       return { 
         type: 'individual', 
         columns: colArray,

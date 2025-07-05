@@ -37,7 +37,7 @@ class PerformanceMonitor {
       this.measures.set(measureName, duration);
       
       // 개발 환경에서만 로그 출력
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env?.MODE === 'development' || false) {
         console.log(`⏱️ ${measureName}: ${duration}ms`);
       }
       
@@ -106,7 +106,7 @@ class PerformanceMonitor {
       memory: this.getMemoryUsage()
     };
     
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env?.MODE === 'development' || false) {
       console.table(summary.measures);
       if (summary.memory) {
         console.log('💾 Memory Usage:', summary.memory);
@@ -126,6 +126,38 @@ class PerformanceMonitor {
     if (typeof performance !== 'undefined' && performance.clearMarks) {
       performance.clearMarks();
       performance.clearMeasures();
+    }
+  }
+
+  /**
+   * 전체 성능 리포트를 생성합니다.
+   * @returns {Object} 전체 성능 메트릭
+   */
+  generateReport() {
+    const report = {};
+    
+    for (const [name, measurements] of this.measures) {
+      const totalDuration = measurements.reduce((sum, m) => sum + m, 0);
+      const count = measurements.length;
+      
+      if (count > 0) {
+        const durations = measurements.map(m => m);
+        const avgDuration = totalDuration / count;
+        const minDuration = Math.min(...durations);
+        const maxDuration = Math.max(...durations);
+        
+        report[name] = {
+          count,
+          avgDuration: Math.round(avgDuration * 100) / 100,
+          minDuration: Math.round(minDuration * 100) / 100,
+          maxDuration: Math.round(maxDuration * 100) / 100,
+          totalDuration: Math.round(totalDuration * 100) / 100
+        };
+      }
+    }
+    
+    if (import.meta.env?.MODE === 'development' || false) {
+      console.table(report);
     }
   }
 }

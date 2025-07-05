@@ -87,15 +87,22 @@ export class EnhancedStorageManager {
     
     // 기존 대기 중인 저장 작업이 있다면 취소
     if (this.pendingSaves.has(saveKey)) {
-      clearTimeout(this.pendingSaves.get(saveKey).timeoutId);
+      const existingSave = this.pendingSaves.get(saveKey);
+      clearTimeout(existingSave.timeoutId);
+      console.log(`[EnhancedStorageManager] 기존 저장 작업이 취소되었습니다: ${saveKey}`);
     }
     
-    // 새로운 저장 작업 예약
+    // 새로운 저장 작업 예약 - 최신 값으로 덮어쓰기
     const timeoutId = setTimeout(() => {
-      this.executeSave(editData);
-      this.pendingSaves.delete(saveKey);
+      // 저장 시점에 최신 editData 사용
+      const latestSave = this.pendingSaves.get(saveKey);
+      if (latestSave) {
+        this.executeSave(latestSave.editData);
+        this.pendingSaves.delete(saveKey);
+      }
     }, this.SAVE_DELAY);
     
+    // 항상 최신 editData로 업데이트
     this.pendingSaves.set(saveKey, {
       editData,
       timeoutId,

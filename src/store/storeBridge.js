@@ -19,7 +19,7 @@ export class StoreBridge {
     this._canRedo = ref(false);
     
     // 디버그 옵션 설정
-    this.debug = options.debug ?? process.env.NODE_ENV === 'development';
+    this.debug = options.debug ?? (import.meta.env?.MODE === 'development' || false);
     
     if (legacyStore) {
       this.initialize();
@@ -850,7 +850,11 @@ export class StoreBridge {
     );
     
     if (!columnMeta) {
-      console.warn('[StoreBridge] clearCellData: 컬럼 메타데이터를 찾을 수 없음:', { colIndex, type });
+      console.error('[StoreBridge] clearCellData: 컬럼 메타데이터를 찾을 수 없음:', { colIndex, type });
+      // 사용자에게 알림
+      if (typeof window !== 'undefined' && window.showToast) {
+        window.showToast('데이터 삭제 중 오류가 발생했습니다.', 'error');
+      }
       return;
     }
     
@@ -1505,7 +1509,7 @@ export class StoreBridge {
 
     // Validation: validationManager 주입 시 호출
     if (this.validationManager) {
-      this.validationManager.validateCell(rowIndex, colIndex, value, columnMeta.type);
+      this.validationManager.validateCell(rowIndex, columnMeta.colIndex, value, columnMeta.type);
     }
     return true;
   }

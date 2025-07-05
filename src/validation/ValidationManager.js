@@ -744,10 +744,19 @@ export class ValidationManager {
 
   _getCellValue(row, columnMeta) {
     if (!row || !columnMeta.dataKey) return '';
+    
     if (columnMeta.cellIndex !== null && columnMeta.cellIndex !== undefined) {
       const arr = row[columnMeta.dataKey];
-      return Array.isArray(arr) ? arr[columnMeta.cellIndex] ?? '' : '';
+      if (!Array.isArray(arr)) return '';
+      
+      // 배열 범위 체크 추가
+      if (columnMeta.cellIndex < 0 || columnMeta.cellIndex >= arr.length) {
+        return '';
+      }
+      
+      return arr[columnMeta.cellIndex] ?? '';
     }
+    
     return row[columnMeta.dataKey] ?? '';
   }
 }

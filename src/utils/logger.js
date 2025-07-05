@@ -11,9 +11,9 @@ const LOG_LEVELS = {
 };
 
 class Logger {
-  constructor(options = {}) {
-    this.level = options.level || (process.env.NODE_ENV === 'development' ? LOG_LEVELS.DEBUG : LOG_LEVELS.ERROR);
-    this.prefix = options.prefix || '[App]';
+  constructor(prefix = '[App]', options = {}) {
+    this.prefix = prefix;
+    this.level = options.level || (import.meta.env?.MODE === 'development' ? LOG_LEVELS.DEBUG : LOG_LEVELS.ERROR);
   }
 
   error(message, ...args) {

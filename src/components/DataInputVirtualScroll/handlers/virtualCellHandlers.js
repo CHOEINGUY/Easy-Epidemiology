@@ -298,10 +298,12 @@ export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, co
 async function handleDateTimePickerEdit(rowIndex, colIndex, event, context) {
   const { allColumnsMeta, selectionSystem } = context;
   
-  // 데이트피커 참조가 없으면 인라인 편집으로 폴백
+  // 데이트피커 참조가 없으면 경고하고 날짜 전용 인라인 편집으로 폴백
   if (!context.dateTimePickerRef || !context.dateTimePickerRef.value) {
-    console.warn('[DateTimePicker] DateTimePicker reference not found, falling back to inline edit');
-    await handleInlineEdit(rowIndex, colIndex, event, context);
+    console.warn('[DateTimePicker] DateTimePicker reference not found, falling back to date-aware inline edit');
+    
+    // 날짜/시간 형식을 위한 특수 인라인 편집
+    await handleDateTimeInlineEdit(rowIndex, colIndex, event, context);
     return;
   }
 
@@ -352,8 +354,44 @@ async function handleDateTimePickerEdit(rowIndex, colIndex, event, context) {
     };
   } else {
     console.warn('[DateTimePicker] dateTimePickerState not found in context');
-    // 폴백: 인라인 편집으로 전환
-    await handleInlineEdit(rowIndex, colIndex, event, context);
+    // 폴백: 날짜 전용 인라인 편집으로 전환
+    await handleDateTimeInlineEdit(rowIndex, colIndex, event, context);
+  }
+}
+
+/**
+ * 날짜/시간 전용 인라인 편집 처리 (데이트피커 없을 때 폴백)
+ */
+async function handleDateTimeInlineEdit(rowIndex, colIndex, event, context) {
+  const { allColumnsMeta, selectionSystem, getCellValue, rows, cellInputState, storeBridge } = context;
+  
+  // 기본 인라인 편집 시작
+  await handleInlineEdit(rowIndex, colIndex, event, context);
+  
+  // 날짜/시간 형식 검증 추가
+  const cellElement = event.target.closest('td, th');
+  if (cellElement) {
+    const originalHandleInput = cellElement._handleInput;
+    
+    // 날짜/시간 형식 검증을 추가한 input 핸들러
+    cellElement._handleInput = (e) => {
+      const newValue = e.target.textContent;
+      const dateTimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+      
+      // 입력 중인 값이 형식에 맞지 않으면 경고 표시
+      if (newValue && newValue.length >= 16 && !dateTimeRegex.test(newValue)) {
+        cellElement.style.backgroundColor = '#ffebee';
+        cellElement.title = 'YYYY-MM-DD HH:mm 형식으로 입력하세요';
+      } else {
+        cellElement.style.backgroundColor = '';
+        cellElement.title = '';
+      }
+      
+      // 기본 핸들러 호출
+      if (originalHandleInput) {
+        originalHandleInput(e);
+      }
+    };
   }
 }
 

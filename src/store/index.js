@@ -6,9 +6,13 @@
 import { StoreBridge, useStoreBridge } from './storeBridge.js';
 import { EnhancedStorageManager } from './enhancedStorageManager.js';
 import { CellInputState } from './cellInputState.js';
+import { getMigrationStatus, executeMigration } from './utils/migration.js';
 
 // 전역 인스턴스
 let globalStoreBridge = null;
+
+// 개발 환경 확인
+const isDevelopment = import.meta.env?.MODE === 'development' || false;
 
 /**
  * 전역 StoreBridge 인스턴스를 초기화합니다.
@@ -27,7 +31,7 @@ export function initializeStoreBridge(legacyStore) {
   }
   
   globalStoreBridge = new StoreBridge(legacyStore, null, { 
-    debug: process.env.NODE_ENV === 'development' 
+    debug: isDevelopment
   });
   console.log('[Store] StoreBridge가 초기화되었습니다.');
   
@@ -66,7 +70,7 @@ export function useStore(legacyStore = null) {
   }
   
   return useStoreBridge(globalStoreBridge.legacyStore, null, { 
-    debug: process.env.NODE_ENV === 'development' 
+    debug: isDevelopment
   });
 }
 
@@ -104,6 +108,24 @@ export function resetStoreSystem() {
   }
   globalStoreBridge = null;
   console.log('[Store] 저장 시스템이 초기화되었습니다.');
+}
+
+/**
+ * StoreBridge 시스템을 store와 연결합니다.
+ * @param {Object} legacyStore - 기존 store.js 인스턴스
+ * @param {Object} validationManager - ValidationManager 인스턴스
+ * @returns {Object} StoreBridge 메서드들
+ */
+export function setupStoreBridge(legacyStore, validationManager) {
+  if (!globalStoreBridge) {
+    globalStoreBridge = new StoreBridge(legacyStore, validationManager, { 
+      debug: isDevelopment
+    });
+    console.log('[Store Index] StoreBridge가 설정되었습니다.');
+  } else {
+    globalStoreBridge.setLegacyStore(legacyStore);
+    console.log('[Store Index] 기존 StoreBridge에 legacyStore가 업데이트되었습니다.');
+  }
 }
 
 // 내보내기
