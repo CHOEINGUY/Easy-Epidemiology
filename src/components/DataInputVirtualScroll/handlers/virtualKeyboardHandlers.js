@@ -270,6 +270,17 @@ export function setupDateTimeInputHandling(cellElement, initialKey, clickX = nul
 
   // 현재 입력된 내용을 digits 로 저장 (구분자 제거)
   let digits = '';
+  let originalDigitsCopied = false;
+
+  // 셀에 이미 YYYY-MM-DD HH:MM 형식의 값이 들어 있다면 digits를 미리 채워 넣어
+  // 더블클릭 직후 기존 값이 사라져 보이는 현상을 방지합니다.
+  const existingText = cellElement.textContent.trim();
+  const existingMatch = existingText.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
+  if (existingMatch) {
+    // existingMatch[1]..[5] = YYYY MM DD HH mm
+    digits = existingMatch.slice(1).join('');
+    originalDigitsCopied = true; // 아직 사용자가 수정하지 않음
+  }
 
   const DIGIT_RE = /\d/;
 
@@ -457,7 +468,13 @@ export function setupDateTimeInputHandling(cellElement, initialKey, clickX = nul
   };
 
   // 최초 렌더링 (clickX 여부 적용)
-  applyFormattedText(true);
+  if (digits.length > 0) {
+    // 기존 값이 있는 경우 그대로 표시
+    applyFormattedText(true);
+  } else if (existingText === '') {
+    // 빈 셀인 경우 placeholder 즉시 표시
+    applyFormattedText(true);
+  }
 
   // 초기 키 반영
   if (DIGIT_RE.test(initialKey)) {
@@ -468,17 +485,27 @@ export function setupDateTimeInputHandling(cellElement, initialKey, clickX = nul
   const handleKeyDown = (e) => {
     if (e.key === 'Backspace') {
       e.preventDefault();
-      digits = digits.slice(0, -1);
+      if (originalDigitsCopied) {
+        // 기존 값 전체 선택 상태에서 Backspace 눌렀다면 전체 삭제로 간주
+        digits = '';
+        originalDigitsCopied = false;
+      } else {
+        digits = digits.slice(0, -1);
+      }
       applyFormattedText();
       return;
     }
     // Tab/Enter 처리는 handleVirtualKeyDown에서 통합 처리
     if (DIGIT_RE.test(e.key)) {
       e.preventDefault();
-      if (digits.length < 12) {
+      if (originalDigitsCopied) {
+        // 첫 입력 → 기존 값 덮어쓰기 모드
+        digits = e.key;
+        originalDigitsCopied = false;
+      } else if (digits.length < 12) {
         digits += e.key;
-        applyFormattedText();
       }
+      applyFormattedText();
       return;
     }
   };
@@ -487,15 +514,30 @@ export function setupDateTimeInputHandling(cellElement, initialKey, clickX = nul
   cellElement.__dtSaveValue = saveCurrentValue; // 외부에서 저장 함수 호출 가능하게 함
   cellElement.addEventListener('keydown', handleKeyDown);
 
+  const handleMouse = (e) => {
+    // 사용자가 셀 내부를 클릭해 캐럿을 옮긴 경우, 전체 덮어쓰기 모드를 해제
+    if (originalDigitsCopied) {
+      originalDigitsCopied = false;
+    }
+    e.stopPropagation();
+  };
+  cellElement.addEventListener('mousedown', handleMouse);
+  cellElement.addEventListener('click', handleMouse);
+
+  cellElement.__dtStopProp = handleMouse;
+
   // cleanup on blur
   const cleanup = async () => {
     // blur 시 자동 저장 (다른 셀로 이동할 때)
     await saveCurrentValue();
     
     cellElement.removeEventListener('keydown', handleKeyDown);
+    cellElement.removeEventListener('mousedown', handleMouse);
+    cellElement.removeEventListener('click', handleMouse);
     cellElement.removeEventListener('blur', cleanup);
     delete cellElement.__dtKeyHandler;
     delete cellElement.__dtSaveValue;
+    delete cellElement.__dtStopProp;
   };
   cellElement.addEventListener('blur', cleanup);
 
@@ -503,6 +545,17 @@ export function setupDateTimeInputHandling(cellElement, initialKey, clickX = nul
     cellElement.setAttribute('contenteditable', 'true');
   }
   cellElement.focus();
+
+  // 옵션 2: 기존 값이 있는 경우 전체 선택 상태로 만들어 첫 키 입력 시 바로 덮어쓰기가 되도록 함
+  if (digits.length > 0) {
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(cellElement);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
 }
 
 async function handleCopy(context) {

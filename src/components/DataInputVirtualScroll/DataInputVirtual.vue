@@ -1307,9 +1307,23 @@ function onKeyDown(event) {
 
     case 'Enter':
       // 데이트피커 내부에서 Enter 키 처리는 DateTimePicker 컴포넌트에서 담당
-      // 여기서는 기본 동작 방지만 수행
+      // 하지만 입력 포커스가 그리드(혹은 외부)일 때도 Enter 누르면 완료되도록 처리
       event.preventDefault();
       event.stopPropagation();
+      if (dateTimePickerRef.value?.confirm) {
+        dateTimePickerRef.value.confirm();
+      }
+      return;
+
+    case 'Tab':
+      // Tab 키 입력 시에도 날짜 선택을 확정하고 데이트피커를 닫음
+      // (DateTimePicker는 focus 관리 목적으로 Tab 을 기본 동작으로 두었으나
+      //  그리드 편집 UX에서는 Tab = 완료 & 다음 셀 이동이 자연스러움)
+      event.preventDefault();
+      event.stopPropagation();
+      if (dateTimePickerRef.value?.confirm) {
+        dateTimePickerRef.value.confirm();
+      }
       return;
 
     default:

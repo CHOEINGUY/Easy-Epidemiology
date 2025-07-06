@@ -191,17 +191,6 @@ const currentMonth = ref(new Date().getMonth() + 1);
 // 요일 배열
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 
-// 5분 단위로 반올림하는 함수
-const roundToNearest5Minutes = (minute) => {
-  return Math.round(minute / 5) * 5;
-};
-
-// 분을 5분 단위 문자열로 변환하는 함수
-const formatMinuteTo5MinuteUnit = (minute) => {
-  const roundedMinute = roundToNearest5Minutes(minute);
-  return String(roundedMinute).padStart(2, '0');
-};
-
 // 피커 스타일
 const pickerStyle = computed(() => ({
   top: `${props.position.top}px`,
@@ -340,14 +329,17 @@ const selectDate = (date) => {
   selectedDate.year = date.year;
   selectedDate.month = date.month;
   selectedDate.day = date.day;
+
+  // 선택한 날짜와 키보드 포커스 동기화
+  focusedDate.year = date.year;
+  focusedDate.month = date.month;
+  focusedDate.day = date.day;
   
   // 선택한 날짜가 다른 달이면 해당 달로 이동
   if (!date.isCurrentMonth) {
     currentYear.value = date.year;
     currentMonth.value = date.month;
   }
-  
-
 };
 
 // 현재 선택 상태 포맷
@@ -437,8 +429,6 @@ const handleKeyDown = (event) => {
   }
 };
 
-
-
 // 확인 버튼
 const confirm = () => {
   if (!selectedDate.year || !selectedDate.month || !selectedDate.day) {
@@ -472,7 +462,7 @@ watch(() => props.initialValue, (newValue) => {
     // 분을 5분 단위로 반올림
     const minuteValue = newValue.minute || '00';
     const minuteNum = parseInt(minuteValue);
-    selectedMinute.value = formatMinuteTo5MinuteUnit(minuteNum);
+    selectedMinute.value = String(minuteNum).padStart(2, '0');
     
     // 캘린더도 해당 년/월로 이동
     currentYear.value = newValue.year;
@@ -493,7 +483,7 @@ watch(() => props.initialValue, (newValue) => {
     selectedDate.day = now.getDate();
     selectedHour.value = String(now.getHours()).padStart(2, '0');
     // 현재 분을 5분 단위로 반올림
-    selectedMinute.value = formatMinuteTo5MinuteUnit(now.getMinutes());
+    selectedMinute.value = String(now.getMinutes()).padStart(2, '0');
     
     currentYear.value = now.getFullYear();
     currentMonth.value = now.getMonth() + 1;
@@ -521,8 +511,6 @@ watch(() => props.visible, (visible) => {
 watch([selectedDate, selectedHour, selectedMinute], () => {
   directInputValue.value = formatCurrentSelection();
 }, { deep: true });
-
-
 
 // --- 키보드 네비게이션 함수들 ---
 
@@ -631,8 +619,8 @@ const handleDirectInput = () => {
       selectedDate.month = monthNum;
       selectedDate.day = dayNum;
       selectedHour.value = String(hourNum).padStart(2, '0');
-      // 분을 5분 단위로 반올림
-      selectedMinute.value = formatMinuteTo5MinuteUnit(minuteNum);
+      // 분을 더 이상 5분 단위로 반올림하지 않고 그대로 사용
+      selectedMinute.value = String(minuteNum).padStart(2, '0');
       
       // 캘린더도 해당 날짜로 이동
       currentYear.value = yearNum;
@@ -675,6 +663,10 @@ const handleDirectInputFocus = () => {
   // 포커스 인 시 직접 입력 필드 업데이트
   directInputValue.value = formatCurrentSelection();
 };
+
+// 부모 컴포넌트에서 confirm / cancel 메서드에 접근할 수 있도록 노출
+// eslint-disable-next-line no-undef
+defineExpose({ confirm, cancel });
 </script>
 
 <style scoped>
@@ -903,8 +895,6 @@ const handleDirectInputFocus = () => {
   margin-top: 16px;
   font-family: 'Noto Sans KR', sans-serif;
 }
-
-
 
 .current-selection {
   display: flex;
