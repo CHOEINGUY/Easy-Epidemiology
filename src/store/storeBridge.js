@@ -887,7 +887,7 @@ export class StoreBridge {
         console.log(`[StoreBridge] validation 재실행 (단일셀): row=${rowIndex}, col=${colIndex}, value=null, type=${type}`);
       }
       // 빈 값이므로 validation 재실행 (오류 제거)
-      this.validationManager.validateCell(rowIndex, colIndex, null, type, true);
+      this.validationManager.validateCell(rowIndex, columnMeta.colIndex, null, type, true);
     }
     
     return result;
@@ -1528,7 +1528,9 @@ export class StoreBridge {
     const typeMap = {
       basic: 'basic',
       clinical: 'clinical',
-      diet: 'diet'
+      clinicalSymptoms: 'clinical',
+      diet: 'diet',
+      dietInfo: 'diet'
     };
     const headerType = typeMap[columnMeta.type];
     const headerIndex = columnMeta.cellIndex;
