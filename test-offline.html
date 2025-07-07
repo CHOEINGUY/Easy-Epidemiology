@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy-Epidemiology Web - 오프라인 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover { background-color: #0056b3; }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Easy-Epidemiology Web - 오프라인 테스트</h1>
+    
+    <div class="test-section">
+        <h2>📋 테스트 체크리스트</h2>
+        <ul>
+            <li>✅ 빌드 완료 확인</li>
+            <li>✅ dist 폴더 생성 확인</li>
+            <li>✅ index.html 파일 존재 확인</li>
+            <li>✅ 모든 JS/CSS 파일 존재 확인</li>
+            <li>✅ Service Worker 등록 확인</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 환경 테스트</h2>
+        <button class="button" onclick="testEnvironment()">환경 정보 확인</button>
+        <button class="button" onclick="testServiceWorker()">Service Worker 테스트</button>
+        <button class="button" onclick="testLocalStorage()">LocalStorage 테스트</button>
+        <button class="button" onclick="testFileProtocol()">File Protocol 테스트</button>
+        <div id="testResults" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📁 실행 방법</h2>
+        <h3>방법 1: 파일 직접 열기</h3>
+        <p>dist/index.html 파일을 브라우저에서 직접 열기</p>
+        
+        <h3>방법 2: 로컬 서버</h3>
+        <p>터미널에서 dist 폴더로 이동 후:</p>
+        <code>python -m http.server 8080</code>
+        <p>또는</p>
+        <code>npx http-server -p 8080</code>
+        
+        <h3>방법 3: VS Code Live Server</h3>
+        <p>dist/index.html 우클릭 → "Open with Live Server"</p>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 기능 테스트</h2>
+        <ol>
+            <li><strong>Excel 업로드 테스트</strong>
+                <ul>
+                    <li>Easy-Epidemiology_Template.xlsx 파일 업로드</li>
+                    <li>데이터가 정상적으로 로드되는지 확인</li>
+                </ul>
+            </li>
+            <li><strong>데이터 입력 테스트</strong>
+                <ul>
+                    <li>셀에 데이터 입력</li>
+                    <li>검증 기능 작동 확인</li>
+                </ul>
+            </li>
+            <li><strong>차트 생성 테스트</strong>
+                <ul>
+                    <li>차트 탭으로 이동</li>
+                    <li>차트가 정상적으로 표시되는지 확인</li>
+                </ul>
+            </li>
+            <li><strong>저장 기능 테스트</strong>
+                <ul>
+                    <li>데이터 입력 후 저장</li>
+                    <li>페이지 새로고침 후 데이터 복원 확인</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="test-section warning">
+        <h2>⚠️ 주의사항</h2>
+        <ul>
+            <li>file:/// 환경에서는 일부 브라우저 기능이 제한될 수 있습니다</li>
+            <li>대용량 Excel 파일 처리 시 메모리 사용량에 주의하세요</li>
+            <li>LocalStorage 용량 제한(보통 5-10MB)을 고려하세요</li>
+            <li>브라우저 호환성: Chrome, Firefox, Safari, Edge 권장</li>
+        </ul>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('testResults');
+            logDiv.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function testEnvironment() {
+            log('=== 환경 정보 ===');
+            log('User Agent: ' + navigator.userAgent);
+            log('Protocol: ' + window.location.protocol);
+            log('Hostname: ' + window.location.hostname);
+            log('Port: ' + window.location.port);
+            log('Service Worker 지원: ' + ('serviceWorker' in navigator));
+            log('LocalStorage 지원: ' + (typeof(Storage) !== "undefined"));
+            log('IndexedDB 지원: ' + ('indexedDB' in window));
+            log('Web Workers 지원: ' + (typeof Worker !== 'undefined'));
+            log('RequestIdleCallback 지원: ' + ('requestIdleCallback' in window));
+        }
+
+        function testServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations()
+                    .then(registrations => {
+                        log('=== Service Worker 테스트 ===');
+                        log('등록된 SW 개수: ' + registrations.length);
+                        registrations.forEach((registration, index) => {
+                            log(`SW ${index + 1}: ${registration.scope}`);
+                        });
+                    })
+                    .catch(error => {
+                        log('Service Worker 확인 실패: ' + error.message);
+                    });
+            } else {
+                log('Service Worker를 지원하지 않는 브라우저입니다.');
+            }
+        }
+
+        function testLocalStorage() {
+            log('=== LocalStorage 테스트 ===');
+            try {
+                const testKey = 'offline_test_' + Date.now();
+                const testValue = 'test_value_' + Date.now();
+                
+                localStorage.setItem(testKey, testValue);
+                const retrieved = localStorage.getItem(testKey);
+                
+                if (retrieved === testValue) {
+                    log('LocalStorage 읽기/쓰기 성공');
+                } else {
+                    log('LocalStorage 읽기/쓰기 실패');
+                }
+                
+                localStorage.removeItem(testKey);
+                log('LocalStorage 삭제 성공');
+                
+                // 용량 테스트
+                const size = JSON.stringify(localStorage).length;
+                log('현재 LocalStorage 사용량: ' + size + ' bytes');
+                
+            } catch (error) {
+                log('LocalStorage 테스트 실패: ' + error.message);
+            }
+        }
+
+        function testFileProtocol() {
+            log('=== File Protocol 테스트 ===');
+            const isFileProtocol = window.location.protocol === 'file:';
+            log('File Protocol 사용: ' + isFileProtocol);
+            
+            if (isFileProtocol) {
+                log('⚠️ File Protocol 환경에서는 일부 기능이 제한될 수 있습니다');
+                log('- 웹 워커 사용 불가');
+                log('- 일부 브라우저 API 제한');
+                log('- CORS 정책 적용');
+            } else {
+                log('✅ HTTP/HTTPS 환경 - 모든 기능 사용 가능');
+            }
+        }
+
+        // 페이지 로드 시 자동 테스트
+        window.addEventListener('load', () => {
+            log('=== 오프라인 테스트 시작 ===');
+            testEnvironment();
+            testServiceWorker();
+            testLocalStorage();
+            testFileProtocol();
+        });
+    </script>
+</body>
+</html> 

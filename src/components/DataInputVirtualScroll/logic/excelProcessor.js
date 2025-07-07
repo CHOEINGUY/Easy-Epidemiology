@@ -1,22 +1,40 @@
-// Excel processor for VirtualScroll version using Web Worker offloading.
+// Excel processor for VirtualScroll version with fallback support for file:/// environment
 
 // Public API: processExcelFile(file: File, onProgress?: (percent:number)=>void)
 // Returns Promise resolving to { headers, rows, hasIndividualExposureTime }
+
+import { processExcelFileAsync } from './excelProcessorSync.js';
+import { createWorkerSafely } from '../../../utils/workerUtils.js';
 
 export function processExcelFile(file, onProgress = () => {}) {
   if (!(file instanceof File)) {
     return Promise.reject(new Error('유효한 파일이 아닙니다.'));
   }
 
-  // Use regular Promise executor (not async) to satisfy ESLint
+  // 환경 감지: file:/// 프로토콜에서는 워커를 사용할 수 없음
+  const isFileProtocol = window.location.protocol === 'file:';
+  
+  if (isFileProtocol) {
+    // file:/// 환경에서는 requestIdleCallback 기반 비동기 처리 사용
+    console.log('[ExcelProcessor] Using async processor for file:/// environment');
+    return processExcelFileAsync(file, onProgress);
+  }
+
+  // 안전한 워커 사용 시도
   return new Promise((resolve, reject) => {
     file
       .arrayBuffer()
       .then((buffer) => {
-        // Dynamically create worker
-        const worker = new Worker(new URL('../workers/excelWorker.js', import.meta.url), {
-          type: 'module'
-        });
+        // 안전한 워커 생성
+        const worker = createWorkerSafely(new URL('../workers/excelWorker.js', import.meta.url));
+        
+        if (!worker) {
+          // 워커 생성 실패 시 비동기 처리로 폴백
+          console.log('[ExcelProcessor] Worker creation failed, using async processor');
+          return processExcelFileAsync(file, onProgress)
+            .then(resolve)
+            .catch(reject);
+        }
 
         worker.onmessage = (e) => {
           const { type, data, progress, error } = e.data || {};
@@ -40,7 +58,11 @@ export function processExcelFile(file, onProgress = () => {}) {
 
         worker.onerror = (err) => {
           worker.terminate();
-          reject(err);
+          console.warn('[ExcelProcessor] Worker failed, falling back to async processor:', err);
+          // 워커 실패 시 비동기 처리로 폴백
+          processExcelFileAsync(file, onProgress)
+            .then(resolve)
+            .catch(reject);
         };
 
         // Transfer ArrayBuffer to worker
@@ -50,6 +72,4 @@ export function processExcelFile(file, onProgress = () => {}) {
       })
       .catch((err) => reject(err));
   });
-}
-
-// Fallback direct processing (synchronous) can be imported from refactor version if really needed. 
+} 

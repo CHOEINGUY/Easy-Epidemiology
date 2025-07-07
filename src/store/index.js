@@ -6,7 +6,6 @@
 import { StoreBridge, useStoreBridge } from './storeBridge.js';
 import { EnhancedStorageManager } from './enhancedStorageManager.js';
 import { CellInputState } from './cellInputState.js';
-import { getMigrationStatus, executeMigration } from './utils/migration.js';
 
 // 전역 인스턴스
 let globalStoreBridge = null;

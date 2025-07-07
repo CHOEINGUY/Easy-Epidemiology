@@ -2,6 +2,11 @@
 
 import * as XLSX from 'xlsx';
 
+// 워커 오류 처리
+self.onerror = (error) => {
+  self.postMessage({ type: 'error', error: error.message || 'Worker error' });
+};
+
 // --- Utility functions copied from DataInputRefactor ---
 
 function findColumnRanges(headerRow1, headerRow2) {

@@ -326,23 +326,10 @@ const analysisResults = computed(() => {
           }
         // else: se_logOR 계산 불가 시 ci_lower, ci_upper는 초기값 "N/A" 유지
         } else if (or_calc === 0) {
-        // OR이 0인 경우
+        // OR이 0인 경우 개선: 상한 계산 의미 없음, 더 큰 값 사용 또는 N/A 처리
           oddsRatio = '0.000';
-          ci_lower = '0.000'; // 하한은 0
-          // 상한 계산 (se_logOR이 계산 가능해야 함)
-          const se_logOR_for_zero = Math.sqrt(
-            1 / b_adj + 1 / c_adj + 1 / e_adj + 1 / f_adj
-          );
-          if (isFinite(se_logOR_for_zero)) {
-          // 0에 매우 작은 값을 더해 log 계산 시 음의 무한대 방지
-            const logOR_zero = Math.log(or_calc + Number.EPSILON); // Number.EPSILON 사용
-            const logCI_upper_zero = logOR_zero + z_crit * se_logOR_for_zero;
-            ci_upper = Math.exp(logCI_upper_zero).toFixed(3);
-            // 상한이 매우 작은 값으로 나올 수 있음 (예: 0.000)
-            if (parseFloat(ci_upper) === 0) ci_upper = '0.000';
-          } else {
-            ci_upper = 'N/A';
-          }
+          ci_lower = '0.000';
+          ci_upper = 'N/A'; // 0인 경우 상한 계산 의미 없음
         } else {
         // OR이 무한대(Inf) 또는 계산 불가(NaN)인 경우
         // 분모(c_adj * e_adj)가 0에 가까워 발생 가능

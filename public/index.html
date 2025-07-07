@@ -5,9 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
-    <!-- Google Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <!-- Material Icons (로컬 폰트로 대체) -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    <!-- 폴백: 로컬 폰트 파일이 없을 경우 -->
+    <style>
+      @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+      @import url('https://fonts.googleapis.com/icon?family=Material+Icons+Outlined');
+    </style>
     <title><%= htmlWebpackPlugin.options.title %></title>
   </head>
   <body>

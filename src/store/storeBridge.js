@@ -1907,8 +1907,8 @@ export function useStoreBridge(legacyStore = null, validationManager = null, opt
     individualExposureTimeStartIndex: bridge.individualExposureTimeStartIndex,
     symptomOnsetStartIndex: bridge.symptomOnsetStartIndex,
     dietInfoStartIndex: bridge.dietInfoStartIndex,
-    canUndo: bridge._canUndo,
-    canRedo: bridge._canRedo,
+    canUndo: bridge.canUndo,
+    canRedo: bridge.canRedo,
     
     // state
     state: bridge.state,

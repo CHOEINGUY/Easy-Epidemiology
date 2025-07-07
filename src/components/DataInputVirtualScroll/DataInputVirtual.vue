@@ -138,6 +138,7 @@ import { showToast, showConfirmToast } from './logic/toast.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
 // Validation
 import ValidationManager from '../../validation/ValidationManager.js';
+import { createProcessingOptions } from '../../utils/environmentUtils.js';
 
 // --- 상수 (기존 컴포넌트에서 가져옴) ---
 import {
@@ -158,16 +159,17 @@ const COL_TYPE_INDIVIDUAL_EXPOSURE = 'individualExposureTime';
 const store = useStore();
 const getters = store.getters;
 
-// ValidationManager 인스턴스 (개발 환경에서만 디버그 로그 활성화)
-const validationManager = new ValidationManager(store, { 
-  useWorker: import.meta.env?.MODE === 'production' || false, // 프로덕션에서만 Worker 사용
+// ValidationManager 인스턴스 (환경에 따른 자동 최적화)
+const validationOptions = createProcessingOptions({
   chunkSize: 500,
-  debug: import.meta.env?.MODE === 'development' || false, // 개발 환경에서만 디버그 로그
+  debug: import.meta.env?.MODE === 'development' || false,
   onProgress: (progress) => {
     isValidationProcessing.value = progress < 100;
     validationProgress.value = progress;
   }
 });
+
+const validationManager = new ValidationManager(store, validationOptions);
 
 // --- 새로운 저장 시스템 ---
 const storeBridge = useStoreBridge(store, validationManager, { 

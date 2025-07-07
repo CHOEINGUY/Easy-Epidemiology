@@ -11,6 +11,8 @@
  */
 
 import { validateCell as _validateCell } from '../store/utils/validation.js';
+import { validateDataAsync } from '../utils/asyncProcessor.js';
+import { createWorkerSafely } from '../utils/workerUtils.js';
 
 /**
  * @typedef {object} ValidationManagerOptions
@@ -49,9 +51,11 @@ export class ValidationManager {
 
     this._destroyed = false;
 
-    if (this.useWorker && typeof Worker !== 'undefined') {
-      try {
-        this._worker = new Worker(new URL('./workers/validationWorker.js', import.meta.url), { type: 'module' });
+    if (this.useWorker) {
+      // 안전한 워커 생성
+      this._worker = createWorkerSafely(new URL('./workers/validationWorker.js', import.meta.url));
+      
+      if (this._worker) {
         this._worker.onmessage = (e) => {
           if (this._destroyed) return;
           const { type, invalidCells, error } = e.data || {};
@@ -71,12 +75,12 @@ export class ValidationManager {
             });
           }
         };
-      } catch (err) {
-        if (this.debug) {
-          console.warn('[ValidationManager] worker init failed, fallback to chunk', err);
-        }
-        this._worker = null;
+      } else {
+        // 워커 생성 실패 시 비동기 처리로 폴백
         this.useWorker = false;
+        if (this.debug) {
+          console.log('[ValidationManager] Worker creation failed, using async processor');
+        }
       }
     }
   }
@@ -137,28 +141,21 @@ export class ValidationManager {
    * @param {Array<object>} columnMetas   – isEditable / colIndex / type / dataKey / cellIndex 등 포함
    * @param {object} [opts]
    * @param {number|null} [opts.chunkSize] – null = 동기, 숫자 = 비동기 청크 크기
+   * @param {boolean} [opts.useAsyncProcessor] – requestIdleCallback 기반 비동기 처리 사용 여부
    */
   revalidateAll(rows = [], columnMetas = [], opts = {}) {
     if (this._destroyed) return;
-
-    // Worker 사용 조건: 데이터가 충분히 클 때만 (1000개 셀 이상)
-    const totalCells = rows.length * columnMetas.filter(meta => meta.isEditable).length;
-    const shouldUseWorker = (opts.useWorker ?? this.useWorker) && this._worker && totalCells > 1000;
-    
-    if (shouldUseWorker) {
-      this._worker.postMessage({ rows, columnMetas });
-      return;
-    }
-
-    const chunkSize = opts.chunkSize !== undefined ? opts.chunkSize : this.defaultChunkSize;
 
     // 0. 기존 오류 + 타이머 정리
     this.clearAllErrors();
 
     if (!rows.length || !columnMetas.length) return;
 
-    // 1) 동기 처리
-    if (!chunkSize || chunkSize <= 0) {
+    const totalCells = rows.length * columnMetas.filter(meta => meta.isEditable).length;
+    const chunkSize = opts.chunkSize !== undefined ? opts.chunkSize : this.defaultChunkSize;
+
+    // 1) 동기 처리 (작은 데이터셋)
+    if (!chunkSize || chunkSize <= 0 || totalCells < 500) {
       rows.forEach((row, rowIndex) => {
         columnMetas.forEach((meta) => {
           if (!meta.isEditable) return;
@@ -171,7 +168,48 @@ export class ValidationManager {
       return;
     }
 
-    // 2) 비동기 청크 처리 – UI 프리징 방지
+    // 2) requestIdleCallback 기반 비동기 처리 (권장)
+    if (opts.useAsyncProcessor !== false) {
+      const validationTask = validateDataAsync(
+        rows, 
+        columnMetas, 
+        _validateCell,
+        {
+          chunkSize: Math.min(chunkSize, 100),
+          onProgress: (progress, processed, total) => {
+            if (this.onProgress) {
+              this.onProgress(progress, processed, total);
+            }
+            if (this.debug) {
+              console.log(`[ValidationManager] Progress: ${progress.toFixed(1)}% (${processed}/${total})`);
+            }
+          },
+          onComplete: (invalidCells) => {
+            // 검증 결과를 스토어에 반영
+            invalidCells.forEach(({ row, col, message }) => {
+              this.store.commit('ADD_VALIDATION_ERROR', {
+                rowIndex: row,
+                colIndex: col,
+                message
+              });
+            });
+            
+            if (this.debug) {
+              console.log(`[ValidationManager] Validation complete. Found ${invalidCells.length} invalid cells.`);
+            }
+          },
+          onError: (error) => {
+            console.error('[ValidationManager] Validation error:', error);
+          }
+        }
+      );
+
+      // 취소 가능한 작업으로 저장 (필요시)
+      this._currentValidationTask = validationTask;
+      return;
+    }
+
+    // 3) 기존 setTimeout 기반 청크 처리 (폴백)
     const totalRows = rows.length;
     let start = 0;
     const processChunk = () => {

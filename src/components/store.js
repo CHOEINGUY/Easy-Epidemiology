@@ -85,7 +85,16 @@ const store = createStore({
 
     // --- 유행곡선 탭 관련 상태 추가 ---
     selectedSymptomInterval: 6, // 증상발현 시간간격 (기본값: 6시간)
-    exposureDateTime: '2023-04-07T20:00', // 의심원 노출시간 (기본값, YYYY-MM-DDTHH:MM 형식)
+    exposureDateTime: (() => {
+      // localStorage에서 저장된 값 불러오기, 없으면 빈 값으로 시작
+      try {
+        const saved = localStorage.getItem('exposureDateTime');
+        return saved || '';
+      } catch (error) {
+        console.warn('localStorage에서 exposureDateTime 로드 실패:', error);
+        return '';
+      }
+    })(),
     selectedIncubationInterval: 6, // 잠복기 간격 (기본값: 6시간)
     isIndividualExposureColumnVisible: false,
     // === Validation ===
@@ -676,6 +685,12 @@ const store = createStore({
     },
     SET_EXPOSURE_DATETIME(state, value) {
       state.exposureDateTime = value;
+      // localStorage에 자동 저장
+      try {
+        localStorage.setItem('exposureDateTime', value);
+      } catch (error) {
+        console.warn('localStorage에 exposureDateTime 저장 실패:', error);
+      }
     },
     SET_INCUBATION_INTERVAL(state, value) {
       state.selectedIncubationInterval = value;

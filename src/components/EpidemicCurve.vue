@@ -216,7 +216,26 @@
               </tbody>
             </table>
             <div v-else class="no-data-message">
-              잠복 기간 테이블 데이터를 생성할 수 없습니다.
+              <div v-if="!exposureDateTime && !isIndividualExposureColumnVisible" class="input-guide-message">
+                <div class="guide-icon">📅</div>
+                <div class="guide-text">
+                  <div class="guide-title">의심원 노출시간을 입력해주세요</div>
+                  <div class="guide-subtitle">위의 '의심원 노출시간' 입력란에 시간을 설정하면 잠복기 분석이 시작됩니다.</div>
+                </div>
+              </div>
+              <div v-else-if="exposureDateTime && incubationDurations.length === 0 && !isIndividualExposureColumnVisible" class="input-guide-message">
+                <div class="guide-text">
+                  <div class="guide-title">잠복기 차트가 생성되지 않는 이유</div>
+                  <div class="guide-subtitle">
+                    입력된 환자들의 증상발현시간이 <b>설정한 노출시간보다 이전</b>일 경우, 잠복기 계산이 불가능하여 차트가 생성되지 않습니다.<br/>
+                    <br/>
+                    <span style="color: #888;">※ 노출시간과 환자들의 증상발현시간을 다시 한 번 확인해주세요.</span>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="no-data-message-default">
+                잠복 기간 테이블 데이터를 생성할 수 없습니다.
+              </div>
             </div>
 
             <div class="table-title incubation-summary-title">
@@ -567,19 +586,7 @@ const getNextValue = (currentValue, valueArray) => {
   }
 };
 
-/**
- * 차트 준비 상태 검증
- * @returns {boolean} 차트 업데이트 가능 여부
- */
-const canUpdateCharts = () => {
-  try {
-    const states = chartStates.value;
-    return states.isEpiCurveReady || states.isIncubationReady;
-  } catch (error) {
-    console.error('canUpdateCharts 검증 오류:', error);
-    return false;
-  }
-};
+
 
 // 유행곡선 차트 마우스 이벤트 핸들러 (단순화)
 const handleEpiMouseEnterFontSize = () => {
@@ -1201,43 +1208,26 @@ const incubationPeriodTableData = computed(() => {
 
   const intervalMillis = intervalHours * 3600000;
   const maxDuration = Math.max(...durations);
-  const data = [];
-  let currentIntervalStart = 0;
-  let guard = 0;
-
-  while (currentIntervalStart <= maxDuration && guard < 1000) {
-    const currentIntervalEnd = currentIntervalStart + intervalMillis;
-    
-    // 성능 최적화: filter 대신 for 루프 사용
-    let count = 0;
-    for (const duration of durations) {
-      if (duration >= currentIntervalStart && duration < currentIntervalEnd) {
-        count++;
-      }
+  
+  // 🔥 NEW: 선점(Pre-fill) 방식으로 모든 구간을 미리 생성
+  const totalBins = Math.ceil((maxDuration + intervalMillis) / intervalMillis);
+  const bins = Array(totalBins).fill(0);
+  
+  // 실제 데이터를 해당 bin에 배치
+  for (const duration of durations) {
+    const binIndex = Math.floor(duration / intervalMillis);
+    if (binIndex >= 0 && binIndex < totalBins) {
+      bins[binIndex]++;
     }
-
-    // Only add if there's a count or it's the first interval for context
-    if (count > 0 || currentIntervalStart === 0) {
-      data.push({
-        intervalLabel: `${formatDurationHHMM(
-          currentIntervalStart
-        )} ~ ${formatDurationHHMM(currentIntervalEnd)}`,
-        count
-      });
-    }
-
-    currentIntervalStart = currentIntervalEnd;
-    guard++;
   }
-  if (guard >= 1000) console.error('Loop guard hit in incubation period table');
-
-  // Add the final "empty" interval if the last duration wasn't exactly at the start of the last interval
-  if (currentIntervalStart <= maxDuration + intervalMillis) {
-    data.push({
-      intervalLabel: `${formatDurationHHMM(currentIntervalStart)} ~ `,
-      count: 0
-    });
-  }
+  
+  // 모든 구간을 데이터로 변환 (0건 구간도 포함)
+  const data = bins.map((count, index) => ({
+    intervalLabel: `${formatDurationHHMM(
+      index * intervalMillis
+    )} ~ ${formatDurationHHMM((index + 1) * intervalMillis)}`,
+    count
+  }));
 
   return data;
 });
@@ -1452,8 +1442,8 @@ const generateIncubationChartOptions = () => {
       return { title: { text: '데이터 형식 오류' } };
     }
     
-    // Filter out the last "empty" row for charting
-    const validData = data.slice(0, -1);
+    // 🔥 NEW: 모든 데이터를 사용 (0건 구간도 포함)
+    const validData = data;
     if (!validData || validData.length === 0) {
       console.warn('generateIncubationChartOptions: 유효한 데이터가 없음');
       return { title: { text: '데이터 없음' } };
@@ -1575,34 +1565,73 @@ const generateIncubationChartOptions = () => {
 // --- Chart Update Logic (성능 최적화) ---
 
 /**
+ * 차트 인스턴스들을 강제로 정리
+ * @returns {void}
+ */
+const clearCharts = () => {
+  console.log('차트 인스턴스 정리 시작');
+  
+  if (epiCurveChartInstance.value && typeof epiCurveChartInstance.value.dispose === 'function') {
+    try {
+      epiCurveChartInstance.value.dispose();
+      epiCurveChartInstance.value = null;
+      console.log('유행곡선 차트 인스턴스 정리 완료');
+    } catch (error) {
+      console.error('유행곡선 차트 정리 오류:', error);
+    }
+  }
+  
+  if (incubationChartInstance.value && typeof incubationChartInstance.value.dispose === 'function') {
+    try {
+      incubationChartInstance.value.dispose();
+      incubationChartInstance.value = null;
+      console.log('잠복기 차트 인스턴스 정리 완료');
+    } catch (error) {
+      console.error('잠복기 차트 정리 오류:', error);
+    }
+  }
+};
+
+/**
  * 차트 인스턴스들을 업데이트
  * 유행곡선과 잠복기 차트를 모두 업데이트합니다.
  * @returns {void}
  */
 const updateCharts = () => {
   try {
-    // 상태 검증: 차트 업데이트 가능 여부 확인
-    if (!canUpdateCharts()) {
-      console.warn('차트 업데이트 건너뜀: 데이터가 준비되지 않음');
-      return;
-    }
+    console.log('updateCharts 함수 시작');
+    console.log('차트 업데이트 조건 확인:', {
+      hasValidData: hasValidData.value,
+      hasValidPatientData: hasValidPatientData.value,
+      hasValidExposureData: hasValidExposureData.value,
+      epiCurveChartContainer: !!epiCurveChartContainer.value,
+      incubationChartContainer: !!incubationChartContainer.value
+    });
     
     const states = chartStates.value;
-    console.log('차트 업데이트 시작:', states);
+    console.log('차트 상태:', states);
     console.log('유행곡선 차트 조건:', {
       container: !!epiCurveChartContainer.value,
-      isEpiCurveReady: states.isEpiCurveReady,
+      hasValidPatientData: hasValidPatientData.value,
       symptomOnsetTableDataLength: symptomOnsetTableData.value.length
     });
     
     // 유행곡선 차트 업데이트
-    if (epiCurveChartContainer.value && states.isEpiCurveReady) {
+    if (epiCurveChartContainer.value && hasValidPatientData.value) {
       console.log('유행곡선 차트 업데이트 시작');
       if (!epiCurveChartInstance.value) {
-        epiCurveChartInstance.value = markRaw(
-          echarts.init(epiCurveChartContainer.value)
-        );
-        console.log('유행곡선 차트 인스턴스 생성됨');
+        // DOM 컨테이너 크기 확인
+        const container = epiCurveChartContainer.value;
+        const rect = container.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          epiCurveChartInstance.value = markRaw(
+            echarts.init(epiCurveChartContainer.value)
+          );
+          console.log('유행곡선 차트 인스턴스 생성됨');
+        } else {
+          console.warn('유행곡선 차트 컨테이너 크기가 0입니다:', rect);
+          return;
+        }
       }
       
       const epiOptions = generateEpiCurveChartOptions();
@@ -1616,17 +1645,25 @@ const updateCharts = () => {
     } else {
       console.log('유행곡선 차트 업데이트 건너뜀:', {
         hasContainer: !!epiCurveChartContainer.value,
-        isEpiCurveReady: states.isEpiCurveReady
+        hasValidPatientData: hasValidPatientData.value
       });
     }
     
     // 잠복기 차트 업데이트
-    if (incubationChartContainer.value && states.isIncubationReady) {
+    if (incubationChartContainer.value && hasValidExposureData.value) {
       if (!incubationChartInstance.value) {
-        incubationChartInstance.value = markRaw(
-          echarts.init(incubationChartContainer.value)
-        );
-        console.log('잠복기 차트 인스턴스 생성됨');
+        // DOM 컨테이너 크기 확인
+        const container = incubationChartContainer.value;
+        const rect = container.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          incubationChartInstance.value = markRaw(
+            echarts.init(incubationChartContainer.value)
+          );
+          console.log('잠복기 차트 인스턴스 생성됨');
+        } else {
+          console.warn('잠복기 차트 컨테이너 크기가 0입니다:', rect);
+          return;
+        }
       }
       
       const incubationOptions = generateIncubationChartOptions();
@@ -1650,28 +1687,26 @@ onMounted(() => {
   nextTick(updateCharts);
 });
 
-// 안전한 차트 상태 검증 함수
-const validateChartState = () => {
-  const hasData = hasValidData.value;
-  const hasPatientData = hasValidPatientData.value;
-  const hasIndividualExposure = isIndividualExposureColumnVisible.value;
-  const hasExposureData = hasValidExposureData.value;
-  
-  console.log('차트 상태 검증:', { hasData, hasPatientData, hasIndividualExposure, hasExposureData });
-  
-  // 유행곡선 차트: 환자 데이터만 있으면 OK
-  // 잠복기 차트: 개별노출시간열이 있으면 잠복기 데이터 필요, 없으면 공통 노출시간만 있으면 OK
-  return hasData && hasPatientData && (hasIndividualExposure ? hasExposureData : true);
-};
+
 
 // 안전한 차트 업데이트 함수
 const safeUpdateCharts = () => {
   try {
-    if (validateChartState()) {
-      console.log('차트 상태 유효, 업데이트 시작');
+    console.log('safeUpdateCharts 호출됨');
+    console.log('차트 상태 검증:', {
+      hasValidData: hasValidData.value,
+      hasValidPatientData: hasValidPatientData.value,
+      hasValidExposureData: hasValidExposureData.value,
+      isIndividualExposureColumnVisible: isIndividualExposureColumnVisible.value
+    });
+    
+    // 유효한 환자 데이터가 있으면 차트 업데이트 시도
+    if (hasValidPatientData.value) {
+      console.log('유효한 환자 데이터 확인, 차트 업데이트 시작');
       updateCharts();
     } else {
-      console.warn('차트 상태가 유효하지 않아 업데이트 건너뜀');
+      console.warn('유효한 환자 데이터가 없어 차트 업데이트 건너뜀');
+      clearCharts();
     }
   } catch (error) {
     console.error('차트 업데이트 중 오류:', error);
@@ -1691,12 +1726,13 @@ onActivated(() => {
       hasValidExposureData: hasValidExposureData.value,
       isIndividualExposureColumnVisible: isIndividualExposureColumnVisible.value,
       rowsLength: rows.value?.length,
-      patientCount: rows.value?.filter(row => row.isPatient === '1').length
+      patientCount: rows.value?.filter(row => row.isPatient === '1').length,
+      symptomOnsetCount: rows.value?.filter(row => row.symptomOnset).length
     });
     
-    // 데이터 유효성 검증
-    if (hasValidData.value) {
-      console.log('데이터 유효성 확인됨, 차트 업데이트 시작');
+    // 유효한 환자 데이터가 있으면 차트 업데이트, 없으면 차트 정리
+    if (hasValidPatientData.value) {
+      console.log('유효한 환자 데이터 확인됨, 차트 업데이트 시작');
       
       // 개별노출시간열 상태 확인
       if (isIndividualExposureColumnVisible.value) {
@@ -1705,10 +1741,12 @@ onActivated(() => {
         console.log('공통 노출시간 모드로 차트 업데이트');
       }
       
-      // 안전한 차트 업데이트 실행
-      safeUpdateCharts();
+      // 강제로 차트 업데이트 실행 (조건 검증 없이)
+      console.log('강제 차트 업데이트 실행');
+      updateCharts();
     } else {
-      console.log('유효한 데이터가 없어 차트 업데이트 건너뜀');
+      console.log('유효한 환자 데이터가 없어 차트 정리');
+      clearCharts();
     }
   });
 });
@@ -1772,14 +1810,16 @@ watch(
       
       // DOM 업데이트 후 차트 재생성
       nextTick(() => {
-        if (epiCurveChartContainer.value) {
-          try {
-            epiCurveChartInstance.value = markRaw(echarts.init(epiCurveChartContainer.value));
-            safeUpdateCharts();
-          } catch (error) {
-            console.error('EpiCurve chart recreation failed:', error);
+        setTimeout(() => {
+          if (epiCurveChartContainer.value) {
+            try {
+              epiCurveChartInstance.value = markRaw(echarts.init(epiCurveChartContainer.value));
+              safeUpdateCharts();
+            } catch (error) {
+              console.error('EpiCurve chart recreation failed:', error);
+            }
           }
-        }
+        }, 50); // DOM 렌더링을 위한 짧은 지연
       });
     }
   },
@@ -1805,14 +1845,16 @@ watch(
       
       // DOM 업데이트 후 차트 재생성
       nextTick(() => {
-        if (incubationChartContainer.value) {
-          try {
-            incubationChartInstance.value = markRaw(echarts.init(incubationChartContainer.value));
-            safeUpdateCharts();
-          } catch (error) {
-            console.error('Incubation chart recreation failed:', error);
+        setTimeout(() => {
+          if (incubationChartContainer.value) {
+            try {
+              incubationChartInstance.value = markRaw(echarts.init(incubationChartContainer.value));
+              safeUpdateCharts();
+            } catch (error) {
+              console.error('Incubation chart recreation failed:', error);
+            }
           }
-        }
+        }, 50); // DOM 렌더링을 위한 짧은 지연
       });
     }
   },
@@ -1885,25 +1927,48 @@ watch(
   }
 );
 
-// 기존 store의 rows 감시 - Excel 데이터 가져오기 시 즉시 반응
+// 기존 store의 rows 감시 - Excel 데이터 가져오기 및 초기화 시 즉시 반응
 watch(
   () => store.getters.rows,
   (newRows, oldRows) => {
-    if (newRows !== oldRows && newRows && newRows.length > 0) {
+    if (newRows !== oldRows) {
       console.log('Store rows changed, updating epidemic curve charts');
       console.log('Store rows change detected:', {
-        newRowsLength: newRows.length,
-        oldRowsLength: oldRows ? oldRows.length : 0,
+        newRowsLength: newRows?.length || 0,
+        oldRowsLength: oldRows?.length || 0,
         hasValidData: hasValidData.value,
         hasValidPatientData: hasValidPatientData.value
       });
       
       nextTick(() => {
-        safeUpdateCharts();
+        // 유효한 환자 데이터가 없으면 차트 정리
+        if (!hasValidPatientData.value) {
+          console.log('유효한 환자 데이터 없음, 차트 정리');
+          clearCharts();
+        } else {
+          console.log('유효한 환자 데이터 있음, 차트 업데이트');
+          safeUpdateCharts();
+        }
       });
     }
   },
   { deep: true, immediate: false }
+);
+
+// StoreBridge resetSheet 액션과 연동하여 차트 정리
+watch(
+  () => hasValidPatientData.value,
+  (hasValidData, hadValidData) => {
+    if (!hasValidData && hadValidData) {
+      console.log('유효한 환자 데이터가 사라짐, 차트 정리');
+      clearCharts();
+    } else if (hasValidData && !hadValidData) {
+      console.log('유효한 환자 데이터가 추가됨, 차트 업데이트');
+      nextTick(() => {
+        safeUpdateCharts();
+      });
+    }
+  }
 );
 
 // 잠복기 차트 내보내기 함수 추가
@@ -2225,6 +2290,48 @@ const exportIncubationChart = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.no-data-message-default {
+  color: #666;
+  font-size: 16px;
+}
+
+/* 입력 가이드 메시지 */
+.input-guide-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+  border: 2px dashed #4a90e2;
+  border-radius: 12px;
+  color: #2c5282;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.guide-icon {
+  font-size: 32px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.guide-text {
+  text-align: left;
+}
+
+.guide-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c5282;
+  margin-bottom: 4px;
+}
+
+.guide-subtitle {
+  font-size: 14px;
+  color: #4a90e2;
+  line-height: 1.4;
 }
 
 /* --- 컨트롤 + 차트 래퍼 공통 스타일 --- */
