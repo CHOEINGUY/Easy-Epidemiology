@@ -114,14 +114,13 @@
                       significant:
                         result.pValue !== null && result.pValue < 0.05,
                     }"
+                    :title="result.adj_chi === null && result.pValue !== null ? 'Fisher의 정확검정 (기대빈도 < 5)' : 'Yates 보정 카이제곱 검정 (기대빈도 ≥ 5)'"
                   >
-                    {{
-                      result.pValue !== null
-                        ? result.pValue < 0.001
-                          ? "<0.001"
-                          : result.pValue.toFixed(3)
-                        : "N/A"
-                    }}
+                    <span v-if="result.pValue !== null">
+                      {{ result.pValue < 0.001 ? "<0.001" : result.pValue.toFixed(3) }}
+                      <sup v-if="result.adj_chi === null && result.pValue !== null" class="test-method fisher">*</sup>
+                    </span>
+                    <span v-else>N/A</span>
                   </td>
                   <td class="cell-stat">{{ result.relativeRisk }}</td>
                   <td class="cell-stat">{{ result.rr_ci_lower }}</td>
@@ -129,6 +128,16 @@
                 </tr>
               </tbody>
             </table>
+            <div class="table-legend">
+              <div class="legend-header">
+                <span class="legend-title">통계 검정 방법 및 표시 기준</span>
+              </div>
+              <div class="legend-content legend-content--plain">
+                <div class="legend-item-plain">* : Fisher's Exact Test (기대빈도&nbsp;&lt;&nbsp;5인 셀이 있을 때)</div>
+                <div class="legend-item-plain">- : Yates' Corrected Chi-square Test (모든 셀 기대빈도&nbsp;≥&nbsp;5)</div>
+                <div class="legend-item-plain">N/A : 계산 불가(셀 값이 0인 경우)</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -309,27 +318,44 @@ const cohortAnalysisResults = computed(() => {
       // 2. 특정 식단의 값이 모두 같으면 (rowTotal_Exposed = 0 또는 rowTotal_Unexposed = 0) 검정 불가
       // 3. 모든 사람이 환자이거나 모든 사람이 정상이면 (colTotal_Disease = 0 또는 colTotal_NoDisease = 0) 검정 불가
       const canApplyChiSquare = rowTotal_Exposed > 0 && rowTotal_Unexposed > 0 && 
-                                colTotal_Disease > 0 && colTotal_NoDisease > 0;
+                                colTotal_Disease > 0 && colTotal_NoDisease > 0 &&
+                                a_exp > 0 && b_exp > 0 && c_exp > 0 && d_exp > 0;
 
       if (canApplyChiSquare) {
-        // Yates' 보정 카이제곱 값 계산
-        const term1 = calculateChiTerm(a_obs, a_exp);
-        const term2 = calculateChiTerm(b_obs, b_exp);
-        const term3 = calculateChiTerm(c_obs, c_exp);
-        const term4 = calculateChiTerm(d_obs, d_exp);
-        adj_chi = term1 + term2 + term3 + term4;
-
-        // P-value 계산 (자유도=1)
-        if (isFinite(adj_chi) && adj_chi >= 0) {
+        // 기대빈도 5미만 체크
+        const hasSmallExpected = a_exp < 5 || b_exp < 5 || c_exp < 5 || d_exp < 5;
+        
+        if (hasSmallExpected) {
+          // 기대빈도 5미만: Fisher의 정확검정 사용
           try {
-            pValue = 1 - jStat.chisquare.cdf(adj_chi, 1);
-            if (isNaN(pValue)) pValue = null; // 계산 불가 시 null 처리
+            pValue = calculateFisherExactTest(a_obs, b_obs, c_obs, d_obs);
+            adj_chi = null; // Fisher 검정에서는 카이제곱 값 계산 안함
+            console.log(`Fisher의 정확검정 적용 - ${factorName}: 기대빈도 5미만`);
           } catch (e) {
-            console.error(`P-value calculation error for item ${factorName}:`, e);
+            console.error(`Fisher's exact test calculation error for item ${factorName}:`, e);
             pValue = null;
+            adj_chi = null;
           }
         } else {
-          adj_chi = null; // 카이제곱 계산 불가 시 null 처리
+          // 기대빈도 5이상: Yates' 보정 카이제곱 검정 사용
+          const term1 = calculateChiTerm(a_obs, a_exp);
+          const term2 = calculateChiTerm(b_obs, b_exp);
+          const term3 = calculateChiTerm(c_obs, c_exp);
+          const term4 = calculateChiTerm(d_obs, d_exp);
+          adj_chi = term1 + term2 + term3 + term4;
+
+          // P-value 계산 (자유도=1)
+          if (isFinite(adj_chi) && adj_chi >= 0) {
+            try {
+              pValue = 1 - jStat.chisquare.cdf(adj_chi, 1);
+              if (isNaN(pValue)) pValue = null; // 계산 불가 시 null 처리
+            } catch (e) {
+              console.error(`P-value calculation error for item ${factorName}:`, e);
+              pValue = null;
+            }
+          } else {
+            adj_chi = null; // 카이제곱 계산 불가 시 null 처리
+          }
         }
       } else {
         // 카이제곱 검정 적용 불가
@@ -344,80 +370,69 @@ const cohortAnalysisResults = computed(() => {
     if (rowTotal_Exposed > 0 && rowTotal_Unexposed > 0) {
       const hasZeroCell =
       a_obs === 0 || b_obs === 0 || c_obs === 0 || d_obs === 0;
-      const a_adj = hasZeroCell ? a_obs + 0.5 : a_obs;
-      const b_adj = hasZeroCell ? b_obs + 0.5 : b_obs;
-      const c_adj = hasZeroCell ? c_obs + 0.5 : c_obs;
-      const d_adj = hasZeroCell ? d_obs + 0.5 : d_obs;
-      const total_exposed_adj = a_adj + b_adj;
-      const total_unexposed_adj = c_adj + d_adj;
+      
+      // 0인 셀이 있으면 RR 계산 불가 (N/A 처리)
+      if (hasZeroCell) {
+        relativeRisk = 'N/A';
+        rr_ci_lower = 'N/A';
+        rr_ci_upper = 'N/A';
+        console.log(`RR 계산 불가 - ${factorName}: 0인 셀이 존재하여 계산 불가능`);
+      } else {
+        // 0인 셀이 없을 때만 RR 계산
+        const total_exposed = a_obs + b_obs;
+        const total_unexposed = c_obs + d_obs;
 
-      try {
-        const risk_exposed =
-        total_exposed_adj > 0 ? a_adj / total_exposed_adj : 0;
-        const risk_unexposed =
-        total_unexposed_adj > 0 ? c_adj / total_unexposed_adj : 0;
+        try {
+          const risk_exposed = total_exposed > 0 ? a_obs / total_exposed : 0;
+          const risk_unexposed = total_unexposed > 0 ? c_obs / total_unexposed : 0;
 
-        let rr_calc = NaN;
-        if (risk_unexposed > 0) {
-          rr_calc = risk_exposed / risk_unexposed;
-        } else if (risk_exposed > 0 && risk_unexposed === 0) {
-          rr_calc = Infinity;
-        } else {
-          rr_calc = NaN;
-        }
-
-        if (isFinite(rr_calc) && rr_calc >= 0) {
-          relativeRisk = rr_calc.toFixed(3);
-          const logRR = Math.log(rr_calc <= 0 ? Number.EPSILON : rr_calc);
-          let se_logRR = NaN;
-          const term_se1 = a_adj * total_exposed_adj;
-          const term_se2 = c_adj * total_unexposed_adj;
-
-          if (term_se1 > 0 && term_se2 > 0) {
-            se_logRR = Math.sqrt(b_adj / term_se1 + d_adj / term_se2);
+          let rr_calc = NaN;
+          if (risk_unexposed > 0) {
+            rr_calc = risk_exposed / risk_unexposed;
+          } else if (risk_exposed > 0 && risk_unexposed === 0) {
+            rr_calc = Infinity;
+          } else {
+            rr_calc = NaN;
           }
 
-          if (isFinite(se_logRR)) {
-            const logCI_lower = logRR - z_crit * se_logRR;
-            const logCI_upper = logRR + z_crit * se_logRR;
-            rr_ci_lower = Math.exp(logCI_lower).toFixed(3);
-            rr_ci_upper = Math.exp(logCI_upper).toFixed(3);
-            if (rr_calc === 0) rr_ci_lower = '0.000';
-            if (parseFloat(rr_ci_upper) === 0) rr_ci_upper = '0.000';
+          if (isFinite(rr_calc) && rr_calc >= 0) {
+            relativeRisk = rr_calc.toFixed(3);
+            const logRR = Math.log(rr_calc <= 0 ? Number.EPSILON : rr_calc);
+            let se_logRR = NaN;
+            const term_se1 = a_obs * total_exposed;
+            const term_se2 = c_obs * total_unexposed;
+
+            if (term_se1 > 0 && term_se2 > 0) {
+              se_logRR = Math.sqrt(b_obs / term_se1 + d_obs / term_se2);
+            }
+
+            if (isFinite(se_logRR)) {
+              const logCI_lower = logRR - z_crit * se_logRR;
+              const logCI_upper = logRR + z_crit * se_logRR;
+              rr_ci_lower = Math.exp(logCI_lower).toFixed(3);
+              rr_ci_upper = Math.exp(logCI_upper).toFixed(3);
+              if (rr_calc === 0) rr_ci_lower = '0.000';
+              if (parseFloat(rr_ci_upper) === 0) rr_ci_upper = '0.000';
+            } else {
+              rr_ci_lower = 'N/A';
+              rr_ci_upper = 'N/A';
+            }
+          } else if (rr_calc === Infinity) {
+            relativeRisk = 'Inf';
+            // 무한대인 경우 신뢰구간 계산은 의미가 없음
+            rr_ci_lower = 'Inf';
+            rr_ci_upper = 'Inf';
           } else {
+            relativeRisk = 'N/A';
             rr_ci_lower = 'N/A';
             rr_ci_upper = 'N/A';
           }
-        } else if (rr_calc === Infinity) {
-          relativeRisk = 'Inf';
-          let se_logRR_inf = NaN;
-          const term_se1_inf = a_adj * total_exposed_adj;
-          const term_se2_inf = c_adj * total_unexposed_adj;
-          if (term_se1_inf > 0 && term_se2_inf > 0) {
-            se_logRR_inf = Math.sqrt(b_adj / term_se1_inf + d_adj / term_se2_inf);
-          }
-          if (isFinite(se_logRR_inf)) {
-            try {
-              const approx_logRR = Math.log(risk_exposed / Number.EPSILON);
-              const logCI_lower_inf = approx_logRR - z_crit * se_logRR_inf;
-              rr_ci_lower = Math.exp(logCI_lower_inf).toFixed(3);
-            } catch {
-              rr_ci_lower = 'N/A';
-            }
-          } else {
-            rr_ci_lower = 'N/A';
-          }
-          rr_ci_upper = 'Inf';
-        } else {
-          relativeRisk = 'N/A';
-          rr_ci_lower = 'N/A';
-          rr_ci_upper = 'N/A';
+        } catch (e) {
+          console.error(`RR/CI calculation error for item ${factorName}:`, e);
+          relativeRisk = 'Error';
+          rr_ci_lower = 'Error';
+          rr_ci_upper = 'Error';
         }
-      } catch (e) {
-        console.error(`RR/CI calculation error for item ${factorName}:`, e);
-        relativeRisk = 'Error';
-        rr_ci_lower = 'Error';
-        rr_ci_upper = 'Error';
       }
     } else {
       // 노출군 또는 비노출군이 없는 경우 RR 계산 불가
@@ -428,7 +443,7 @@ const cohortAnalysisResults = computed(() => {
     }
 
     // --- 최종 결과 객체 반환 (발병률 추가) ---
-    return {
+    const result = {
       item: factorName,
       a_obs, // 노출군 환자수 (a)
       rowTotal_Exposed, // 노출군 대상자수 (a+b)
@@ -442,8 +457,98 @@ const cohortAnalysisResults = computed(() => {
       rr_ci_lower,
       rr_ci_upper
     };
+    
+    // 통계 검증 실행
+    validateCohortStatistics(result, factorName);
+    
+    return result;
   });
 });
+
+// --- 통계 계산 검증 함수 ---
+const validateCohortStatistics = (result, factorName) => {
+  const issues = [];
+  
+  // P-value 검증
+  if (result.pValue !== null) {
+    if (result.pValue < 0 || result.pValue > 1) {
+      issues.push(`P-value 범위 오류: ${result.pValue}`);
+    }
+  }
+  
+  // Relative Risk 검증
+  if (result.relativeRisk !== 'N/A' && result.relativeRisk !== 'Inf' && result.relativeRisk !== 'Error') {
+    const rr = parseFloat(result.relativeRisk);
+    if (isNaN(rr) || rr < 0) {
+      issues.push(`Relative Risk 값 오류: ${result.relativeRisk}`);
+    }
+  }
+  
+  // 발병률 검증
+  if (result.incidence_exposed_formatted !== 'N/A') {
+    const exposed = parseFloat(result.incidence_exposed_formatted);
+    if (!isNaN(exposed) && (exposed < 0 || exposed > 100)) {
+      issues.push(`노출군 발병률 범위 오류: ${result.incidence_exposed_formatted}`);
+    }
+  }
+  
+  if (result.incidence_unexposed_formatted !== 'N/A') {
+    const unexposed = parseFloat(result.incidence_unexposed_formatted);
+    if (!isNaN(unexposed) && (unexposed < 0 || unexposed > 100)) {
+      issues.push(`비노출군 발병률 범위 오류: ${result.incidence_unexposed_formatted}`);
+    }
+  }
+  
+  if (issues.length > 0) {
+    console.warn(`코호트 통계 검증 오류 - ${factorName}:`, issues);
+  }
+  
+  return issues.length === 0;
+};
+
+// --- Fisher의 정확검정 계산 함수 ---
+const calculateFisherExactTest = (a, b, c, d) => {
+  // 2x2 분할표에서 Fisher의 정확검정 계산
+  const n = a + b + c + d;
+  const row1 = a + b;
+  const row2 = c + d;
+  const col1 = a + c;
+  const col2 = b + d;
+  
+  // 초기 확률 계산
+  let pValue = 0;
+  
+  // 모든 가능한 분할표에 대해 확률 계산
+  for (let x = 0; x <= Math.min(row1, col1); x++) {
+    const y = row1 - x;
+    const z = col1 - x;
+    const w = row2 - z;
+    
+    if (y >= 0 && z >= 0 && w >= 0) {
+      // 현재 분할표의 확률
+      const currentProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
+                         (factorial(n) * factorial(x) * factorial(y) * factorial(z) * factorial(w));
+      
+      // 관측된 분할표보다 극단적인 경우의 확률만 합산
+      if (x <= a) {
+        pValue += currentProb;
+      }
+    }
+  }
+  
+  return pValue;
+};
+
+// --- 팩토리얼 계산 함수 ---
+const factorial = (n) => {
+  if (n < 0) return NaN;
+  if (n === 0 || n === 1) return 1;
+  let result = 1;
+  for (let i = 2; i <= n; i++) {
+    result *= i;
+  }
+  return result;
+};
 </script>
 
 <style scoped>
@@ -639,9 +744,20 @@ const cohortAnalysisResults = computed(() => {
   background-color: #f2f2f2;
   font-weight: bold;
   position: sticky;
-  top: 0;
   z-index: 1;
   box-shadow: inset 0 -1px 0 #ddd;
+}
+
+/* 첫 번째 헤더 행 (rowspan=2인 셀들) */
+.analysis-table thead tr:first-child th {
+  top: 0;
+  z-index: 2;
+}
+
+/* 두 번째 헤더 행 */
+.analysis-table thead tr:nth-child(2) th {
+  top: 33px; /* 첫 번째 행의 실제 높이에 맞춤 (padding 포함) */
+  z-index: 1;
 }
 /* 헤더 그룹 스타일 (명칭만 바뀜) */
 .header-item {
@@ -775,5 +891,108 @@ const cohortAnalysisResults = computed(() => {
 .button-text {
   font-family: "Noto Sans KR", sans-serif;
   font-weight: 400;
+}
+
+/* --- 테이블 범례 스타일 --- */
+.table-legend {
+  margin: 15px 20px 20px 20px;
+  padding: 0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.legend-header {
+  background-color: #f8f9fa;
+  padding: 8px 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.legend-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.legend-content {
+  padding: 12px 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.legend-item:last-child {
+  margin-bottom: 0;
+}
+
+.legend-marker {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-right: 10px;
+  min-width: 45px;
+  text-align: center;
+}
+
+.legend-marker.fisher {
+  background-color: #e3f2fd;
+  color: #1a73e8;
+  border: 1px solid #bbdefb;
+}
+
+.legend-marker.yates {
+  background-color: #e8f5e8;
+  color: #34a853;
+  border: 1px solid #c8e6c9;
+}
+
+.legend-marker.na {
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.legend-description {
+  color: #666;
+  font-weight: 400;
+}
+
+/* --- 검정 방법 표시 스타일 --- */
+.test-method {
+  font-size: 1em;
+  font-weight: 600;
+  margin-left: 0px;
+  vertical-align: top;
+}
+
+.test-method.fisher {
+  color: #1a73e8; /* 파란색 */
+}
+
+.test-method.yates {
+  color: #34a853; /* 녹색 */
+}
+
+.legend-content--plain {
+  padding: 12px 15px;
+}
+.legend-item-plain {
+  font-size: 13px;
+  color: #444;
+  font-family: "Noto Sans KR", sans-serif;
+  margin-bottom: 6px;
+}
+.legend-item-plain:last-child {
+  margin-bottom: 0;
 }
 </style>

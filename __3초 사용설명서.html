@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Easy-Epidemiology 빠른 실행 가이드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Noto Sans KR 폰트 적용 */
+      body {
+        font-family: "Noto Sans KR", sans-serif;
+        background-color: #f8fafc; /* slate-50 */
+        color: #334155; /* slate-700 */
+      }
+      /* 섹션 제목 스타일 */
+      .section-title {
+        font-size: 1.5rem; /* 24px */
+        font-weight: 700;
+        margin-bottom: 1.25rem; /* 20px */
+        display: flex;
+        align-items: center;
+        gap: 0.75rem; /* 12px */
+        color: #1e293b; /* slate-800 */
+      }
+      /* FAQ 아코디언 화살표 애니메이션 */
+      details > summary {
+        list-style: none;
+      }
+      details > summary::-webkit-details-marker {
+        display: none;
+      }
+      details .arrow {
+        transition: transform 0.2s ease-in-out;
+      }
+      details[open] .arrow {
+        transform: rotate(90deg);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 전체 컨테이너 -->
+    <div class="container mx-auto max-w-3xl p-4 sm:p-8">
+      <!-- 헤더 -->
+      <header class="text-center mb-12">
+        <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">
+          Easy-Epidemiology 실행 가이드
+        </h1>
+        <p class="mt-3 text-slate-500">가장 중요한 핵심 내용만 모았습니다.</p>
+      </header>
+
+      <!-- 1. 실행 방법 -->
+      <section class="mb-12">
+        <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+          <h2 class="section-title text-blue-600">
+            <span
+              class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg"
+              >1</span
+            >
+            프로그램 실행 방법
+          </h2>
+          <ol class="space-y-4 text-lg pl-2">
+            <li class="flex items-start gap-3">
+              <span class="font-bold text-blue-500">STEP 1</span>
+              <span>`Easy-Epidemiology Web v1.0` 폴더를 엽니다.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="font-bold text-blue-500">STEP 2</span>
+              <span
+                >폴더 안의
+                <code
+                  class="bg-blue-100 text-blue-800 font-semibold px-2 py-1 rounded-md"
+                  >index.html</code
+                >
+                파일을 더블-클릭하세요.</span
+              >
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="font-bold text-blue-500">STEP 3</span>
+              <span>브라우저에 화면이 뜨면 완료! (인터넷 X)</span>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- 2. 필수 확인 사항 -->
+      <section class="mb-12">
+        <h2 class="section-title">
+          <span
+            class="bg-amber-100 text-amber-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg"
+            >2</span
+          >
+          사용 전 필수 확인 사항
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- 데이터 백업 -->
+          <div
+            class="bg-white p-5 rounded-xl shadow-md border border-slate-200 hover:shadow-lg transition-shadow"
+          >
+            <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-amber-500"
+              >
+                <path
+                  d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+                ></path>
+                <polyline points="13 2 13 9 20 9"></polyline>
+                <path d="m12 18-3-3 3-3"></path>
+                <path d="M9 15h9"></path>
+              </svg>
+              데이터 백업 필수
+            </h3>
+            <p class="text-slate-600 text-sm">
+              작업 후엔
+              <strong class="text-amber-700">'엑셀로 내보내기'</strong>로
+              데이터를 꼭 보관해주세요.
+            </p>
+          </div>
+          <!-- 최신 브라우저 -->
+          <div
+            class="bg-white p-5 rounded-xl shadow-md border border-slate-200 hover:shadow-lg transition-shadow"
+          >
+            <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-sky-500"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M2 12h20"></path>
+                <path
+                  d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                ></path>
+              </svg>
+              최신 브라우저 사용
+            </h3>
+            <p class="text-slate-600 text-sm">
+              Chrome, Edge 브라우저에서 가장 잘 작동해요.
+            </p>
+          </div>
+          <!-- 폴더 구조 유지 -->
+          <div
+            class="bg-white p-5 rounded-xl shadow-md border border-slate-200 hover:shadow-lg transition-shadow"
+          >
+            <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-emerald-500"
+              >
+                <path
+                  d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                ></path>
+              </svg>
+              폴더 구조 유지
+            </h3>
+            <p class="text-slate-600 text-sm">
+              파일이나 폴더를 옮기면 화면이 깨질 수 있어요.
+            </p>
+          </div>
+          <!-- 엑셀 템플릿 -->
+          <div
+            class="bg-white p-5 rounded-xl shadow-md border border-slate-200 hover:shadow-lg transition-shadow"
+          >
+            <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-violet-500"
+              >
+                <path
+                  d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                ></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <line x1="10" y1="9" x2="8" y2="9"></line>
+              </svg>
+              엑셀 템플릿 사용
+            </h3>
+            <p class="text-slate-600 text-sm">
+              정해진 양식을 사용해야 오류가 나지 않아요.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 자주 묻는 질문 -->
+      <section>
+        <h2 class="section-title">
+          <span
+            class="bg-slate-200 text-slate-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg"
+            >3</span
+          >
+          자주 묻는 질문 (FAQ)
+        </h2>
+        <div class="space-y-3">
+          <!-- 질문 1 -->
+          <details
+            class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-pointer group"
+          >
+            <summary class="font-semibold flex justify-between items-center">
+              Q. 화면이 하얗게만 보여요.
+              <span class="arrow text-slate-400">▶</span>
+            </summary>
+            <p
+              class="text-slate-600 mt-3 pt-3 border-t border-slate-200 text-sm"
+            >
+              폴더 구조가 바뀌지 않았는지 먼저 확인해주세요. 그래도 문제가
+              해결되지 않으면, 키보드 `F12`를 눌러 나오는 Console 화면을
+              캡처해서 보내주세요.
+            </p>
+          </details>
+          <!-- 질문 2 -->
+          <details
+            class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-pointer group"
+          >
+            <summary class="font-semibold flex justify-between items-center">
+              Q. 저장했던 데이터가 사라졌어요.
+              <span class="arrow text-slate-400">▶</span>
+            </summary>
+            <p
+              class="text-slate-600 mt-3 pt-3 border-t border-slate-200 text-sm"
+            >
+              브라우저의 인터넷 기록(캐시, 쿠키)을 삭제하면 프로그램에 임시
+              저장된 데이터도 함께 지워집니다. 이 프로그램은 데이터를 사용자
+              컴퓨터에만 저장하므로, 중요한 데이터는 반드시
+              <strong class="text-amber-700">'엑셀로 내보내기'</strong>로
+              백업해야 합니다.
+            </p>
+          </details>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

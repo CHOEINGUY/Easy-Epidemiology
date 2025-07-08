@@ -526,13 +526,12 @@ const store = createStore({
       for (let i = 0; i < data.length; i++) {
         const rowData = data[i];
         const currentRowIndex = startRowIndex + i;
+        
         if (currentRowIndex >= state.rows.length) {
           state.rows.push({
             isPatient: '',
             basicInfo: Array(state.headers.basic?.length || 0).fill(''),
-            clinicalSymptoms: Array(state.headers.clinical?.length || 0).fill(
-              ''
-            ),
+            clinicalSymptoms: Array(state.headers.clinical?.length || 0).fill(''),
             symptomOnset: '',
             individualExposureTime: '',
             dietInfo: Array(state.headers.diet?.length || 0).fill('')
@@ -540,9 +539,11 @@ const store = createStore({
         }
         const targetRow = state.rows[currentRowIndex];
         if (!targetRow) continue;
+        
         let currentColumn = startColIndex;
         for (let j = 0; j < rowData.length; j++) {
           const cellValue = rowData[j] ?? '';
+          
           if (currentColumn === 1) {
             targetRow.isPatient = cellValue;
           } else if (

@@ -82,10 +82,6 @@
     />
     <DragOverlay :visible="isDragOver" :progress="excelUploadProgress" />
     <ToastContainer />
-    <ValidationProgress 
-      :is-processing="isValidationProcessing"
-      :progress="validationProgress"
-    />
     <AddRowsControls 
       @add-rows="onAddRows" 
       @delete-empty-rows="onDeleteEmptyRows" 
@@ -119,7 +115,6 @@ import { useStoreBridge } from '../../store/storeBridge.js';
 import { useCellInputState } from '../../store/cellInputState.js';
 import ToastContainer from './parts/ToastContainer.vue';
 import AddRowsControls from './parts/AddRowsControls.vue';
-import ValidationProgress from './parts/ValidationProgress.vue';
 import { useContextMenu } from './logic/useContextMenu.js';
 import { handleContextMenu } from './handlers/contextMenuHandlers.js';
 import { useVirtualScroll } from './logic/useVirtualScroll.js';
@@ -162,11 +157,7 @@ const getters = store.getters;
 // ValidationManager 인스턴스 (환경에 따른 자동 최적화)
 const validationOptions = createProcessingOptions({
   chunkSize: 500,
-  debug: import.meta.env?.MODE === 'development' || false,
-  onProgress: (progress) => {
-    isValidationProcessing.value = progress < 100;
-    validationProgress.value = progress;
-  }
+  debug: import.meta.env?.MODE === 'development' || false
 });
 
 const validationManager = new ValidationManager(store, validationOptions);
@@ -549,15 +540,11 @@ const { contextMenuState, showContextMenu, hideContextMenu } = useContextMenu();
 // --- Excel Upload/Export ---
 const isUploadingExcel = ref(false);
 const excelUploadProgress = ref(0);
-const { downloadXLSX, downloadTemplate } = useDataExport();
+const { downloadXLSXSmart, downloadTemplate } = useDataExport();
 
 // --- Drag & Drop ---
 const { isDragOver, setupDragDropListeners } = useDragDrop();
 let cleanupDragDrop = null;
-
-// --- Validation Progress ---
-const isValidationProcessing = ref(false);
-const validationProgress = ref(0);
 
 // === Validation Errors Computed ===
 const validationErrors = computed(() => {
@@ -573,12 +560,16 @@ async function onExcelFileSelected(file) {
     // 기존 유효성 검사 오류 초기화
     validationManager.clearAllErrors();
     
+    // 1단계: 엑셀 파일 파싱 (0% ~ 60%)
     const parsed = await processExcelFile(file, (p) => {
-      excelUploadProgress.value = Math.round(p);
+      excelUploadProgress.value = Math.round(p * 0.6); // 파싱은 전체의 60%
     });
-    // update store headers/rows
+    
+    // 2단계: 데이터 저장 및 설정 (60% ~ 70%)
+    excelUploadProgress.value = 60;
     storeBridge.dispatch('updateHeadersFromExcel', parsed.headers);
     storeBridge.dispatch('addRowsFromExcel', parsed.rows);
+    
     // '의심원 노출시간' 열 가시성 토글
     if (parsed.hasIndividualExposureTime) {
       if (!storeBridge.state.isIndividualExposureColumnVisible) {
@@ -590,10 +581,21 @@ async function onExcelFileSelected(file) {
       }
     }
     
-    // 데이터 가져온 후 전체 유효성 검사 실행
+    // 3단계: 데이터 검증 (70% ~ 100%)
+    excelUploadProgress.value = 70;
     await nextTick();
     const columnMetas = storeBridge.bridge.getColumnMetas();
-    await validationManager.revalidateAll(storeBridge.state.rows, columnMetas);
+    
+    // 검증 진행률을 엑셀 업로드 진행률에 통합
+    await validationManager.revalidateAll(storeBridge.state.rows, columnMetas, {
+      onProgress: (progress) => {
+        // 검증 진행률을 70% ~ 100% 범위로 매핑
+        excelUploadProgress.value = 70 + Math.round(progress * 0.3);
+      }
+    });
+    
+    // 완료
+    excelUploadProgress.value = 100;
     
     // focus first cell
     selectionSystem.selectCell(0, 1);
@@ -612,19 +614,24 @@ function onDownloadTemplate(type = 'basic') {
 }
 
 function onExportData() {
-  // build worksheet data (header rows + data rows)
-  const headerRow1 = [];
-  const headerRow2 = [];
-  // Build based on allColumnsMeta
-  allColumnsMeta.value.forEach(col => {
-    headerRow1.push(col.headerRow === 1 ? col.headerText.replace(/<br\s*\/?>/g, ' ') : '');
-    headerRow2.push(col.headerRow === 2 ? col.headerText : '');
-  });
-  const dataRows = rows.value.map((row, rIdx) => {
-    return allColumnsMeta.value.map(col => getCellValue(row, col, rIdx));
-  });
-  const worksheetData = [headerRow1, headerRow2, ...dataRows];
-  downloadXLSX(worksheetData, [], 'exported_data.xlsx');
+  try {
+    // 스마트 내보내기 사용 - 가져오기와 완전 호환
+    const hasIndividualExposure = storeBridge.state.isIndividualExposureColumnVisible;
+    
+    downloadXLSXSmart(
+      allColumnsMeta.value,
+      rows.value,
+      getCellValue,
+      hasIndividualExposure
+    );
+    
+    // 성공 토스트 메시지
+    showToast('데이터가 성공적으로 내보내졌습니다. 파일을 다시 가져오기할 수 있습니다.', 'success');
+    
+  } catch (error) {
+    console.error('Export failed:', error);
+    showToast(`데이터 내보내기 중 오류가 발생했습니다: ${error.message}`, 'error');
+  }
 }
 
 async function onCopyEntireData() {

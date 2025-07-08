@@ -607,8 +607,9 @@ async function handlePaste(context) {
     if (!clipboardText) return;
 
     const parsedData = clipboardText
-      .split('\n')
-      .map(row => row.split('\t'));
+      .split(/\r?\n/) // Windows(\r\n)와 Unix(\n) 모두 처리
+      .filter(row => row.trim() !== '') // 빈 행 제거
+      .map(row => row.split('\t').map(cell => cell.replace(/\r/g, '').trim()));
 
     const startRow = selectedCell.rowIndex;
     const startCol = selectedCell.colIndex;

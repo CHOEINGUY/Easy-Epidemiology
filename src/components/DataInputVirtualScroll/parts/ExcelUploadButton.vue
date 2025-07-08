@@ -23,7 +23,7 @@
         hourglass_empty
       </span>
       <span class="upload-text">
-        {{ isUploading ? `가져오는 중... ${uploadProgress}%` : '데이터 가져오기' }}
+        {{ isUploading ? `처리 중... ${uploadProgress}%` : '데이터 가져오기' }}
       </span>
     </button>
   </div>

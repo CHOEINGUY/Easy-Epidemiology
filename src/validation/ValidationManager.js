@@ -142,8 +142,9 @@ export class ValidationManager {
    * @param {object} [opts]
    * @param {number|null} [opts.chunkSize] – null = 동기, 숫자 = 비동기 청크 크기
    * @param {boolean} [opts.useAsyncProcessor] – requestIdleCallback 기반 비동기 처리 사용 여부
+   * @param {Function} [opts.onProgress] – 진행률 콜백 함수
    */
-  revalidateAll(rows = [], columnMetas = [], opts = {}) {
+  async revalidateAll(rows = [], columnMetas = [], opts = {}) {
     if (this._destroyed) return;
 
     // 0. 기존 오류 + 타이머 정리
@@ -153,6 +154,7 @@ export class ValidationManager {
 
     const totalCells = rows.length * columnMetas.filter(meta => meta.isEditable).length;
     const chunkSize = opts.chunkSize !== undefined ? opts.chunkSize : this.defaultChunkSize;
+    const onProgress = opts.onProgress || this.onProgress;
 
     // 1) 동기 처리 (작은 데이터셋)
     if (!chunkSize || chunkSize <= 0 || totalCells < 500) {
@@ -165,73 +167,100 @@ export class ValidationManager {
           }
         });
       });
+      
+      // 완료 시 100% 보고
+      if (onProgress) {
+        onProgress(100);
+      }
       return;
     }
 
     // 2) requestIdleCallback 기반 비동기 처리 (권장)
     if (opts.useAsyncProcessor !== false) {
-      const validationTask = validateDataAsync(
-        rows, 
-        columnMetas, 
-        _validateCell,
-        {
-          chunkSize: Math.min(chunkSize, 100),
-          onProgress: (progress, processed, total) => {
-            if (this.onProgress) {
-              this.onProgress(progress, processed, total);
-            }
-            if (this.debug) {
-              console.log(`[ValidationManager] Progress: ${progress.toFixed(1)}% (${processed}/${total})`);
-            }
-          },
-          onComplete: (invalidCells) => {
-            // 검증 결과를 스토어에 반영
-            invalidCells.forEach(({ row, col, message }) => {
-              this.store.commit('ADD_VALIDATION_ERROR', {
-                rowIndex: row,
-                colIndex: col,
-                message
+      return new Promise((resolve, reject) => {
+        const validationTask = validateDataAsync(
+          rows, 
+          columnMetas, 
+          _validateCell,
+          {
+            chunkSize: Math.min(chunkSize, 100),
+            onProgress: (progress, processed, total) => {
+              if (onProgress) {
+                onProgress(progress);
+              }
+              if (this.debug) {
+                console.log(`[ValidationManager] Progress: ${progress.toFixed(1)}% (${processed}/${total})`);
+              }
+            },
+            onComplete: (invalidCells) => {
+              // 검증 결과를 스토어에 반영
+              invalidCells.forEach(({ row, col, message }) => {
+                this.store.commit('ADD_VALIDATION_ERROR', {
+                  rowIndex: row,
+                  colIndex: col,
+                  message
+                });
               });
-            });
-            
-            if (this.debug) {
-              console.log(`[ValidationManager] Validation complete. Found ${invalidCells.length} invalid cells.`);
+              
+              if (this.debug) {
+                console.log(`[ValidationManager] Validation complete. Found ${invalidCells.length} invalid cells.`);
+              }
+              resolve();
+            },
+            onError: (error) => {
+              console.error('[ValidationManager] Validation error:', error);
+              reject(error);
             }
-          },
-          onError: (error) => {
-            console.error('[ValidationManager] Validation error:', error);
           }
-        }
-      );
+        );
 
-      // 취소 가능한 작업으로 저장 (필요시)
-      this._currentValidationTask = validationTask;
-      return;
+        // 취소 가능한 작업으로 저장 (필요시)
+        this._currentValidationTask = validationTask;
+      });
     }
 
     // 3) 기존 setTimeout 기반 청크 처리 (폴백)
-    const totalRows = rows.length;
-    let start = 0;
-    const processChunk = () => {
-      if (this._destroyed) return;
-      const end = Math.min(start + chunkSize, totalRows);
-      for (let rowIndex = start; rowIndex < end; rowIndex++) {
-        const row = rows[rowIndex];
-        columnMetas.forEach((meta) => {
-          if (!meta.isEditable) return;
-          const value = this._getCellValue(row, meta);
-          if (value !== '' && value !== null && value !== undefined) {
-            this.validateCell(rowIndex, meta.colIndex, value, meta.type, true);
-          }
-        });
-      }
-      start = end;
-      if (start < totalRows) {
-        setTimeout(processChunk, 0); // Yield 이벤트 루프
-      }
-    };
+    return new Promise((resolve) => {
+      const totalRows = rows.length;
+      let start = 0;
+      let processedRows = 0;
+      
+      const processChunk = () => {
+        if (this._destroyed) {
+          resolve();
+          return;
+        }
+        
+        const end = Math.min(start + chunkSize, totalRows);
+        for (let rowIndex = start; rowIndex < end; rowIndex++) {
+          const row = rows[rowIndex];
+          columnMetas.forEach((meta) => {
+            if (!meta.isEditable) return;
+            const value = this._getCellValue(row, meta);
+            if (value !== '' && value !== null && value !== undefined) {
+              this.validateCell(rowIndex, meta.colIndex, value, meta.type, true);
+            }
+          });
+        }
+        
+        processedRows = end;
+        start = end;
+        
+        // 진행률 보고
+        if (onProgress) {
+          const progress = Math.round((processedRows / totalRows) * 100);
+          onProgress(progress);
+        }
+        
+        if (start < totalRows) {
+          setTimeout(processChunk, 0); // Yield 이벤트 루프
+        } else {
+          resolve();
+        }
+      };
 
-    processChunk();
+      processChunk();
+    });
   }
 
   /**

@@ -247,33 +247,27 @@ export class EnhancedStorageManager {
    */
   loadData() {
     try {
-      console.log('[EnhancedStorageManager] 데이터 로드를 시작합니다...');
-      
       // 마이그레이션 상태 확인
       const migrationStatus = getMigrationStatus();
       
       if (migrationStatus.needsMigration) {
-        console.log('[EnhancedStorageManager] 마이그레이션이 필요합니다. 마이그레이션을 실행합니다...');
         const migrationResult = executeMigration();
         
         if (!migrationResult.success) {
           console.error('[EnhancedStorageManager] 마이그레이션 실패:', migrationResult.error);
           return null;
         }
-        
-        console.log('[EnhancedStorageManager] 마이그레이션 완료');
       }
       
       // 새로운 형식의 데이터 로드
       const newData = localStorage.getItem('epidemiology_data');
+      
       if (newData) {
         const parsedData = JSON.parse(newData);
-        console.log('[EnhancedStorageManager] 새로운 형식의 데이터 로드 완료');
         this.isInitialized = true;
         return parsedData;
       }
       
-      console.log('[EnhancedStorageManager] 새로운 형식의 데이터가 없습니다.');
       return null;
       
     } catch (error) {
@@ -289,8 +283,6 @@ export class EnhancedStorageManager {
    */
   saveData(data) {
     try {
-      console.log('[EnhancedStorageManager] 데이터를 새로운 형식으로 저장합니다...');
-      
       const saveData = {
         version: '1.0',
         timestamp: Date.now(),
@@ -298,7 +290,6 @@ export class EnhancedStorageManager {
       };
       
       localStorage.setItem('epidemiology_data', JSON.stringify(saveData));
-      console.log('[EnhancedStorageManager] 데이터 저장 완료');
       return true;
       
     } catch (error) {

@@ -115,14 +115,13 @@
                       significant:
                         result.pValue !== null && result.pValue < 0.05,
                     }"
+                    :title="result.adj_chi === null && result.pValue !== null ? 'Fisher의 정확검정 (기대빈도 < 5)' : 'Yates 보정 카이제곱 검정 (기대빈도 ≥ 5)'"
                   >
-                    {{
-                      result.pValue !== null
-                        ? result.pValue < 0.001
-                          ? "<0.001"
-                          : result.pValue.toFixed(3)
-                        : "N/A"
-                    }}
+                    <span v-if="result.pValue !== null">
+                      {{ result.pValue < 0.001 ? "<0.001" : result.pValue.toFixed(3) }}
+                      <sup v-if="result.adj_chi === null && result.pValue !== null" class="test-method fisher">*</sup>
+                    </span>
+                    <span v-else>N/A</span>
                   </td>
                   <td class="cell-stat">{{ result.oddsRatio }}</td>
                   <td class="cell-stat">{{ result.ci_lower }}</td>
@@ -130,6 +129,16 @@
                 </tr>
               </tbody>
             </table>
+            <div class="table-legend">
+              <div class="legend-header">
+                <span class="legend-title">통계 검정 방법 및 표시 기준</span>
+              </div>
+              <div class="legend-content legend-content--plain">
+                <div class="legend-item-plain">* : Fisher's Exact Test (기대빈도&nbsp;&lt;&nbsp;5인 셀이 있을 때)</div>
+                <div class="legend-item-plain">- : Yates' Corrected Chi-square Test (모든 셀 기대빈도&nbsp;≥&nbsp;5)</div>
+                <div class="legend-item-plain">N/A : 계산 불가(셀 값이 0인 경우)</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -254,27 +263,44 @@ const analysisResults = computed(() => {
       // 1. 모든 기대빈도가 0보다 커야 함
       // 2. 특정 식단의 값이 모두 같으면 (colTotal_Exposed = 0 또는 colTotal_Unexposed = 0) 검정 불가
       const canApplyChiSquare = colTotal_Exposed > 0 && colTotal_Unexposed > 0 && 
-                                rowTotal_Case > 0 && rowTotal_Control > 0;
+                                rowTotal_Case > 0 && rowTotal_Control > 0 &&
+                                b_exp > 0 && c_exp > 0 && e_exp > 0 && f_exp > 0;
 
       if (canApplyChiSquare) {
-      // Yates' 보정 카이제곱 값 계산
-        const term1 = calculateChiTerm(b_obs, b_exp);
-        const term2 = calculateChiTerm(c_obs, c_exp);
-        const term3 = calculateChiTerm(e_obs, e_exp);
-        const term4 = calculateChiTerm(f_obs, f_exp);
-        adj_chi = term1 + term2 + term3 + term4;
-
-        // P-value 계산 (자유도=1)
-        if (isFinite(adj_chi) && adj_chi >= 0) {
+        // 기대빈도 5미만 체크
+        const hasSmallExpected = b_exp < 5 || c_exp < 5 || e_exp < 5 || f_exp < 5;
+        
+        if (hasSmallExpected) {
+          // 기대빈도 5미만: Fisher의 정확검정 사용
           try {
-            pValue = 1 - jStat.chisquare.cdf(adj_chi, 1);
-            if (isNaN(pValue)) pValue = null; // 계산 불가 시 null 처리
+            pValue = calculateFisherExactTest(b_obs, c_obs, e_obs, f_obs);
+            adj_chi = null; // Fisher 검정에서는 카이제곱 값 계산 안함
+            console.log(`Fisher의 정확검정 적용 - ${factorName}: 기대빈도 5미만`);
           } catch (e) {
-            console.error(`P-value calculation error for item ${factorName}:`, e);
+            console.error(`Fisher's exact test calculation error for item ${factorName}:`, e);
             pValue = null;
+            adj_chi = null;
           }
         } else {
-          adj_chi = null; // 카이제곱 계산 불가 시 null 처리
+          // 기대빈도 5이상: Yates' 보정 카이제곱 검정 사용
+          const term1 = calculateChiTerm(b_obs, b_exp);
+          const term2 = calculateChiTerm(c_obs, c_exp);
+          const term3 = calculateChiTerm(e_obs, e_exp);
+          const term4 = calculateChiTerm(f_obs, f_exp);
+          adj_chi = term1 + term2 + term3 + term4;
+
+          // P-value 계산 (자유도=1)
+          if (isFinite(adj_chi) && adj_chi >= 0) {
+            try {
+              pValue = 1 - jStat.chisquare.cdf(adj_chi, 1);
+              if (isNaN(pValue)) pValue = null; // 계산 불가 시 null 처리
+            } catch (e) {
+              console.error(`P-value calculation error for item ${factorName}:`, e);
+              pValue = null;
+            }
+          } else {
+            adj_chi = null; // 카이제곱 계산 불가 시 null 처리
+          }
         }
       } else {
         // 카이제곱 검정 적용 불가 (모든 값이 동일하거나 한 그룹이 비어있음)
@@ -288,63 +314,68 @@ const analysisResults = computed(() => {
     // 카이제곱 검정이 불가능한 경우 OR 계산도 의미가 없음
     if (colTotal_Exposed > 0 && colTotal_Unexposed > 0 && 
         rowTotal_Case > 0 && rowTotal_Control > 0) {
-    // 0인 셀이 있는지 확인 (신뢰구간 계산 시 0으로 나누는 것을 방지하기 위함)
+    // 0인 셀이 있는지 확인
       const hasZeroCell =
       b_obs === 0 || c_obs === 0 || e_obs === 0 || f_obs === 0;
 
-      // 0.5 보정 적용: 0인 셀이 하나라도 있으면 모든 셀에 0.5를 더함 (Haldane-Anscombe correction)
-      const b_adj = hasZeroCell ? b_obs + 0.5 : b_obs;
-      const c_adj = hasZeroCell ? c_obs + 0.5 : c_obs;
-      const e_adj = hasZeroCell ? e_obs + 0.5 : e_obs;
-      const f_adj = hasZeroCell ? f_obs + 0.5 : f_obs;
+      // 0인 셀이 있으면 OR 계산 불가 (N/A 처리)
+      if (hasZeroCell) {
+        oddsRatio = 'N/A';
+        ci_lower = 'N/A';
+        ci_upper = 'N/A';
+        console.log(`OR 계산 불가 - ${factorName}: 0인 셀이 존재하여 계산 불가능`);
+      } else {
+        // 0인 셀이 없을 때만 OR 계산
+        try {
+          // Odds Ratio 계산: OR = (b*f)/(c*e)
+          const or_calc = (b_obs * f_obs) / (c_obs * e_obs);
 
-      try {
-      // (보정된 값으로) Odds Ratio 계산: OR = (a*d)/(b*c) -> (b_adj * f_adj) / (c_adj * e_adj)
-        const or_calc = (b_adj * f_adj) / (c_adj * e_adj);
+          if (isFinite(or_calc) && or_calc > 0) {
+            // OR 값 포맷팅
+            oddsRatio = or_calc.toFixed(3);
 
-        if (isFinite(or_calc) && or_calc > 0) {
-        // OR 값 포맷팅
-          oddsRatio = or_calc.toFixed(3);
+            // Log Odds Ratio 계산
+            const logOR = Math.log(or_calc);
 
-          // Log Odds Ratio 계산
-          const logOR = Math.log(or_calc);
+            // Standard Error of Log Odds Ratio 계산: sqrt(1/b + 1/c + 1/e + 1/f)
+            const se_logOR = Math.sqrt(
+              1 / b_obs + 1 / c_obs + 1 / e_obs + 1 / f_obs
+            );
 
-          // Standard Error of Log Odds Ratio 계산: sqrt(1/a + 1/b + 1/c + 1/d)
-          const se_logOR = Math.sqrt(
-            1 / b_adj + 1 / c_adj + 1 / e_adj + 1 / f_adj
-          );
+            // 신뢰구간 계산 가능 여부 확인
+            if (isFinite(se_logOR)) {
+              // Log Scale에서 CI 계산
+              const logCI_lower = logOR - z_crit * se_logOR;
+              const logCI_upper = logOR + z_crit * se_logOR;
 
-          // 신뢰구간 계산 가능 여부 확인
-          if (isFinite(se_logOR)) {
-          // Log Scale에서 CI 계산
-            const logCI_lower = logOR - z_crit * se_logOR;
-            const logCI_upper = logOR + z_crit * se_logOR;
-
-            // 원래 스케일(OR)로 변환 (지수 함수 적용) 및 포맷팅
-            ci_lower = Math.exp(logCI_lower).toFixed(3);
-            ci_upper = Math.exp(logCI_upper).toFixed(3);
+              // 원래 스케일(OR)로 변환 (지수 함수 적용) 및 포맷팅
+              ci_lower = Math.exp(logCI_lower).toFixed(3);
+              ci_upper = Math.exp(logCI_upper).toFixed(3);
+            }
+          } else if (or_calc === 0) {
+            // OR이 0인 경우: 분모가 0이 아닌데 분자가 0인 경우
+            oddsRatio = '0.000';
+            ci_lower = '0.000';
+            ci_upper = '0.000';
+          } else {
+            // OR이 무한대(Inf) 또는 계산 불가(NaN)인 경우
+            if (c_obs * e_obs === 0 && b_obs * f_obs > 0) {
+              oddsRatio = 'Inf';
+              ci_lower = 'Inf';
+              ci_upper = 'Inf';
+            } else {
+              oddsRatio = 'N/A';
+              ci_lower = 'N/A';
+              ci_upper = 'N/A';
+            }
           }
-        // else: se_logOR 계산 불가 시 ci_lower, ci_upper는 초기값 "N/A" 유지
-        } else if (or_calc === 0) {
-        // OR이 0인 경우 개선: 상한 계산 의미 없음, 더 큰 값 사용 또는 N/A 처리
-          oddsRatio = '0.000';
-          ci_lower = '0.000';
-          ci_upper = 'N/A'; // 0인 경우 상한 계산 의미 없음
-        } else {
-        // OR이 무한대(Inf) 또는 계산 불가(NaN)인 경우
-        // 분모(c_adj * e_adj)가 0에 가까워 발생 가능
-          oddsRatio = c_adj * e_adj === 0 ? 'Inf' : 'N/A'; // 조건 수정
-          ci_lower = 'N/A';
-          ci_upper = 'N/A';
-          // 만약 b_adj*f_adj도 0이면 NaN이 될 수 있음
-          if (isNaN(or_calc)) oddsRatio = 'N/A';
+        } catch (e) {
+          // 계산 중 예외 발생 시
+          console.error(`OR/CI calculation error for item ${factorName}:`, e);
+          oddsRatio = 'Error';
+          ci_lower = 'Error';
+          ci_upper = 'Error';
         }
-      } catch (e) {
-      // 계산 중 예외 발생 시
-        console.error(`OR/CI calculation error for item ${factorName}:`, e);
-        oddsRatio = 'Error';
-        ci_lower = 'Error';
-        ci_upper = 'Error';
       }
     } else {
       // 환자군/대조군 또는 노출/비노출군이 없는 경우 OR 계산 불가
@@ -355,7 +386,7 @@ const analysisResults = computed(() => {
     }
 
     // --- 최종 결과 객체 반환 ---
-    return {
+    const result = {
       item: factorName,
       b_obs,
       c_obs,
@@ -369,6 +400,11 @@ const analysisResults = computed(() => {
       ci_lower, // 계산된 CI 하한
       ci_upper // 계산된 CI 상한
     };
+    
+    // 통계 검증 실행
+    validateStatistics(result, factorName);
+    
+    return result;
   });
 });
 
@@ -438,6 +474,85 @@ const copyTableToClipboard = async () => {
   } catch (e) {
     isTableCopied.value = false;
   }
+};
+
+// --- 통계 계산 검증 함수 ---
+const validateStatistics = (result, factorName) => {
+  const issues = [];
+  
+  // P-value 검증
+  if (result.pValue !== null) {
+    if (result.pValue < 0 || result.pValue > 1) {
+      issues.push(`P-value 범위 오류: ${result.pValue}`);
+    }
+  }
+  
+  // Odds Ratio 검증
+  if (result.oddsRatio !== 'N/A' && result.oddsRatio !== 'Inf' && result.oddsRatio !== 'Error') {
+    const or = parseFloat(result.oddsRatio);
+    if (isNaN(or) || or < 0) {
+      issues.push(`Odds Ratio 값 오류: ${result.oddsRatio}`);
+    }
+  }
+  
+  // 신뢰구간 검증
+  if (result.ci_lower !== 'N/A' && result.ci_upper !== 'N/A') {
+    const lower = parseFloat(result.ci_lower);
+    const upper = parseFloat(result.ci_upper);
+    if (!isNaN(lower) && !isNaN(upper) && lower > upper) {
+      issues.push(`신뢰구간 순서 오류: ${result.ci_lower} > ${result.ci_upper}`);
+    }
+  }
+  
+  if (issues.length > 0) {
+    console.warn(`통계 검증 오류 - ${factorName}:`, issues);
+  }
+  
+  return issues.length === 0;
+};
+
+// --- Fisher의 정확검정 계산 함수 ---
+const calculateFisherExactTest = (a, b, c, d) => {
+  // 2x2 분할표에서 Fisher의 정확검정 계산
+  const n = a + b + c + d;
+  const row1 = a + b;
+  const row2 = c + d;
+  const col1 = a + c;
+  const col2 = b + d;
+  
+  // 초기 확률 계산
+  let pValue = 0;
+  
+  // 모든 가능한 분할표에 대해 확률 계산
+  for (let x = 0; x <= Math.min(row1, col1); x++) {
+    const y = row1 - x;
+    const z = col1 - x;
+    const w = row2 - z;
+    
+    if (y >= 0 && z >= 0 && w >= 0) {
+      // 현재 분할표의 확률
+      const currentProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
+                         (factorial(n) * factorial(x) * factorial(y) * factorial(z) * factorial(w));
+      
+      // 관측된 분할표보다 극단적인 경우의 확률만 합산
+      if (x <= a) {
+        pValue += currentProb;
+      }
+    }
+  }
+  
+  return pValue;
+};
+
+// --- 팩토리얼 계산 함수 ---
+const factorial = (n) => {
+  if (n < 0) return NaN;
+  if (n === 0 || n === 1) return 1;
+  let result = 1;
+  for (let i = 2; i <= n; i++) {
+    result *= i;
+  }
+  return result;
 };
 </script>
 
@@ -680,9 +795,20 @@ const copyTableToClipboard = async () => {
   background-color: #f2f2f2;
   font-weight: bold;
   position: sticky;
-  top: 0;
   z-index: 1;
   box-shadow: inset 0 -1px 0 #ddd;
+}
+
+/* 첫 번째 헤더 행 (rowspan=2인 셀들) */
+.analysis-table thead tr:first-child th {
+  top: 0;
+  z-index: 2;
+}
+
+/* 두 번째 헤더 행 */
+.analysis-table thead tr:nth-child(2) th {
+  top: 33px; /* 첫 번째 행의 실제 높이에 맞춤 (padding 포함) */
+  z-index: 1;
 }
 /* 헤더 그룹 스타일 */
 .header-item {
@@ -813,5 +939,108 @@ const copyTableToClipboard = async () => {
 .button-text {
   font-family: "Noto Sans KR", sans-serif;
   font-weight: 400;
+}
+
+/* --- 테이블 범례 스타일 --- */
+.table-legend {
+  margin: 15px 20px 20px 20px;
+  padding: 0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.legend-header {
+  background-color: #f8f9fa;
+  padding: 8px 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.legend-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.legend-content {
+  padding: 12px 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.legend-item:last-child {
+  margin-bottom: 0;
+}
+
+.legend-marker {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-right: 10px;
+  min-width: 45px;
+  text-align: center;
+}
+
+.legend-marker.fisher {
+  background-color: #e3f2fd;
+  color: #1a73e8;
+  border: 1px solid #bbdefb;
+}
+
+.legend-marker.yates {
+  background-color: #e8f5e8;
+  color: #34a853;
+  border: 1px solid #c8e6c9;
+}
+
+.legend-marker.na {
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.legend-description {
+  color: #666;
+  font-weight: 400;
+}
+
+/* --- 검정 방법 표시 스타일 --- */
+.test-method {
+  font-size: 1em;
+  font-weight: 600;
+  margin-left: 0px;
+  vertical-align: top;
+}
+
+.test-method.fisher {
+  color: #1a73e8; /* 파란색 */
+}
+
+.test-method.yates {
+  color: #34a853; /* 녹색 */
+}
+
+.legend-content--plain {
+  padding: 12px 15px;
+}
+.legend-item-plain {
+  font-size: 13px;
+  color: #444;
+  font-family: "Noto Sans KR", sans-serif;
+  margin-bottom: 6px;
+}
+.legend-item-plain:last-child {
+  margin-bottom: 0;
 }
 </style>

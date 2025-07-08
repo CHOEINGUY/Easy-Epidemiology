@@ -6,6 +6,10 @@ import { processInChunks } from '../../../utils/asyncProcessor.js';
 // --- Utility functions copied from excelWorker.js ---
 
 function findColumnRanges(headerRow1, headerRow2) {
+  console.log('=== findColumnRanges 디버깅 ===');
+  console.log('headerRow1:', headerRow1);
+  console.log('headerRow2:', headerRow2);
+  
   const ranges = {};
 
   // 연번 컬럼 (고정) - Excel template 에서 첫 열
@@ -16,6 +20,7 @@ function findColumnRanges(headerRow1, headerRow2) {
     cell?.toString().includes('환자여부') || cell?.toString().includes('환자 여부')
   );
   ranges.isPatient = isPatientIndex !== -1 ? isPatientIndex : 1;
+  console.log('isPatient 범위:', ranges.isPatient);
 
   // 기본정보 범위
   const basicStart = headerRow1.findIndex(cell => cell?.toString().includes('기본정보'));
@@ -25,6 +30,7 @@ function findColumnRanges(headerRow1, headerRow2) {
     basicEnd++;
   }
   ranges.basic = { start: basicStart, end: basicEnd };
+  console.log('basic 범위:', ranges.basic);
 
   // 임상증상 범위
   const clinicalStart = headerRow1.findIndex(cell => cell?.toString().includes('임상증상'));
@@ -34,6 +40,7 @@ function findColumnRanges(headerRow1, headerRow2) {
     clinicalEnd++;
   }
   ranges.clinical = { start: clinicalStart, end: clinicalEnd };
+  console.log('clinical 범위:', ranges.clinical);
 
   // 증상발현시간 컬럼 (2행 검색)
   const onsetIdx = headerRow2.findIndex(cell =>
@@ -41,18 +48,22 @@ function findColumnRanges(headerRow1, headerRow2) {
   );
   if (onsetIdx === -1) throw new Error('증상발현시간 컬럼 없음');
   ranges.symptomOnset = onsetIdx;
+  console.log('symptomOnset 인덱스:', ranges.symptomOnset);
 
   // 의심원 노출시간 (2행 검색, 있을 수도 있음)
   const exposureIdx = headerRow2.findIndex(cell =>
     typeof cell === 'string' && (cell.includes('의심원노출시간') || cell.includes('의심원 노출시간'))
   );
   ranges.individualExposureTime = exposureIdx; // -1 if not present
+  console.log('individualExposureTime 인덱스:', ranges.individualExposureTime);
 
   // 식단 범위
   const dietStart = headerRow1.findIndex(cell => cell?.toString().includes('식단'));
   if (dietStart === -1) throw new Error('식단 카테고리 없음');
   ranges.diet = { start: dietStart, end: headerRow2.length };
+  console.log('diet 범위:', ranges.diet);
 
+  console.log('최종 ranges:', ranges);
   return ranges;
 }
 
