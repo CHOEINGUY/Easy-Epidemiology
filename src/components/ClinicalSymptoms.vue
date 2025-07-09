@@ -49,7 +49,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(item, idx) in symptomStats" :key="idx">
+                <tr v-for="(item, idx) in sortedSymptomStats" :key="idx">
                   <td>{{ item.name }}</td>
                   <td>{{ item.count }}</td>
                   <td>{{ item.percent }}</td>
@@ -111,6 +111,15 @@
                   <div v-if="activeTooltip === 'highlight'" class="control-tooltip">
                     {{ tooltipText }}
                   </div>
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label">정렬:</label>
+                <div class="control-button-wrapper">
+                  <button class="control-button sort-button" @click="cycleSort" @mouseenter="showTooltip('sort', currentSortOption.tooltip)" @mouseleave="hideTooltip">
+                    {{ currentSortOption.label }}
+                  </button>
+                  <div v-if="activeTooltip === 'sort'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
               </div>
             </div>
@@ -201,7 +210,7 @@ const chartStates = computed(() => {
     hasHeaders: hasValidClinicalHeaders.value,
     hasPatients: hasValidPatientData.value,
     isReady: hasValidData.value && hasValidClinicalHeaders.value && hasValidPatientData.value,
-    symptomCount: symptomStats.value.length
+    symptomCount: sortedSymptomStats.value.length
   };
 });
 
@@ -333,6 +342,35 @@ const highlightOptions = [
 
 const currentHighlight = ref('none');
 const highlightButtonText = ref(highlightOptions[0].label);
+
+// 정렬 옵션 정의
+const sortOptions = [
+  { key: 'none', label: '정렬 없음', tooltip: '원본 순서대로 표시합니다' },
+  { key: 'percent-asc', label: '오름차순', tooltip: '백분율이 낮은 순으로 정렬합니다' },
+  { key: 'percent-desc', label: '내림차순', tooltip: '백분율이 높은 순으로 정렬합니다' }
+];
+
+const currentSort = ref('none');
+const currentSortOption = computed(() => {
+  return sortOptions.find(option => option.key === currentSort.value) || sortOptions[0];
+});
+
+// 정렬된 증상 통계 데이터
+const sortedSymptomStats = computed(() => {
+  const stats = symptomStats.value;
+  if (!Array.isArray(stats) || stats.length === 0) return [];
+  
+  const sorted = [...stats]; // 원본 배열 복사
+  
+  switch (currentSort.value) {
+  case 'percent-asc':
+    return sorted.sort((a, b) => a.percent - b.percent);
+  case 'percent-desc':
+    return sorted.sort((a, b) => b.percent - a.percent);
+  default:
+    return stats; // 원본 순서
+  }
+});
 
 const activeTooltip = ref(null);
 const tooltipText = ref('');
@@ -510,12 +548,33 @@ const cycleHighlight = () => {
 };
 
 /**
+ * 정렬 옵션을 순환적으로 변경
+ * @returns {void}
+ */
+const cycleSort = () => {
+  try {
+    const currentIndex = sortOptions.findIndex(option => option.key === currentSort.value);
+    const nextIndex = (currentIndex + 1) % sortOptions.length;
+    currentSort.value = sortOptions[nextIndex].key;
+    
+    console.log('정렬 변경:', currentSort.value);
+    nextTick(() => {
+      if (canUpdateChart()) {
+        debouncedRenderChart();
+      }
+    });
+  } catch (error) {
+    console.error('cycleSort 오류:', error);
+  }
+};
+
+/**
  * ECharts 옵션 생성 (에러 처리 강화)
  * @returns {Object} ECharts 옵션 객체
  */
 const chartOptions = computed(() => {
   try {
-    const stats = symptomStats.value;
+    const stats = sortedSymptomStats.value;
     
     if (!Array.isArray(stats) || stats.length === 0) {
       console.warn('chartOptions: 유효하지 않은 증상 데이터');
@@ -589,7 +648,7 @@ const chartOptions = computed(() => {
         formatter(params) {
           if (params && params[0]) {
             const data = params[0];
-            const statsData = symptomStats.value.find(s => s.name === data.name);
+            const statsData = sortedSymptomStats.value.find(s => s.name === data.name);
             let result = `<strong>${data.name}</strong><br/>${data.seriesName}: <strong>${data.value}</strong>%`;
             if(statsData) {
               result += ` (${statsData.count}명)`;
@@ -951,19 +1010,16 @@ const copyTableToClipboard = async () => {
  */
 const copyChartToClipboard = async () => {
   const instance = chartInstance.value;
-  
   if (!instance || typeof instance.getDataURL !== 'function') {
     console.warn('copyChartToClipboard: 차트 인스턴스가 없거나 getDataURL 함수가 없음');
     isChartCopied.value = false;
     return;
   }
-  
   if (!navigator.clipboard || !navigator.clipboard.write) {
     console.warn('copyChartToClipboard: 클립보드 API를 사용할 수 없음');
     isChartCopied.value = false;
     return;
   }
-  
   if (typeof ClipboardItem === 'undefined') {
     console.warn('copyChartToClipboard: ClipboardItem을 사용할 수 없음');
     isChartCopied.value = false;
@@ -971,23 +1027,48 @@ const copyChartToClipboard = async () => {
   }
   
   try {
-    const dataUrl = instance.getDataURL({ 
+    // 1. 임시 컨테이너 생성 (충분히 큰 크기)
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = `${chartWidth.value}px`;
+    tempContainer.style.height = '600px';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    document.body.appendChild(tempContainer);
+    
+    // 2. 임시 차트 인스턴스 생성
+    const tempChart = echarts.init(tempContainer);
+    
+    // 3. 현재 차트의 옵션을 가져와서 임시 차트에 적용
+    const currentOption = instance.getOption();
+    currentOption.animation = false;
+    tempChart.setOption(currentOption, true);
+    
+    // 4. 차트가 완전히 렌더링될 때까지 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // 5. 임시 차트에서 완전한 이미지 생성
+    const dataUrl = tempChart.getDataURL({ 
       type: 'png', 
       pixelRatio: 3, 
-      backgroundColor: '#fff' 
+      backgroundColor: '#fff'
     });
     
     if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
       throw new Error('유효하지 않은 이미지 데이터 URL');
     }
     
+    // 6. 클립보드에 복사
     const response = await fetch(dataUrl);
     if (!response.ok) {
       throw new Error(`이미지 로드 실패: ${response.statusText}`);
     }
-    
     const blob = await response.blob();
     await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+    
+    // 7. 임시 요소들 정리
+    tempChart.dispose();
+    document.body.removeChild(tempContainer);
     
     isChartCopied.value = true;
     setTimeout(() => (isChartCopied.value = false), 1500);
@@ -1004,33 +1085,55 @@ const copyChartToClipboard = async () => {
  */
 const exportChart = async () => {
   const instance = chartInstance.value;
-  
   if (!instance || typeof instance.getDataURL !== 'function') {
-    const message = '차트 내보내기 불가: 차트 인스턴스가 없습니다';
-    console.error(message);
-    alert(message);
+    alert('차트 내보내기 불가');
     return;
   }
-  
-  const filename = `임상증상별_분포_${new Date().toISOString().split('T')[0]}.png`;
+  const filename = `임상증상_분석_${new Date().toISOString().split('T')[0]}.png`;
   
   try {
-    const dataUrl = instance.getDataURL({ 
+    // 1. 임시 컨테이너 생성 (충분히 큰 크기)
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = `${chartWidth.value}px`;
+    tempContainer.style.height = '600px';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    document.body.appendChild(tempContainer);
+    
+    // 2. 임시 차트 인스턴스 생성
+    const tempChart = echarts.init(tempContainer);
+    
+    // 3. 현재 차트의 옵션을 가져와서 임시 차트에 적용
+    const currentOption = instance.getOption();
+    currentOption.animation = false;
+    tempChart.setOption(currentOption, true);
+    
+    // 4. 차트가 완전히 렌더링될 때까지 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // 5. 임시 차트에서 완전한 이미지 생성
+    const dataUrl = tempChart.getDataURL({ 
       type: 'png', 
       pixelRatio: 3, 
-      backgroundColor: '#fff' 
+      backgroundColor: '#fff'
     });
     
     if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
       throw new Error('유효하지 않은 이미지 데이터 URL');
     }
     
+    // 6. 파일 다운로드
     const link = document.createElement('a');
     link.href = dataUrl;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // 7. 임시 요소들 정리
+    tempChart.dispose();
+    document.body.removeChild(tempContainer);
     
     console.log('차트 저장 완료:', filename);
   } catch (error) {
@@ -1284,6 +1387,18 @@ const exportChart = async () => {
   justify-content: center;
   gap: 4px;
   min-width: 110px;
+  padding: 4px 8px;
+  text-align: center;
+  height: 28px;
+  box-sizing: border-box;
+}
+
+.sort-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 90px;
   padding: 4px 8px;
   text-align: center;
   height: 28px;

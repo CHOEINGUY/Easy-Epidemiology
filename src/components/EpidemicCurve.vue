@@ -131,6 +131,29 @@
                   <div v-if="activeTooltip === 'epiColor'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
               </div>
+              <div class="control-group">
+                <label class="control-label">차트 표시:</label>
+                <div class="control-button-wrapper">
+                  <button @click="selectDisplayMode('time')" 
+                          :class="{ 'chart-select-button--active': chartDisplayMode === 'time' }" 
+                          class="chart-select-button"
+                          @mouseenter="showTooltip('displayModeTime', '간단한 시 단위 표시')" 
+                          @mouseleave="hideTooltip">
+                    시 단위
+                  </button>
+                  <div v-if="activeTooltip === 'displayModeTime'" class="control-tooltip">{{ tooltipText }}</div>
+                </div>
+                <div class="control-button-wrapper">
+                  <button @click="selectDisplayMode('datetime')" 
+                          :class="{ 'chart-select-button--active': chartDisplayMode === 'datetime' }" 
+                          class="chart-select-button"
+                          @mouseenter="showTooltip('displayModeDateTime', '정확한 날짜와 시간 표시')" 
+                          @mouseleave="hideTooltip">
+                    날짜+시간
+                  </button>
+                  <div v-if="activeTooltip === 'displayModeDateTime'" class="control-tooltip">{{ tooltipText }}</div>
+                </div>
+              </div>
             </div>
             <div class="chart-container-wrapper epi-chart-wrapper">
               <div class="chart-buttons">
@@ -324,6 +347,15 @@
                   <div v-if="activeTooltip === 'incubationColor'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
               </div>
+              <div class="control-group">
+                <label class="control-label">차트 표시:</label>
+                <div class="control-button-wrapper">
+                  <button @click="incubationChartDisplayMode = 'hour'" :class="{ 'chart-select-button--active': incubationChartDisplayMode === 'hour' }" class="chart-select-button">시간 단위</button>
+                </div>
+                <div class="control-button-wrapper">
+                  <button @click="incubationChartDisplayMode = 'hhmm'" :class="{ 'chart-select-button--active': incubationChartDisplayMode === 'hhmm' }" class="chart-select-button">시:분 단위</button>
+                </div>
+              </div>
             </div>
             <div class="chart-container-wrapper incubation-chart-wrapper">
               <div class="chart-buttons">
@@ -436,6 +468,10 @@ const incubationChartWidth = ref(1100);
 const incubationBarColor = ref('#91cc75'); // 녹색으로 구분
 const incubationFontSizeButtonText = ref(incubationChartFontSize.value);
 const incubationChartWidthButtonText = ref(`${incubationChartWidth.value}px`);
+
+// --- 차트 표시 모드 설정 ---
+const chartDisplayMode = ref('time'); // 'time' | 'datetime'
+const incubationChartDisplayMode = ref('hour'); // 'hour' | 'hhmm'
 
 const activeTooltip = ref(null);
 const tooltipText = ref('');
@@ -655,6 +691,12 @@ const cycleIncubationBarColor = () => {
   nextTick(safeUpdateCharts);
 };
 
+// --- 차트 표시 모드 선택 함수 ---
+const selectDisplayMode = (mode) => {
+  chartDisplayMode.value = mode;
+  nextTick(safeUpdateCharts);
+};
+
 // Chart export functions
 const exportChart = async () => {
   const instance = epiCurveChartInstance.value;
@@ -664,22 +706,39 @@ const exportChart = async () => {
   }
   const filename = `유행곡선_${selectedSymptomInterval.value}시간_${new Date().toISOString().split('T')[0]}.png`;
   try {
-    const dataUrl = instance.getDataURL({
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = `${epiChartWidth.value}px`;
+    tempContainer.style.height = '600px';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    document.body.appendChild(tempContainer);
+    const tempChart = echarts.init(tempContainer);
+    const currentOption = instance.getOption();
+    currentOption.animation = false;
+    tempChart.setOption(currentOption, true);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const dataUrl = tempChart.getDataURL({
       type: 'png',
       pixelRatio: 3,
       backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith('data:image/png'))
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
       throw new Error('유효하지 않은 이미지 데이터 URL');
+    }
     const link = document.createElement('a');
     link.href = dataUrl;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    tempChart.dispose();
+    document.body.removeChild(tempContainer);
+    console.log('유행곡선 차트 저장 완료:', filename);
   } catch (error) {
-    console.error('차트 내보내기 오류:', error);
-    alert(`차트 내보내기 오류: ${error.message}`);
+    const message = `차트 내보내기 오류: ${error.message}`;
+    console.error(message);
+    alert(message);
   }
 };
 
@@ -836,22 +895,45 @@ const copyChartToClipboard = async () => {
     isEpiChartCopied.value = false;
     return;
   }
+  
   try {
-    const dataUrl = instance.getDataURL({
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = `${epiChartWidth.value}px`;
+    tempContainer.style.height = '600px';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    document.body.appendChild(tempContainer);
+    const tempChart = echarts.init(tempContainer);
+    const currentOption = instance.getOption();
+    currentOption.animation = false;
+    tempChart.setOption(currentOption, true);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const dataUrl = tempChart.getDataURL({
       type: 'png',
       pixelRatio: 3,
       backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith('data:image/png')) throw new Error('유효하지 않은 이미지 데이터 URL');
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
+      throw new Error('유효하지 않은 이미지 데이터 URL');
+    }
     const response = await fetch(dataUrl);
-    if (!response.ok) throw new Error(`이미지 로드 실패: ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(`이미지 로드 실패: ${response.statusText}`);
+    }
     const blob = await response.blob();
     await navigator.clipboard.write([
       new ClipboardItem({ [blob.type]: blob })
     ]);
+    tempChart.dispose();
+    document.body.removeChild(tempContainer);
     isEpiChartCopied.value = true;
     setTimeout(() => (isEpiChartCopied.value = false), 1500);
-  } catch (error) { isEpiChartCopied.value = false; }
+    console.log('유행곡선 차트 복사 완료');
+  } catch (error) {
+    console.error('유행곡선 차트 복사 오류:', error);
+    isEpiChartCopied.value = false;
+  }
 };
 
 const copyIncubationChartToClipboard = async () => {
@@ -868,28 +950,51 @@ const copyIncubationChartToClipboard = async () => {
     isIncubationChartCopied.value = false;
     return;
   }
+  
   try {
-    const dataUrl = instance.getDataURL({
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = `${incubationChartWidth.value}px`;
+    tempContainer.style.height = '600px';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    document.body.appendChild(tempContainer);
+    const tempChart = echarts.init(tempContainer);
+    const currentOption = instance.getOption();
+    currentOption.animation = false;
+    tempChart.setOption(currentOption, true);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const dataUrl = tempChart.getDataURL({
       type: 'png',
       pixelRatio: 3,
       backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith('data:image/png')) throw new Error('유효하지 않은 이미지 데이터 URL');
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
+      throw new Error('유효하지 않은 이미지 데이터 URL');
+    }
     const response = await fetch(dataUrl);
-    if (!response.ok) throw new Error(`이미지 로드 실패: ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(`이미지 로드 실패: ${response.statusText}`);
+    }
     const blob = await response.blob();
     await navigator.clipboard.write([
       new ClipboardItem({ [blob.type]: blob })
     ]);
+    tempChart.dispose();
+    document.body.removeChild(tempContainer);
     isIncubationChartCopied.value = true;
     setTimeout(() => (isIncubationChartCopied.value = false), 1500);
-  } catch (error) { isIncubationChartCopied.value = false; }
+    console.log('잠복기 차트 복사 완료');
+  } catch (error) {
+    console.error('잠복기 차트 복사 오류:', error);
+    isIncubationChartCopied.value = false;
+  }
 };
 
 // --- Helper Functions (타입 안전성 강화) ---
 
 /**
- * 날짜를 MM-dd HH:mm 형식으로 포맷팅
+ * 날짜를 MM-dd HH:mm 형식으로 포맷팅 (구간 시작점용)
  * @param {Date} date - 포맷팅할 날짜 객체
  * @returns {string} 포맷팅된 날짜 문자열 또는 빈 문자열
  */
@@ -906,6 +1011,29 @@ const formatDateTime = (date) => {
     return `${month}-${day} ${hours}:${minutes}`;
   } catch (error) {
     console.error('formatDateTime 오류:', error, 'date:', date);
+    return '';
+  }
+};
+
+/**
+ * 날짜를 MM-dd HH:mm 형식으로 포맷팅 (구간 끝점용 - XX:59로 표시)
+ * @param {Date} date - 포맷팅할 날짜 객체
+ * @returns {string} 포맷팅된 날짜 문자열 또는 빈 문자열
+ */
+const formatDateTimeEnd = (date) => {
+  try {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+      console.warn('formatDateTimeEnd: 유효하지 않은 날짜:', date);
+      return '';
+    }
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    // 구간 끝점은 항상 59분으로 표시
+    const minutes = '59';
+    return `${month}-${day} ${hours}:${minutes}`;
+  } catch (error) {
+    console.error('formatDateTimeEnd 오류:', error, 'date:', date);
     return '';
   }
 };
@@ -976,6 +1104,8 @@ const formatDurationHHMM = (durationMillis) => {
     return '--:--';
   }
 };
+
+
 
 /**
  * 날짜를 YYYY-MM-dd HH:mm 형식으로 포맷팅
@@ -1096,10 +1226,12 @@ const symptomOnsetTableData = computed(() => {
     }
 
     // 🔥 NEW: 모든 구간을 추가 (0명인 구간도 포함)
+    // 구간 끝점을 1분 빼서 XX:59로 표시
+    const displayEndTime = new Date(currentIntervalEnd - 60000); // 1분 빼기
     data.push({
       intervalLabel: `${formatDateTime(
         new Date(currentIntervalStart)
-      )} ~ ${formatDateTime(new Date(currentIntervalEnd))}`,
+      )} ~ ${formatDateTimeEnd(displayEndTime)}`,
       count
     });
 
@@ -1242,6 +1374,40 @@ const incubationChartInstance = ref(null);
 // --- Chart Options Generation (에러 처리 강화) ---
 
 /**
+ * y축 최대값을 데이터 최댓값에 따라 여유 있게 반환
+ * @param {number} maxValue - 데이터 최댓값
+ * @returns {number} y축 최대값
+ */
+function getNiceYAxisMax(maxValue) {
+  if (maxValue < 10) {
+    return Math.max(maxValue + 1, Math.ceil(maxValue * 1.1));
+  }
+  if (maxValue < 20) {
+    return Math.ceil(maxValue / 5) * 5;
+  }
+  // 20 이상은 10의 단위로 올림
+  return Math.ceil((maxValue * 1.1) / 10) * 10;
+}
+
+/**
+ * y축 최대값과 간격(step)을 계산하여 yMax가 step의 배수로 떨어지도록 반환
+ * @param {number} maxValue - 데이터 최댓값
+ * @returns {{yMax: number, step: number}}
+ */
+function getNiceYAxisMaxAndStep(maxValue) {
+  let yMax = getNiceYAxisMax(maxValue);
+  // 적절한 step 구하기 (1, 2, 5, 10, 20, 50, 100 등)
+  let step = 1;
+  if (yMax > 100) step = 20;
+  else if (yMax > 50) step = 10;
+  else if (yMax > 20) step = 5;
+  else if (yMax > 10) step = 2;
+  // yMax를 step의 배수로 올림
+  yMax = Math.ceil(yMax / step) * step;
+  return { yMax, step };
+}
+
+/**
  * 유행곡선 차트 옵션 생성
  * @returns {Object} ECharts 옵션 객체
  */
@@ -1263,7 +1429,7 @@ const generateEpiCurveChartOptions = () => {
 
     // --- 제공된 최종 예제 코드를 기반으로 로직 재구성 ---
 
-    // 1. 데이터 가공 (날짜/시간 포맷팅)
+    // 1. 데이터 가공 (모드에 따른 날짜/시간 포맷팅)
     const processedData = validData.map(item => {
       const intervalLabel = item.intervalLabel;
       const parts = intervalLabel.split(' ~ ');
@@ -1282,15 +1448,19 @@ const generateEpiCurveChartOptions = () => {
       const formattedDate = `${month}. ${day}.(${dayOfWeek})`;
 
       const startTime = timePart.split(':')[0];
-      let endTime = '??';
-      if (parts[1] && parts[1].includes(':')) {
-        endTime = parts[1].split(' ')[1].split(':')[0];
-      } else {
-        const intervalHours = selectedSymptomInterval.value || 3;
-        endTime = String((parseInt(startTime, 10) + intervalHours) % 24).padStart(2, '0');
-      }
         
-      const formattedTime = `${parseInt(startTime, 10)}~${endTime === '00' ? 24 : parseInt(endTime, 10)}시`;
+      // 모드에 따른 시간 표시 결정
+      let formattedTime;
+      if (chartDisplayMode.value === 'datetime') {
+        // 날짜+시간 모드: 테이블과 동일한 형식
+        formattedTime = item.intervalLabel; // "04-07 18:00 ~ 04-07 23:59"
+      } else {
+        // 시 단위 모드: 기존 로직
+        const startHour = parseInt(startTime, 10);
+        const intervalHours = selectedSymptomInterval.value || 3;
+        const endHour = (startHour + intervalHours) % 24;
+        formattedTime = `${startHour}~${endHour === 0 ? 24 : endHour}시`;
+      }
 
       return {
         formattedDate,
@@ -1315,6 +1485,9 @@ const generateEpiCurveChartOptions = () => {
       dateGroups.push({ name: key, ...value });
     });
 
+    // y축 최대값과 간격 계산
+    const maxValue = Math.max(...seriesData);
+    const { yMax, step } = getNiceYAxisMaxAndStep(maxValue);
 
     return {
       textStyle: {
@@ -1332,64 +1505,94 @@ const generateEpiCurveChartOptions = () => {
         formatter: (params) => {
           const dataIndex = params[0].dataIndex;
           const item = processedData[dataIndex];
-          return `<strong>${item.formattedDate}</strong><br/>${item.formattedTime} : <strong>${item.value}</strong> 명`;
+          if (chartDisplayMode.value === 'datetime') {
+            // 날짜+시간 모드: 간단한 툴팁
+            return `<strong>${item.formattedTime}</strong><br/>환자 수: <strong>${item.value}</strong> 명`;
+          } else {
+            // 시 단위 모드: 기존 툴팁
+            return `<strong>${item.formattedDate}</strong><br/>${item.formattedTime} : <strong>${item.value}</strong> 명`;
+          }
         }
       },
       grid: {
-        left: '3%',
-        right: '4%',
+        left: chartDisplayMode.value === 'datetime' ? 60 : '3%',
+        right: chartDisplayMode.value === 'datetime' ? 60 : '4%',
         bottom: '7%',
         top: 80, // 제목과 그래프 사이 간격 확보
         containLabel: true
       },
-      xAxis: [
-        {
-          type: 'category',
-          data: timeData,
-          axisLine: { show: true, onZero: false },
-          axisTick: { show: false },
-          axisLabel: { 
-            interval: 0,
-            color: '#333',
-            fontSize: epiChartFontSize.value || 15,
-            margin: 10
-          },
-          splitLine: { show: false }
-        },
-        {
-          type: 'category',
-          position: 'bottom',
-          offset: 35, // 라벨 높이에 따라 조절
-          axisLine: { show: true, lineStyle: { color: '#cccccc', width: 2 } },
-          axisTick: {
-            show: true,
-            inside: false,
-            length: 70, // offset과 동일하게 설정하여 위쪽 축에 닿도록 함
-            lineStyle: { color: '#cccccc', width: 2 },
-            interval: (index, value) => value !== ''
-          },
-          axisLabel: {
-            show: true,
-            interval: (index, value) => value !== '',
-            color: '#333',
-            fontSize: epiChartFontSize.value || 15
-          },
-          splitLine: { show: false },
-          data: dateGroups.flatMap(group => {
-            const groupData = Array(group.count).fill('');
-            if (groupData.length > 0) {
-              groupData[0] = group.name; 
+      xAxis: (
+        chartDisplayMode.value === 'datetime'
+          ? [
+            {
+              type: 'category',
+              data: timeData,
+              axisLine: { show: true, onZero: false },
+              axisTick: { show: false },
+              axisLabel: {
+                interval: 0,
+                color: '#333',
+                fontSize: epiChartFontSize.value || 15,
+                margin: 10,
+                rotate: 45 // 날짜+시간 모드일 때만 기울기 적용
+              },
+              splitLine: { show: false },
+              boundaryGap: [0.18, 0.18]
             }
-            return groupData;
-          })
-        }
-      ],
+          ]
+          : [
+            {
+              type: 'category',
+              data: timeData,
+              axisLine: { show: true, onZero: false },
+              axisTick: { show: false },
+              axisLabel: {
+                interval: 0,
+                color: '#333',
+                fontSize: epiChartFontSize.value || 15,
+                margin: 10,
+                rotate: 0
+              },
+              splitLine: { show: false },
+              boundaryGap: true
+            },
+            {
+              type: 'category',
+              position: 'bottom',
+              offset: 35, // 라벨 높이에 따라 조절
+              axisLine: { show: true, lineStyle: { color: '#cccccc', width: 2 } },
+              axisTick: {
+                show: true,
+                inside: false,
+                length: 70, // offset과 동일하게 설정하여 위쪽 축에 닿도록 함
+                lineStyle: { color: '#cccccc', width: 2 },
+                interval: (index, value) => value !== ''
+              },
+              axisLabel: {
+                show: true,
+                interval: (index, value) => value !== '',
+                color: '#333',
+                fontSize: epiChartFontSize.value || 15
+              },
+              splitLine: { show: false },
+              data: dateGroups.flatMap(group => {
+                const groupData = Array(group.count).fill('');
+                if (groupData.length > 0) {
+                  groupData[0] = group.name;
+                }
+                return groupData;
+              })
+            }
+          ]
+      ),
       yAxis: { 
         type: 'value', 
         name: '환자 수 (명)',
         nameTextStyle: { padding: [0, 0, 0, 60], fontSize: epiChartFontSize.value || 15 },
         axisLabel: { fontSize: epiChartFontSize.value || 15 },
-        splitLine: { show: true, lineStyle: { type: 'dashed' } }
+        splitLine: { show: true, lineStyle: { type: 'dashed' } },
+        max: yMax,
+        interval: step
       },
       series: [
         {
@@ -1436,29 +1639,31 @@ const generateEpiCurveChartOptions = () => {
 const generateIncubationChartOptions = () => {
   try {
     const data = incubationPeriodTableData.value;
-    
     if (!Array.isArray(data)) {
       console.error('generateIncubationChartOptions: data가 배열이 아님:', data);
       return { title: { text: '데이터 형식 오류' } };
     }
-    
-    // 🔥 NEW: 모든 데이터를 사용 (0건 구간도 포함)
     const validData = data;
     if (!validData || validData.length === 0) {
       console.warn('generateIncubationChartOptions: 유효한 데이터가 없음');
       return { title: { text: '데이터 없음' } };
     }
-
-    // 데이터 검증
-    const hasValidLabels = validData.every(item => 
-      item && typeof item.intervalLabel === 'string'
-    );
-    
+    const hasValidLabels = validData.every(item => item && typeof item.intervalLabel === 'string');
     if (!hasValidLabels) {
       console.error('generateIncubationChartOptions: 유효하지 않은 라벨 형식');
       return { title: { text: '데이터 라벨 오류' } };
     }
-
+    const seriesData = data.map(item => item.count);
+    const maxValue = Math.max(...seriesData);
+    const { yMax, step } = getNiceYAxisMaxAndStep(maxValue);
+    // 라벨 데이터 분기
+    const labelData = validData.map(item => {
+      if (incubationChartDisplayMode.value === 'hhmm') {
+        return item.intervalLabel;
+      } else {
+        return formatIncubationLabel(item.intervalLabel);
+      }
+    });
     return {
       textStyle: {
         fontFamily: 'Noto Sans KR, sans-serif'
@@ -1466,14 +1671,14 @@ const generateIncubationChartOptions = () => {
       title: {
         text: '잠복기별 환자 수',
         left: 'center',
-        textStyle: { 
-          fontSize: (incubationChartFontSize.value || 15) + 4, 
-          fontWeight: 'bold' 
+        textStyle: {
+          fontSize: (incubationChartFontSize.value || 15) + 4,
+          fontWeight: 'bold'
         },
         top: 15
       },
-      tooltip: { 
-        trigger: 'axis', 
+      tooltip: {
+        trigger: 'axis',
         axisPointer: { type: 'shadow' },
         formatter: (params) => {
           if (!params || params.length === 0) return '';
@@ -1482,59 +1687,49 @@ const generateIncubationChartOptions = () => {
         }
       },
       grid: {
-        left: '3%',
-        right: '4%',
+        left: incubationChartDisplayMode.value === 'hhmm' ? 60 : '3%',
+        right: incubationChartDisplayMode.value === 'hhmm' ? 60 : '4%',
         bottom: '5%',
-        top: 80, // 제목과 그래프 사이 간격 확보
+        top: 80,
         containLabel: true
       },
-      xAxis: {
-        type: 'category',
-        data: validData.map((item) => {
-          try {
-            return formatIncubationLabel(item.intervalLabel || '시간 오류');
-          } catch (error) {
-            console.warn('xAxis 라벨 처리 오류:', error, item);
-            return '시간 오류';
-          }
-        }),
-        axisLabel: { 
-          rotate: 0, // 라벨을 수평으로 표시
-          interval: 0, // 모든 라벨 표시
-          fontSize: incubationChartFontSize.value || 15,
-          color: '#333',
-          margin: 10
-        },
-        axisLine: { show: true, onZero: false },
-        axisTick: { show: false },
-        splitLine: { show: false }
-      },
-      yAxis: { 
-        type: 'value', 
-        name: '환자 수 (명)',
-        nameTextStyle: { 
-          padding: [0, 0, 0, 60], 
-          fontSize: incubationChartFontSize.value || 15 
-        },
-        axisLabel: { 
-          fontSize: incubationChartFontSize.value || 15 
-        },
-        splitLine: { 
-          show: true, 
-          lineStyle: { type: 'dashed' } 
+      xAxis: [
+        {
+          type: 'category',
+          data: labelData,
+          axisLine: { show: true, onZero: false },
+          axisTick: { show: false },
+          axisLabel: {
+            rotate: incubationChartDisplayMode.value === 'hhmm' ? 45 : 0,
+            interval: 0,
+            fontSize: incubationChartFontSize.value || 15,
+            color: '#333',
+            margin: 10
+          },
+          splitLine: { show: false },
+          boundaryGap: incubationChartDisplayMode.value === 'hhmm' ? [0.18, 0.18] : true
         }
+      ],
+      yAxis: {
+        type: 'value',
+        name: '환자 수 (명)',
+        nameTextStyle: { padding: [0, 0, 0, 60], fontSize: incubationChartFontSize.value || 15 },
+        axisLabel: { fontSize: incubationChartFontSize.value || 15 },
+        splitLine: { show: true, lineStyle: { type: 'dashed' } },
+        max: yMax,
+        interval: step
       },
       series: [
         {
           name: '환자 수',
           type: 'bar',
           data: validData.map((item) => Number(item.count) || 0),
-          barWidth: '100%', // 유행곡선과 동일한 막대 너비
+          barWidth: '100%',
           itemStyle: {
             color: (() => {
               const colors = generateGradientColors(incubationBarColor.value || '#1E88E5');
               return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: colors.lightColor }, 
+                { offset: 0, color: colors.lightColor },
                 { offset: 1, color: colors.darkColor }
               ]);
             })()
@@ -1543,14 +1738,14 @@ const generateIncubationChartOptions = () => {
             focus: 'series',
             itemStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: '#FDB813' }, 
+                { offset: 0, color: '#FDB813' },
                 { offset: 1, color: '#F9A825' }
               ])
             }
           },
-          label: { 
-            show: true, 
-            position: 'top', 
+          label: {
+            show: true,
+            position: 'top',
             fontSize: Math.max(10, (incubationChartFontSize.value || 15) - 1)
           }
         }
@@ -1637,7 +1832,7 @@ const updateCharts = () => {
       const epiOptions = generateEpiCurveChartOptions();
       console.log('유행곡선 차트 옵션 생성됨:', epiOptions ? '성공' : '실패');
       if (epiOptions && typeof epiOptions === 'object') {
-        epiCurveChartInstance.value.setOption(epiOptions, false); // 성능 향상: 병합 방식
+        epiCurveChartInstance.value.setOption(epiOptions, true); // notMerge: true로 완전 덮어쓰기
         console.log('유행곡선 차트 업데이트 완료');
       } else {
         console.warn('유행곡선 차트 옵션이 유효하지 않음');
@@ -1896,10 +2091,12 @@ watch(
     epiBarColor,
     epiChartFontSize,
     incubationBarColor,
-    incubationChartFontSize
+    incubationChartFontSize,
+    chartDisplayMode,
+    incubationChartDisplayMode
   ],
-  ([newSymptomInterval, newExposureDateTime, newIncubationInterval, newEpiBarColor, newEpiFontSize, newIncubationBarColor, newIncubationFontSize],
-    [oldSymptomInterval, oldExposureDateTime, oldIncubationInterval, oldEpiBarColor, oldEpiFontSize, oldIncubationBarColor, oldIncubationFontSize]) => {
+  ([newSymptomInterval, newExposureDateTime, newIncubationInterval, newEpiBarColor, newEpiFontSize, newIncubationBarColor, newIncubationFontSize, newDisplayMode, newIncubationDisplayMode],
+    [oldSymptomInterval, oldExposureDateTime, oldIncubationInterval, oldEpiBarColor, oldEpiFontSize, oldIncubationBarColor, oldIncubationFontSize, oldDisplayMode, oldIncubationDisplayMode]) => {
     
     // 실제 변경사항 확인 (불필요한 업데이트 방지)
     const hasSymptomChange = newSymptomInterval !== oldSymptomInterval;
@@ -1907,13 +2104,15 @@ watch(
     const hasIncubationChange = newIncubationInterval !== oldIncubationInterval;
     const hasEpiStyleChange = newEpiBarColor !== oldEpiBarColor || newEpiFontSize !== oldEpiFontSize;
     const hasIncubationStyleChange = newIncubationBarColor !== oldIncubationBarColor || newIncubationFontSize !== oldIncubationFontSize;
+    const hasDisplayModeChange = newDisplayMode !== oldDisplayMode;
+    const hasIncubationDisplayModeChange = newIncubationDisplayMode !== oldIncubationDisplayMode;
     
-    if (!hasSymptomChange && !hasExposureChange && !hasIncubationChange && !hasEpiStyleChange && !hasIncubationStyleChange) {
+    if (!hasSymptomChange && !hasExposureChange && !hasIncubationChange && !hasEpiStyleChange && !hasIncubationStyleChange && !hasDisplayModeChange && !hasIncubationDisplayModeChange) {
       return; // 변경사항 없으면 조기 종료
     }
     
     console.log('Chart update triggered with changes:', {
-      hasSymptomChange, hasExposureChange, hasIncubationChange, hasEpiStyleChange, hasIncubationStyleChange
+      hasSymptomChange, hasExposureChange, hasIncubationChange, hasEpiStyleChange, hasIncubationStyleChange, hasDisplayModeChange, hasIncubationDisplayModeChange
     });
     
     nextTick(() => {
@@ -1979,25 +2178,47 @@ const exportIncubationChart = async () => {
     return;
   }
   const filename = `잠복기_유행곡선_${selectedIncubationInterval.value}시간_${new Date().toISOString().split('T')[0]}.png`;
+  
   try {
-    const dataUrl = instance.getDataURL({
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = `${incubationChartWidth.value}px`;
+    tempContainer.style.height = '600px';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    document.body.appendChild(tempContainer);
+    const tempChart = echarts.init(tempContainer);
+    const currentOption = instance.getOption();
+    currentOption.animation = false;
+    tempChart.setOption(currentOption, true);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const dataUrl = tempChart.getDataURL({
       type: 'png',
       pixelRatio: 3,
       backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith('data:image/png'))
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
       throw new Error('유효하지 않은 이미지 데이터 URL');
+    }
     const link = document.createElement('a');
     link.href = dataUrl;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    tempChart.dispose();
+    document.body.removeChild(tempContainer);
+    console.log('잠복기 차트 저장 완료:', filename);
   } catch (error) {
-    console.error('차트 내보내기 오류:', error);
-    alert(`차트 내보내기 오류: ${error.message}`);
+    const message = `차트 내보내기 오류: ${error.message}`;
+    console.error(message);
+    alert(message);
   }
 };
+
+
+
+
 </script>
 
 <style scoped>
@@ -2207,9 +2428,9 @@ const exportIncubationChart = async () => {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   border-radius: 12px;
   overflow-x: auto;
-  flex: 0 0 350px;
-  min-width: 350px;
-  max-width: 350px;
+  flex: 0 0 325px;
+  min-width: 325px;
+  max-width: 325px;
   height: 700px; /* 고정 높이로 변경 */
 }
 
@@ -2520,6 +2741,34 @@ const exportIncubationChart = async () => {
   color: white;
   border-color: #1a73e8;
   font-weight: 500;
+}
+
+/* --- 차트 표시 모드 버튼 스타일 --- */
+.chart-select-button {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 14px;
+  background-color: white;
+  cursor: pointer;
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.chart-select-button:hover {
+  background-color: #f0f0f0;
+  border-color: #aaa;
+}
+
+.chart-select-button--active {
+  background-color: #1a73e8;
+  color: white;
+  border-color: #1a73e8;
+  font-weight: 500;
+}
+
+.chart-select-button--active:hover {
+  background-color: #155ab6;
 }
 
 .button-group-toggle {

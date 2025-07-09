@@ -32,6 +32,11 @@
             <span class="summary-bar__value">{{ totalPatients }}</span>
             <span class="summary-bar__unit">명</span>
           </div>
+          <div class="participant-summary__item">
+            <span class="summary-bar__label">발병률&nbsp;</span>
+            <span class="summary-bar__value">{{ attackRate }}</span>
+            <span class="summary-bar__unit">%</span>
+          </div>
         </div>
       </div>
 
@@ -329,6 +334,13 @@ const totalPatients = computed(() => {
   }
   return count;
 });
+
+const attackRate = computed(() => {
+  const participants = totalParticipants.value;
+  const patients = totalPatients.value;
+  if (participants === 0) return '0.0';
+  return ((patients / participants) * 100).toFixed(1);
+});
 const frequencyData = computed(() => { // 원본 로직 유지
   if (!headers.value?.basic || !Array.isArray(headers.value.basic)) return [];
   const currentFilteredRows = filteredRows.value;
@@ -504,23 +516,56 @@ const exportChart = async () => {
   const header = headers.value?.basic?.[selectedVariableIndex.value] || '(없음)';
   const chartKind = selectedChartType.value === 'total' ? '전체' : '환자';
   const filename = `${header}_${chartKind}_분포_고화질.png`;
+  
   try {
-    const dataUrl = instance.getDataURL({
+    // 1. 임시 컨테이너 생성 (충분히 큰 크기)
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = `${chartWidth.value}px`;
+    tempContainer.style.height = '500px';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    document.body.appendChild(tempContainer);
+    
+    // 2. 임시 차트 인스턴스 생성
+    const tempChart = echarts.init(tempContainer);
+    
+    // 3. 현재 차트의 옵션을 가져와서 임시 차트에 적용
+    const currentOption = instance.getOption();
+    currentOption.animation = false;
+    tempChart.setOption(currentOption, true);
+    
+    // 4. 차트가 완전히 렌더링될 때까지 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // 5. 임시 차트에서 완전한 이미지 생성
+    const dataUrl = tempChart.getDataURL({
       type: 'png',
       pixelRatio: 3,
       backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith('data:image/png'))
+    
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
       throw new Error('유효하지 않은 이미지 데이터 URL');
+    }
+    
+    // 6. 파일 다운로드
     const link = document.createElement('a');
     link.href = dataUrl;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // 7. 임시 요소들 정리
+    tempChart.dispose();
+    document.body.removeChild(tempContainer);
+    
+    console.log('차트 저장 완료:', filename);
   } catch (error) {
-    console.error('차트 내보내기 오류:', error);
-    alert(`차트 내보내기 오류: ${error.message}`);
+    const message = `차트 내보내기 오류: ${error.message}`;
+    console.error(message);
+    alert(message);
   }
 };
 
@@ -613,22 +658,58 @@ const copyChartToClipboard = async () => {
     isChartCopied.value = false;
     return;
   }
+  
   try {
-    const dataUrl = instance.getDataURL({
+    // 1. 임시 컨테이너 생성 (충분히 큰 크기)
+    const tempContainer = document.createElement('div');
+    tempContainer.style.width = `${chartWidth.value}px`;
+    tempContainer.style.height = '500px';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    document.body.appendChild(tempContainer);
+    
+    // 2. 임시 차트 인스턴스 생성
+    const tempChart = echarts.init(tempContainer);
+    
+    // 3. 현재 차트의 옵션을 가져와서 임시 차트에 적용
+    const currentOption = instance.getOption();
+    currentOption.animation = false;
+    tempChart.setOption(currentOption, true);
+    
+    // 4. 차트가 완전히 렌더링될 때까지 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // 5. 임시 차트에서 완전한 이미지 생성
+    const dataUrl = tempChart.getDataURL({
       type: 'png',
       pixelRatio: 3,
       backgroundColor: '#fff'
     });
-    if (!dataUrl || !dataUrl.startsWith('data:image/png')) throw new Error('유효하지 않은 이미지 데이터 URL');
+    
+    if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
+      throw new Error('유효하지 않은 이미지 데이터 URL');
+    }
+    
+    // 6. 클립보드에 복사
     const response = await fetch(dataUrl);
-    if (!response.ok) throw new Error(`이미지 로드 실패: ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(`이미지 로드 실패: ${response.statusText}`);
+    }
     const blob = await response.blob();
     await navigator.clipboard.write([
       new ClipboardItem({ [blob.type]: blob })
     ]);
+    
+    // 7. 임시 요소들 정리
+    tempChart.dispose();
+    document.body.removeChild(tempContainer);
+    
     isChartCopied.value = true;
     setTimeout(() => (isChartCopied.value = false), 1500);
+    console.log('차트 복사 완료');
   } catch (error) {
+    console.error('차트 복사 오류:', error);
     isChartCopied.value = false;
   }
 };
@@ -797,7 +878,7 @@ const generateTotalChartOptions = (header, data, dataType = 'count') => { // 원
       fontFamily: 'Noto Sans KR, sans-serif'
     },
     title: { 
-      text: `전체 대상자 ${header || '(알 수 없음)'} 분포 ${dataType === 'percentage' ? '(비율)' : '(수)'}`, 
+      text: `전체 대상자 ${header || '(알 수 없음)'} 분포`, 
       left: 'center', 
       textStyle: { 
         fontSize: chartFontSize.value, 
@@ -970,7 +1051,7 @@ const generatePatientChartOptions = (header, data, dataType = 'count') => { // �
       fontFamily: 'Noto Sans KR, sans-serif'
     },
     title: { 
-      text: `환자 ${header || '(알 수 없음)'} 분포 ${dataType === 'percentage' ? '(비율)' : '(수)'}`, 
+      text: `환자 ${header || '(알 수 없음)'} 분포`, 
       left: 'center', 
       textStyle: { 
         fontSize: chartFontSize.value,
