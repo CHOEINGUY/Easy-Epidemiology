@@ -117,8 +117,8 @@
                     :title="result.adj_chi === null && result.pValue !== null ? 'Fisher의 정확검정 (기대빈도 < 5)' : 'Yates 보정 카이제곱 검정 (기대빈도 ≥ 5)'"
                   >
                     <span v-if="result.pValue !== null">
-                      {{ result.pValue < 0.001 ? "<0.001" : result.pValue.toFixed(3) }}
-                      <sup v-if="result.adj_chi === null && result.pValue !== null" class="test-method fisher">*</sup>
+                      {{ (result.pValue < 0.001 ? "<0.001" : result.pValue.toFixed(3)) }}
+                      <sup v-if="result.adj_chi === null" class="test-method fisher">*</sup>
                     </span>
                     <span v-else>N/A</span>
                   </td>
@@ -169,56 +169,120 @@ const headers = computed(() => store.getters.headers || { diet: [] });
 const rows = computed(() => store.getters.rows || []);
 
 const isTableCopied = ref(false);
+// 엑셀 방식의 테이블 복사 (병합된 헤더 구조)
 const copyTableToClipboard = async () => {
-  let tableEl = null;
-  const tableContainer = document.querySelector('.analysis-table-container');
-  if (tableContainer) {
-    tableEl = tableContainer.querySelector('.analysis-table');
-  }
-  if (!tableEl) {
-    tableEl = document.querySelector('.analysis-table');
-  }
-  if (!tableEl) {
-    isTableCopied.value = false;
-    return;
-  }
   try {
-    const tempTable = tableEl.cloneNode(true);
-    tempTable.style.borderCollapse = 'collapse';
-    tempTable.style.border = '1px solid #888';
-    tempTable.style.fontSize = '14px';
-    tempTable.style.width = '100%';
-    tempTable.querySelectorAll('th').forEach(th => {
-      th.style.border = '1px solid #888';
-      th.style.padding = '8px 4px';
-      th.style.background = '#f2f2f2';
-      th.style.fontWeight = 'bold';
-      th.style.textAlign = 'center';
+    // 엑셀 방식으로 테이블 데이터 구성
+    const tableData = [];
+    
+    // 헤더 1행: 주요 그룹 헤더 (엑셀 방식 - 병합된 셀 내용 중복)
+    tableData.push([
+      '요인(식단)',
+      '섭취자(노출군)', '섭취자(노출군)', '섭취자(노출군)', 
+      '비섭취자(비노출군)', '비섭취자(비노출군)', '비섭취자(비노출군)',
+      '카이제곱',
+      '상대위험비',
+      '95% 신뢰구간', '95% 신뢰구간'
+    ]);
+    
+    // 헤더 2행: 세부 헤더
+    tableData.push([
+      '',
+      '대상자수', '환자수', '발병률(%)',
+      '대상자수', '환자수', '발병률(%)',
+      'P-value',
+      'Relative Risk',
+      '하한', '상한'
+    ]);
+    
+    // 데이터 행들
+    cohortAnalysisResults.value.forEach(result => {
+      tableData.push([
+        result.item,
+        result.rowTotal_Exposed,
+        result.a_obs,
+        result.incidence_exposed_formatted,
+        result.rowTotal_Unexposed,
+        result.c_obs,
+        result.incidence_unexposed_formatted,
+        result.pValue !== null ? 
+          (result.pValue < 0.001 ? '<0.001' : result.pValue.toFixed(3)) + 
+          (result.adj_chi === null ? '<sup>*</sup>' : '') : 
+          'N/A',
+        result.relativeRisk,
+        result.rr_ci_lower,
+        result.rr_ci_upper
+      ]);
     });
-    tempTable.querySelectorAll('td').forEach(td => {
-      td.style.border = '1px solid #888';
-      td.style.padding = '8px 4px';
-      td.style.textAlign = 'center';
-    });
-    tempTable.querySelectorAll('tbody tr').forEach(tr => {
-      const firstTd = tr.querySelector('td');
-      if (firstTd) firstTd.style.textAlign = 'left';
-    });
-    const html = tempTable.outerHTML;
-    const text = tableEl.innerText;
+    
+    // TSV 형식으로 변환
+    const tsvText = `${tableData.map(row => row.join('\t')).join('\n')}\n\n` +
+      '통계 검정 방법 및 표시 기준:\n' +
+      '* : Fisher\'s Exact Test (기대빈도 < 5인 셀이 있을 때)\n' +
+      '- : Yates\' Corrected Chi-square Test (모든 셀 기대빈도 ≥ 5)\n' +
+      'N/A : 계산 불가(셀 값이 0인 경우)';
+    
+    // HTML 테이블도 생성 (병합 셀 구조 포함)
+    const htmlTable = `
+      <table style="border-collapse: collapse; border: 1px solid #888; font-size: 8pt; font-family: '맑은 고딕', monospace; table-layout: fixed; width: 120%; box-sizing: border-box;">
+        <tr>
+          <th rowspan="2" style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 13%; min-width: 13%; max-width: 13%;"><span style="font-size: 8pt;">요인(식단)</span></th>
+          <th colspan="3" style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 20%; min-width: 20%; max-width: 20%;"><span style="font-size: 8pt;">섭취자(노출군)</span></th>
+          <th colspan="3" style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 20%; min-width: 20%; max-width: 20%;"><span style="font-size: 8pt;">비섭취자(비노출군)</span></th>
+          <th rowspan="2" style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 10%; min-width: 10%; max-width: 10%;"><span style="font-size: 8pt;">카이제곱 P-value</span></th>
+          <th rowspan="2" style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 10%; min-width: 10%; max-width: 10%;"><span style="font-size: 8pt;">상대위험비 Relative Risk</span></th>
+          <th colspan="2" style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 12%; min-width: 12%; max-width: 12%;"><span style="font-size: 8pt;">95% 신뢰구간</span></th>
+        </tr>
+        <tr>
+          <th style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box;"><span style="font-size: 8pt;">대상자수</span></th>
+          <th style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box;"><span style="font-size: 8pt;">환자수</span></th>
+          <th style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box;"><span style="font-size: 8pt;">발병률(%)</span></th>
+          <th style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box;"><span style="font-size: 8pt;">대상자수</span></th>
+          <th style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box;"><span style="font-size: 8pt;">환자수</span></th>
+          <th style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box;"><span style="font-size: 8pt;">발병률(%)</span></th>
+          <th style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 6%; min-width: 6%; max-width: 6%;"><span style="font-size: 8pt;">하한</span></th>
+          <th style="border: 1px solid #888; padding: 2px; text-align: center; background: #f2f2f2; font-weight: bold; width: 6%; min-width: 6%; max-width: 6%;"><span style="font-size: 8pt;">상한</span></th>
+        </tr>
+        ${cohortAnalysisResults.value.map(result => `
+          <tr>
+            <td style="border: 1px solid #888; padding: 4px 2px 4px 4px; text-align: left; width: 13%; min-width: 13%; max-width: 13%; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.item}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.rowTotal_Exposed}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.a_obs}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.incidence_exposed_formatted}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.rowTotal_Unexposed}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.c_obs}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 7%; min-width: 7%; max-width: 7%; white-space: nowrap; overflow: hidden; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.incidence_unexposed_formatted}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 10%; min-width: 10%; max-width: 10%; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt; ${result.pValue !== null && result.pValue < 0.05 ? 'color: #e74c3c; font-weight: bold;' : ''}">${result.pValue !== null ? (result.pValue < 0.001 ? '<0.001' : result.pValue.toFixed(3)) + (result.adj_chi === null ? '<sup>*</sup>' : '') : 'N/A'}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 10%; min-width: 10%; max-width: 10%; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.relativeRisk}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 6%; min-width: 6%; max-width: 6%; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.rr_ci_lower}</span></td>
+            <td style="border: 1px solid #888; padding: 4px 2px; text-align: center; width: 6%; min-width: 6%; max-width: 6%; box-sizing: border-box; ${result.pValue !== null && result.pValue < 0.05 ? 'background-color: #fffbe6;' : ''}"><span style="font-size: 8pt;">${result.rr_ci_upper}</span></td>
+          </tr>
+        `).join('')}
+      </table>
+      <div style="font-size: 8pt; line-height: 1.4; font-family: '맑은 고딕', monospace;">
+        <div><strong>통계 검정 방법 및 표시 기준</strong></div>
+        <div>* : Fisher's Exact Test (기대빈도 &lt; 5인 셀이 있을 때)</div>
+        <div>- : Yates' Corrected Chi-square Test (모든 셀 기대빈도 ≥ 5)</div>
+        <div>N/A : 계산 불가(셀 값이 0인 경우)</div>
+      </div>
+    `;
+
+    // 클립보드에 복사
     if (navigator.clipboard && window.ClipboardItem) {
       await navigator.clipboard.write([
         new window.ClipboardItem({
-          'text/html': new Blob([html], { type: 'text/html' }),
-          'text/plain': new Blob([text], { type: 'text/plain' })
+          'text/html': new Blob([htmlTable], { type: 'text/html' }),
+          'text/plain': new Blob([tsvText], { type: 'text/plain' })
         })
       ]);
     } else {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(tsvText);
     }
+    
     isTableCopied.value = true;
     setTimeout(() => (isTableCopied.value = false), 1500);
   } catch (e) {
+    console.error('Copy failed', e);
     isTableCopied.value = false;
   }
 };
@@ -967,21 +1031,7 @@ const factorial = (n) => {
   font-weight: 400;
 }
 
-/* --- 검정 방법 표시 스타일 --- */
-.test-method {
-  font-size: 1em;
-  font-weight: 600;
-  margin-left: 0px;
-  vertical-align: top;
-}
 
-.test-method.fisher {
-  color: #1a73e8; /* 파란색 */
-}
-
-.test-method.yates {
-  color: #34a853; /* 녹색 */
-}
 
 .legend-content--plain {
   padding: 12px 15px;

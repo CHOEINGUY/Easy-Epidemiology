@@ -88,6 +88,43 @@ function convertExcelDate(cellValue) {
   return str;
 }
 
+/**
+ * 빈 열을 감지하고 제거하는 스마트 매칭 함수
+ * @param {Array} headerRow - 헤더 행
+ * @param {Array} dataRows - 데이터 행들
+ * @param {number} start - 시작 인덱스
+ * @param {number} end - 끝 인덱스
+ * @returns {Object} 필터링된 헤더와 데이터, 제거된 열 정보
+ */
+function smartColumnMatching(headerRow, dataRows, start, end) {
+  const validHeaderIndices = [];
+  const validHeaders = [];
+  let emptyColumnCount = 0;
+
+  // 1단계: 유효한 헤더가 있는 열의 인덱스 찾기
+  for (let i = start; i < end; i++) {
+    if (headerRow[i]?.trim()) {
+      validHeaderIndices.push(i);
+      validHeaders.push(headerRow[i].trim());
+    } else {
+      emptyColumnCount++;
+    }
+  }
+
+  // 2단계: 각 행의 데이터를 유효한 헤더 인덱스에 맞춰 추출
+  const alignedRows = dataRows.map(row => {
+    return validHeaderIndices.map(index => 
+      (row[index] ?? '').toString().trim()
+    );
+  });
+
+  return {
+    headers: validHeaders,
+    rows: alignedRows,
+    emptyColumnCount
+  };
+}
+
 function parseAOAData(aoa) {
   const [headerRow1 = [], headerRow2 = []] = aoa;
   const dataRows = aoa.slice(2);
@@ -95,10 +132,15 @@ function parseAOAData(aoa) {
   const ranges = findColumnRanges(headerRow1, headerRow2);
   const hasIndividualExposureTime = ranges.individualExposureTime !== -1;
 
+  // 스마트 매칭을 사용하여 각 카테고리 처리
+  const basicResult = smartColumnMatching(headerRow2, dataRows, ranges.basic.start, ranges.basic.end);
+  const clinicalResult = smartColumnMatching(headerRow2, dataRows, ranges.clinical.start, ranges.clinical.end);
+  const dietResult = smartColumnMatching(headerRow2, dataRows, ranges.diet.start, ranges.diet.end);
+
   const headers = {
-    basic: headerRow2.slice(ranges.basic.start, ranges.basic.end).filter(h => h?.trim()),
-    clinical: headerRow2.slice(ranges.clinical.start, ranges.clinical.end).filter(h => h?.trim()),
-    diet: headerRow2.slice(ranges.diet.start, ranges.diet.end).filter(h => h?.trim())
+    basic: basicResult.headers,
+    clinical: clinicalResult.headers,
+    diet: dietResult.headers
   };
 
   const rows = dataRows
@@ -107,16 +149,24 @@ function parseAOAData(aoa) {
       const dataCells = row.slice(1);
       return dataCells.some(cell => cell !== null && cell !== undefined && cell.toString().trim() !== '');
     })
-    .map(row => ({
+    .map((row, index) => ({
       isPatient: (row[ranges.isPatient] ?? '').toString().trim(),
-      basicInfo: row.slice(ranges.basic.start, ranges.basic.end).map(c => (c ?? '').toString().trim()),
-      clinicalSymptoms: row.slice(ranges.clinical.start, ranges.clinical.end).map(c => (c ?? '').toString().trim()),
+      basicInfo: basicResult.rows[index] || [],
+      clinicalSymptoms: clinicalResult.rows[index] || [],
       symptomOnset: convertExcelDate(row[ranges.symptomOnset]),
       individualExposureTime: hasIndividualExposureTime ? convertExcelDate(row[ranges.individualExposureTime]) : '',
-      dietInfo: row.slice(ranges.diet.start, ranges.diet.end).map(c => (c ?? '').toString().trim())
+      dietInfo: dietResult.rows[index] || []
     }));
 
-  return { headers, rows, hasIndividualExposureTime };
+  // 총 제거된 빈 열 개수 계산
+  const totalEmptyColumns = basicResult.emptyColumnCount + clinicalResult.emptyColumnCount + dietResult.emptyColumnCount;
+
+  return { 
+    headers, 
+    rows, 
+    hasIndividualExposureTime,
+    emptyColumnCount: totalEmptyColumns
+  };
 }
 
 self.onmessage = function (e) {

@@ -1,15 +1,10 @@
-// excelProcessorSync.js - 동기적 Excel 처리 (file:/// 환경 호환)
+// excelProcessorSync.js - Synchronous Excel processor with fallback support
 
 import * as XLSX from 'xlsx';
-import { processInChunks } from '../../../utils/asyncProcessor.js';
 
-// --- Utility functions copied from excelWorker.js ---
+// --- Utility functions (same as worker) ---
 
 function findColumnRanges(headerRow1, headerRow2) {
-  console.log('=== findColumnRanges 디버깅 ===');
-  console.log('headerRow1:', headerRow1);
-  console.log('headerRow2:', headerRow2);
-  
   const ranges = {};
 
   // 연번 컬럼 (고정) - Excel template 에서 첫 열
@@ -20,7 +15,6 @@ function findColumnRanges(headerRow1, headerRow2) {
     cell?.toString().includes('환자여부') || cell?.toString().includes('환자 여부')
   );
   ranges.isPatient = isPatientIndex !== -1 ? isPatientIndex : 1;
-  console.log('isPatient 범위:', ranges.isPatient);
 
   // 기본정보 범위
   const basicStart = headerRow1.findIndex(cell => cell?.toString().includes('기본정보'));
@@ -30,7 +24,6 @@ function findColumnRanges(headerRow1, headerRow2) {
     basicEnd++;
   }
   ranges.basic = { start: basicStart, end: basicEnd };
-  console.log('basic 범위:', ranges.basic);
 
   // 임상증상 범위
   const clinicalStart = headerRow1.findIndex(cell => cell?.toString().includes('임상증상'));
@@ -40,7 +33,6 @@ function findColumnRanges(headerRow1, headerRow2) {
     clinicalEnd++;
   }
   ranges.clinical = { start: clinicalStart, end: clinicalEnd };
-  console.log('clinical 범위:', ranges.clinical);
 
   // 증상발현시간 컬럼 (2행 검색)
   const onsetIdx = headerRow2.findIndex(cell =>
@@ -48,22 +40,18 @@ function findColumnRanges(headerRow1, headerRow2) {
   );
   if (onsetIdx === -1) throw new Error('증상발현시간 컬럼 없음');
   ranges.symptomOnset = onsetIdx;
-  console.log('symptomOnset 인덱스:', ranges.symptomOnset);
 
   // 의심원 노출시간 (2행 검색, 있을 수도 있음)
   const exposureIdx = headerRow2.findIndex(cell =>
     typeof cell === 'string' && (cell.includes('의심원노출시간') || cell.includes('의심원 노출시간'))
   );
   ranges.individualExposureTime = exposureIdx; // -1 if not present
-  console.log('individualExposureTime 인덱스:', ranges.individualExposureTime);
 
   // 식단 범위
   const dietStart = headerRow1.findIndex(cell => cell?.toString().includes('식단'));
   if (dietStart === -1) throw new Error('식단 카테고리 없음');
   ranges.diet = { start: dietStart, end: headerRow2.length };
-  console.log('diet 범위:', ranges.diet);
 
-  console.log('최종 ranges:', ranges);
   return ranges;
 }
 
@@ -95,6 +83,43 @@ function convertExcelDate(cellValue) {
   return str;
 }
 
+/**
+ * 빈 열을 감지하고 제거하는 스마트 매칭 함수
+ * @param {Array} headerRow - 헤더 행
+ * @param {Array} dataRows - 데이터 행들
+ * @param {number} start - 시작 인덱스
+ * @param {number} end - 끝 인덱스
+ * @returns {Object} 필터링된 헤더와 데이터, 제거된 열 정보
+ */
+function smartColumnMatching(headerRow, dataRows, start, end) {
+  const validHeaderIndices = [];
+  const validHeaders = [];
+  let emptyColumnCount = 0;
+
+  // 1단계: 유효한 헤더가 있는 열의 인덱스 찾기
+  for (let i = start; i < end; i++) {
+    if (headerRow[i]?.trim()) {
+      validHeaderIndices.push(i);
+      validHeaders.push(headerRow[i].trim());
+    } else {
+      emptyColumnCount++;
+    }
+  }
+
+  // 2단계: 각 행의 데이터를 유효한 헤더 인덱스에 맞춰 추출
+  const alignedRows = dataRows.map(row => {
+    return validHeaderIndices.map(index => 
+      (row[index] ?? '').toString().trim()
+    );
+  });
+
+  return {
+    headers: validHeaders,
+    rows: alignedRows,
+    emptyColumnCount
+  };
+}
+
 function parseAOAData(aoa) {
   const [headerRow1 = [], headerRow2 = []] = aoa;
   const dataRows = aoa.slice(2);
@@ -102,10 +127,15 @@ function parseAOAData(aoa) {
   const ranges = findColumnRanges(headerRow1, headerRow2);
   const hasIndividualExposureTime = ranges.individualExposureTime !== -1;
 
+  // 스마트 매칭을 사용하여 각 카테고리 처리
+  const basicResult = smartColumnMatching(headerRow2, dataRows, ranges.basic.start, ranges.basic.end);
+  const clinicalResult = smartColumnMatching(headerRow2, dataRows, ranges.clinical.start, ranges.clinical.end);
+  const dietResult = smartColumnMatching(headerRow2, dataRows, ranges.diet.start, ranges.diet.end);
+
   const headers = {
-    basic: headerRow2.slice(ranges.basic.start, ranges.basic.end).filter(h => h?.trim()),
-    clinical: headerRow2.slice(ranges.clinical.start, ranges.clinical.end).filter(h => h?.trim()),
-    diet: headerRow2.slice(ranges.diet.start, ranges.diet.end).filter(h => h?.trim())
+    basic: basicResult.headers,
+    clinical: clinicalResult.headers,
+    diet: dietResult.headers
   };
 
   const rows = dataRows
@@ -114,16 +144,24 @@ function parseAOAData(aoa) {
       const dataCells = row.slice(1);
       return dataCells.some(cell => cell !== null && cell !== undefined && cell.toString().trim() !== '');
     })
-    .map(row => ({
+    .map((row, index) => ({
       isPatient: (row[ranges.isPatient] ?? '').toString().trim(),
-      basicInfo: row.slice(ranges.basic.start, ranges.basic.end).map(c => (c ?? '').toString().trim()),
-      clinicalSymptoms: row.slice(ranges.clinical.start, ranges.clinical.end).map(c => (c ?? '').toString().trim()),
+      basicInfo: basicResult.rows[index] || [],
+      clinicalSymptoms: clinicalResult.rows[index] || [],
       symptomOnset: convertExcelDate(row[ranges.symptomOnset]),
       individualExposureTime: hasIndividualExposureTime ? convertExcelDate(row[ranges.individualExposureTime]) : '',
-      dietInfo: row.slice(ranges.diet.start, ranges.diet.end).map(c => (c ?? '').toString().trim())
+      dietInfo: dietResult.rows[index] || []
     }));
 
-  return { headers, rows, hasIndividualExposureTime };
+  // 총 제거된 빈 열 개수 계산
+  const totalEmptyColumns = basicResult.emptyColumnCount + clinicalResult.emptyColumnCount + dietResult.emptyColumnCount;
+
+  return { 
+    headers, 
+    rows, 
+    hasIndividualExposureTime,
+    emptyColumnCount: totalEmptyColumns
+  };
 }
 
 /**
@@ -173,6 +211,50 @@ export function processExcelFileSync(file, onProgress = () => {}) {
  * @param {Function} onProgress - 진행률 콜백
  * @returns {Promise} 파싱된 데이터
  */
+// 청크 처리 함수를 함수 본문 루트로 이동
+function processChunk(startIndex, endIndex, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, onProgress, resolve) {
+  const actualEndIndex = Math.min(startIndex + endIndex, filteredRows.length);
+  
+  for (let i = startIndex; i < actualEndIndex; i++) {
+    const row = filteredRows[i];
+    processedRows.push({
+      isPatient: (row[ranges.isPatient] ?? '').toString().trim(),
+      basicInfo: basicResult.rows[i] || [],
+      clinicalSymptoms: clinicalResult.rows[i] || [],
+      symptomOnset: convertExcelDate(row[ranges.symptomOnset]),
+      individualExposureTime: hasIndividualExposureTime ? convertExcelDate(row[ranges.individualExposureTime]) : '',
+      dietInfo: dietResult.rows[i] || []
+    });
+  }
+  
+  const progress = 70 + Math.round((actualEndIndex / filteredRows.length) * 25);
+  onProgress(progress);
+  
+  if (actualEndIndex < filteredRows.length) {
+    // 다음 청크를 비동기적으로 처리
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(() => processChunk(actualEndIndex, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, onProgress, resolve));
+    } else {
+      setTimeout(() => processChunk(actualEndIndex, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, onProgress, resolve), 0);
+    }
+  } else {
+    // 모든 처리 완료
+    const totalEmptyColumns = basicResult.emptyColumnCount + clinicalResult.emptyColumnCount + dietResult.emptyColumnCount;
+    
+    onProgress(100);
+    resolve({
+      headers: {
+        basic: basicResult.headers,
+        clinical: clinicalResult.headers,
+        diet: dietResult.headers
+      },
+      rows: processedRows,
+      hasIndividualExposureTime,
+      emptyColumnCount: totalEmptyColumns
+    });
+  }
+}
+
 export function processExcelFileAsync(file, onProgress = () => {}) {
   if (!(file instanceof File)) {
     return Promise.reject(new Error('유효한 파일이 아닙니다.'));
@@ -204,11 +286,10 @@ export function processExcelFileAsync(file, onProgress = () => {}) {
           const ranges = findColumnRanges(headerRow1, headerRow2);
           const hasIndividualExposureTime = ranges.individualExposureTime !== -1;
 
-          const headers = {
-            basic: headerRow2.slice(ranges.basic.start, ranges.basic.end).filter(h => h?.trim()),
-            clinical: headerRow2.slice(ranges.clinical.start, ranges.clinical.end).filter(h => h?.trim()),
-            diet: headerRow2.slice(ranges.diet.start, ranges.diet.end).filter(h => h?.trim())
-          };
+          // 스마트 매칭을 사용하여 각 카테고리 처리
+          const basicResult = smartColumnMatching(headerRow2, dataRows, ranges.basic.start, ranges.basic.end);
+          const clinicalResult = smartColumnMatching(headerRow2, dataRows, ranges.clinical.start, ranges.clinical.end);
+          const dietResult = smartColumnMatching(headerRow2, dataRows, ranges.diet.start, ranges.diet.end);
 
           onProgress(50);
 
@@ -218,42 +299,14 @@ export function processExcelFileAsync(file, onProgress = () => {}) {
             return dataCells.some(cell => cell !== null && cell !== undefined && cell.toString().trim() !== '');
           });
 
-          const rows = [];
+          onProgress(70);
 
-          const processor = (row) => {
-            const processedRow = {
-              isPatient: (row[ranges.isPatient] ?? '').toString().trim(),
-              basicInfo: row.slice(ranges.basic.start, ranges.basic.end).map(c => (c ?? '').toString().trim()),
-              clinicalSymptoms: row.slice(ranges.clinical.start, ranges.clinical.end).map(c => (c ?? '').toString().trim()),
-              symptomOnset: convertExcelDate(row[ranges.symptomOnset]),
-              individualExposureTime: hasIndividualExposureTime ? convertExcelDate(row[ranges.individualExposureTime]) : '',
-              dietInfo: row.slice(ranges.diet.start, ranges.diet.end).map(c => (c ?? '').toString().trim())
-            };
-            rows.push(processedRow);
-          };
-
-          const progressHandler = (progress) => {
-            // 50% ~ 95% 범위에서 진행률 표시
-            const adjustedProgress = 50 + (progress * 0.45);
-            onProgress(adjustedProgress);
-          };
-
-          const completeHandler = () => {
-            onProgress(100);
-            resolve({ headers, rows, hasIndividualExposureTime });
-          };
-
-          const errorHandler = (error) => {
-            reject(new Error(error.message || 'Excel 파싱 실패'));
-          };
-
-          processInChunks(filteredRows, processor, {
-            chunkSize: 100,
-            onProgress: progressHandler,
-            onComplete: completeHandler,
-            onError: errorHandler
-          });
-
+          // 청크 단위로 처리
+          const processedRows = [];
+          
+          // 첫 번째 청크 처리 시작
+          processChunk(0, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, onProgress, resolve);
+          
         } catch (error) {
           reject(new Error(error.message || 'Excel 파싱 실패'));
         }

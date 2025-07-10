@@ -565,6 +565,14 @@ async function onExcelFileSelected(file) {
       excelUploadProgress.value = Math.round(p * 0.6); // 파싱은 전체의 60%
     });
     
+    // 빈 열 감지 시 toast 메시지 표시
+    if (parsed.emptyColumnCount > 0) {
+      showToast(
+        `빈 열 ${parsed.emptyColumnCount}개가 감지되어 자동으로 제거되었습니다.`, 
+        'info'
+      );
+    }
+    
     // 2단계: 데이터 저장 및 설정 (60% ~ 70%)
     excelUploadProgress.value = 60;
     storeBridge.dispatch('updateHeadersFromExcel', parsed.headers);
