@@ -11,13 +11,15 @@ export function useDataExport() {
    * @param {boolean} hasIndividualExposure - 개별 노출시간 컬럼 포함 여부
    * @returns {Object} 표준화된 헤더 구조
    */
-  const generateStandardHeaders = (allColumnsMeta, hasIndividualExposure = false) => {
+  const generateStandardHeaders = (allColumnsMeta, hasIndividualExposure = false, hasConfirmedCase = false) => {
     const headerRow1 = [];
     const headerRow2 = [];
     
     // 실제 컬럼 순서에 맞게 표준 순서 수정
     const standardOrder = [
-      'serial', 'isPatient', 'basic', 'clinicalSymptoms', 
+      'serial', 'isPatient', 
+      ...(hasConfirmedCase ? ['isConfirmedCase'] : []),
+      'basic', 'clinicalSymptoms', 
       ...(hasIndividualExposure ? ['individualExposureTime'] : []), 'symptomOnset', 'dietInfo'
     ];
     
@@ -63,6 +65,10 @@ export function useDataExport() {
         // 환자여부 (1행과 2행 병합)
         headerRow1.push('환자여부');
         headerRow2.push('');
+      } else if (type === 'isConfirmedCase') {
+        // 확진여부 (1행과 2행 병합)
+        headerRow1.push('확진여부');
+        headerRow2.push('');
       } else if (type === 'symptomOnset') {
         // 증상발현시간 (1행: 형식 설명, 2행: 헤더) - 병합 없음
         headerRow1.push('yyyy/mm/dd OR yyyy-mm-dd hh:mm ');
@@ -97,9 +103,11 @@ export function useDataExport() {
    * @param {boolean} hasIndividualExposure - 개별 노출시간 컬럼 포함 여부
    * @returns {Array} 정렬된 컬럼 메타데이터
    */
-  const reorderColumnsForExport = (allColumnsMeta, hasIndividualExposure = false) => {
+  const reorderColumnsForExport = (allColumnsMeta, hasIndividualExposure = false, hasConfirmedCase = false) => {
     const standardOrder = [
-      'serial', 'isPatient', 'basic', 'clinicalSymptoms', 
+      'serial', 'isPatient', 
+      ...(hasConfirmedCase ? ['isConfirmedCase'] : []),
+      'basic', 'clinicalSymptoms', 
       ...(hasIndividualExposure ? ['individualExposureTime'] : []), 'symptomOnset', 'dietInfo'
     ];
     
@@ -171,7 +179,7 @@ export function useDataExport() {
    * @param {boolean} hasIndividualExposure - 개별 노출시간 컬럼 포함 여부
    * @returns {Array} 병합 정보 배열
    */
-  const generateMerges = (headerRow1, headerRow2, allColumnsMeta, hasIndividualExposure = false) => {
+  const generateMerges = (headerRow1, headerRow2, allColumnsMeta, hasIndividualExposure = false, hasConfirmedCase = false) => {
     const merges = [];
     
     // 현재 컬럼 인덱스 추적
@@ -179,7 +187,9 @@ export function useDataExport() {
     
     // 표준 순서에 따라 병합 정보 생성
     const standardOrder = [
-      'serial', 'isPatient', 'basic', 'clinicalSymptoms', 
+      'serial', 'isPatient', 
+      ...(hasConfirmedCase ? ['isConfirmedCase'] : []),
+      'basic', 'clinicalSymptoms', 
       ...(hasIndividualExposure ? ['individualExposureTime'] : []), 'symptomOnset', 'dietInfo'
     ];
     
@@ -194,6 +204,12 @@ export function useDataExport() {
         }
       } else if (type === 'isPatient') {
         // 환자여부: 1행과 2행 병합 (컬럼 개수와 상관없이)
+        if (columns.length > 0) {
+          merges.push({ s: { c: currentCol, r: 0 }, e: { c: currentCol, r: 1 } });
+          currentCol += columns.length;
+        }
+      } else if (type === 'isConfirmedCase') {
+        // 확진 여부: 1행과 2행 병합 (컬럼 개수와 상관없이)
         if (columns.length > 0) {
           merges.push({ s: { c: currentCol, r: 0 }, e: { c: currentCol, r: 1 } });
           currentCol += columns.length;
@@ -255,6 +271,7 @@ export function useDataExport() {
     rows,
     getCellValue,
     hasIndividualExposure = false,
+    hasConfirmedCase = false,
     fileName
   ) => {
     try {
@@ -268,13 +285,13 @@ export function useDataExport() {
       console.log('전체 컬럼 메타데이터:', allColumnsMeta.map(col => ({ type: col.type, dataKey: col.dataKey, headerText: col.headerText })));
       
       // 1. 표준 헤더 구조 생성
-      const { headerRow1, headerRow2 } = generateStandardHeaders(allColumnsMeta, hasIndividualExposure);
+      const { headerRow1, headerRow2 } = generateStandardHeaders(allColumnsMeta, hasIndividualExposure, hasConfirmedCase);
       
       console.log('생성된 헤더 1행:', headerRow1);
       console.log('생성된 헤더 2행:', headerRow2);
       
       // 2. 컬럼 순서 표준화
-      const orderedColumns = reorderColumnsForExport(allColumnsMeta, hasIndividualExposure);
+      const orderedColumns = reorderColumnsForExport(allColumnsMeta, hasIndividualExposure, hasConfirmedCase);
       
       console.log('정렬된 컬럼들:', orderedColumns.map(col => ({ type: col.type, dataKey: col.dataKey })));
       
@@ -292,7 +309,7 @@ export function useDataExport() {
       console.log('워크시트 데이터 샘플 (첫 3행):', worksheetData.slice(0, 3));
       
       // 5. 병합 정보 생성 (템플릿과 동일한 구조)
-      const merges = generateMerges(headerRow1, headerRow2, allColumnsMeta, hasIndividualExposure);
+      const merges = generateMerges(headerRow1, headerRow2, allColumnsMeta, hasIndividualExposure, hasConfirmedCase);
       
       console.log('생성된 병합 정보:', merges);
       

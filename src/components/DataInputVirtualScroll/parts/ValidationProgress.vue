@@ -1,61 +1,106 @@
 <template>
-  <div v-if="isProcessing" class="validation-progress">
-    <div class="progress-bar">
-      <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+  <div v-if="isVisible" class="validation-progress">
+    <div class="progress-container">
+      <div class="progress-header">
+        <span class="progress-title">데이터 검증 중...</span>
+        <span class="progress-percentage">{{ progress }}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+      </div>
+      <div class="progress-details">
+        <span>{{ processed }}/{{ total }} 셀 처리됨</span>
+        <span v-if="errorCount > 0" class="error-count">오류: {{ errorCount }}개</span>
+      </div>
     </div>
-    <span class="progress-text">검증 중... {{ progress }}%</span>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'ValidationProgress',
-  props: {
-    isProcessing: {
-      type: Boolean,
-      default: false
-    },
-    progress: {
-      type: Number,
-      default: 0
-    }
+<script setup>
+defineProps({
+  progress: {
+    type: Number,
+    default: 0
+  },
+  processed: {
+    type: Number,
+    default: 0
+  },
+  total: {
+    type: Number,
+    default: 0
+  },
+  errorCount: {
+    type: Number,
+    default: 0
+  },
+  isVisible: {
+    type: Boolean,
+    default: false
   }
-};
+});
 </script>
 
 <style scoped>
 .validation-progress {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: white;
   border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  z-index: 1000;
-  min-width: 200px;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 300px;
+}
+
+.progress-container {
+  text-align: center;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.progress-percentage {
+  font-weight: bold;
+  color: #007bff;
 }
 
 .progress-bar {
-  width: 200px;
+  width: 100%;
   height: 8px;
   background: #f0f0f0;
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
 }
 
 .progress-fill {
   height: 100%;
-  background: #4CAF50;
+  background: linear-gradient(90deg, #007bff, #0056b3);
   transition: width 0.3s ease;
 }
 
-.progress-text {
+.progress-details {
+  display: flex;
+  justify-content: space-between;
   font-size: 12px;
   color: #666;
-  display: block;
-  text-align: center;
+}
+
+.error-count {
+  color: #dc3545;
+  font-weight: 600;
 }
 </style> 

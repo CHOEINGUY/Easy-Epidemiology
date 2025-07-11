@@ -222,9 +222,10 @@ export class StoreBridge {
     this.legacyStore.dispatch('deleteRow', rowIndex);
     this.saveCurrentState();
     
-    // Validation 처리 - 삭제된 행 오류 제거 + 남은 행들 인덱스 재조정
+    // Validation 처리 - 고유 키 기반 재매핑
     if (this.validationManager) {
-      this.validationManager.reindexErrorsAfterRowDeletion([rowIndex]);
+      const columnMetas = this.getColumnMetas();
+      this.validationManager.handleRowDeletion([rowIndex], columnMetas);
     }
   }
   
@@ -252,7 +253,8 @@ export class StoreBridge {
       }
       
       if (deletedRowIndices.length > 0) {
-        this.validationManager.reindexErrorsAfterRowDeletion(deletedRowIndices);
+        const columnMetas = this.getColumnMetas();
+        this.validationManager.handleRowDeletion(deletedRowIndices, columnMetas);
       }
     }
   }
@@ -266,7 +268,7 @@ export class StoreBridge {
     this.legacyStore.dispatch('deleteIndividualRows', payload);
     this.saveCurrentState();
     
-    // Validation 처리 - 삭제된 행들 오류 제거 + 남은 행들 인덱스 재조정
+    // Validation 처리 - 고유 키 기반 재매핑
     if (this.validationManager) {
       let deletedRowIndices = [];
       
@@ -279,7 +281,8 @@ export class StoreBridge {
       }
       
       if (deletedRowIndices.length > 0) {
-        this.validationManager.reindexErrorsAfterRowDeletion(deletedRowIndices);
+        const columnMetas = this.getColumnMetas();
+        this.validationManager.handleRowDeletion(deletedRowIndices, columnMetas);
       }
     }
   }
@@ -329,7 +332,8 @@ export class StoreBridge {
     
     // 검증 처리
     if (this.validationManager && deletedRowIndices.length > 0) {
-      this.validationManager.handleRowDeletion(deletedRowIndices);
+      const columnMetas = this.getColumnMetas();
+      this.validationManager.handleRowDeletion(deletedRowIndices, columnMetas);
     }
     
     return result;
@@ -367,15 +371,17 @@ export class StoreBridge {
    * 데이터 붙여넣기
    * @param {Object} payload - 붙여넣기 페이로드
    */
-  pasteData(payload) {
+  async pasteData(payload) {
+    console.log('[StoreBridge] pasteData 호출됨', payload);
     this._captureSnapshot('pasteData', payload);
     const result = this.legacyStore.dispatch('pasteData', payload);
     this.saveCurrentState();
     
-    // 검증 처리
+    // 검증 처리 (개선된 버전)
     if (this.validationManager) {
       const { startRowIndex, startColIndex, data } = payload;
       const columnMetas = this.getColumnMetas();
+      console.log('[StoreBridge] ValidationManager.handlePasteData 호출 직전', data, startRowIndex, startColIndex, columnMetas);
       this.validationManager.handlePasteData(data, startRowIndex, startColIndex, columnMetas);
     }
     
@@ -546,56 +552,85 @@ export class StoreBridge {
    * @param {boolean} isVisible - 가시성 여부
    */
   setIndividualExposureColumnVisibility(isVisible) {
+    const beforeColumnMetas = this.getColumnMetas();
     const wasVisible = this.legacyStore.state.isIndividualExposureColumnVisible;
     const isAdding = isVisible && !wasVisible; // 열을 추가하는 경우
     const isRemoving = !isVisible && wasVisible; // 열을 제거하는 경우
     
-    // 변경이 없으면 조기 리턴
     if (isVisible === wasVisible) {
       return;
-    }
-    
-    let exposureColumnIndex = null;
-    
-    if (isAdding) {
-      // 추가할 때는 증상발현시간 열 앞에 삽입됨
-      exposureColumnIndex = this.symptomOnsetStartIndex;
-    } else if (isRemoving) {
-      // 제거할 때는 현재 개별 노출시간 열의 위치를 찾아야 함
-      const columnMetas = this.getColumnMetas();
-      const individualExposureCol = columnMetas.find(col => 
-        col.type === 'individualExposureTime' || 
-        col.dataKey === 'individualExposureTime'
-      );
-      exposureColumnIndex = individualExposureCol ? individualExposureCol.colIndex : null;
     }
     
     if (this.debug) {
       console.log(`[StoreBridge] setIndividualExposureColumnVisibility: ${isVisible}`);
       console.log(`[StoreBridge] isAdding: ${isAdding}, isRemoving: ${isRemoving}`);
-      console.log(`[StoreBridge] exposureColumnIndex: ${exposureColumnIndex}`);
     }
     
-    // 🔥 중요: 유효성 검사 오류 인덱스 재조정을 Vuex 변경 **전**에 실행
-    if (this.validationManager && exposureColumnIndex !== null) {
-      if (isAdding) {
-        // 열 추가 시: 해당 위치부터 모든 열의 인덱스를 +1
-        if (this.debug) {
-          console.log(`[StoreBridge] 개별 노출시간 열 추가 - reindexErrorsAfterColumnAddition(${exposureColumnIndex})`);
-        }
-        this.validationManager.reindexErrorsAfterColumnAddition(exposureColumnIndex);
-      } else if (isRemoving) {
-        // 열 제거 시: 해당 열의 오류 제거 및 나머지 열의 인덱스를 -1
-        if (this.debug) {
-          console.log(`[StoreBridge] 개별 노출시간 열 제거 - reindexErrorsAfterColumnDeletion([${exposureColumnIndex}])`);
-        }
-        this.validationManager.reindexErrorsAfterColumnDeletion([exposureColumnIndex]);
+    // 기존 로직 실행
+    const result = this.legacyStore.dispatch('setIndividualExposureColumnVisibility', isVisible);
+    this.saveCurrentState();
+    
+    // 고유 식별자 기반 에러 재매핑만 사용
+    const afterColumnMetas = this.getColumnMetas();
+    if (this.validationManager) {
+      console.log('[StoreBridge] setIndividualExposureColumnVisibility: remapValidationErrorsByColumnIdentity 호출');
+      this.validationManager.remapValidationErrorsByColumnIdentity(beforeColumnMetas, afterColumnMetas);
+    }
+    
+    return result;
+  }
+  
+  /**
+   * 확진자 여부 열 가시성 설정
+   * @param {boolean} isVisible - 가시성 여부
+   */
+  setConfirmedCaseColumnVisibility(isVisible) {
+    const beforeColumnMetas = this.getColumnMetas();
+    const wasVisible = this.legacyStore.state.isConfirmedCaseColumnVisible;
+    const isAdding = isVisible && !wasVisible;
+    const isRemoving = !isVisible && wasVisible;
+    
+    if (isVisible === wasVisible) {
+      return;
+    }
+    
+    let confirmedCaseColumnIndex = null;
+    
+    if (isAdding) {
+      // 추가할 때는 환자여부 열 다음에 삽입됨
+      confirmedCaseColumnIndex = 2; // COL_IDX_CONFIRMED_CASE
+    } else if (isRemoving) {
+      // 제거할 때는 현재 확진자 여부 열의 위치를 찾아야 함
+      const columnMetas = this.getColumnMetas();
+      const confirmedCaseCol = columnMetas.find(col => 
+        col.type === 'isConfirmedCase' || 
+        col.dataKey === 'isConfirmedCase'
+      );
+      confirmedCaseColumnIndex = confirmedCaseCol ? confirmedCaseCol.colIndex : null;
+      
+      // 만약 찾지 못했다면, 기본적으로 환자여부 열 다음 위치로 가정
+      if (confirmedCaseColumnIndex === null) {
+        confirmedCaseColumnIndex = 2; // COL_IDX_CONFIRMED_CASE
       }
     }
     
+    if (this.debug) {
+      console.log(`[StoreBridge] setConfirmedCaseColumnVisibility: ${isVisible}`);
+      console.log(`[StoreBridge] isAdding: ${isAdding}, isRemoving: ${isRemoving}`);
+      console.log(`[StoreBridge] confirmedCaseColumnIndex: ${confirmedCaseColumnIndex}`);
+    }
+    
     // Vuex state 변경
-    const result = this.legacyStore.dispatch('setIndividualExposureColumnVisibility', isVisible);
+    const result = this.legacyStore.dispatch('setConfirmedCaseColumnVisibility', isVisible);
     this.saveCurrentState();
+    
+    // 고유 식별자 기반 에러 재매핑만 사용
+    const afterColumnMetas = this.getColumnMetas();
+    if (this.validationManager) {
+      console.log('[StoreBridge] setConfirmedCaseColumnVisibility: remapValidationErrorsByColumnIdentity 호출');
+      this.validationManager.remapValidationErrorsByColumnIdentity(beforeColumnMetas, afterColumnMetas);
+    }
+    
     return result;
   }
   
@@ -618,23 +653,18 @@ export class StoreBridge {
     const beforeColumnMetas = this.getColumnMetas();
     const { type, index } = payload;
     
-    // 삽입될 위치의 colIndex 찾기
-    const targetColumns = beforeColumnMetas.filter(c => c.type === type);
-    const insertColIndex = targetColumns.length > 0 ? targetColumns[0].colIndex + index : 0;
-    
     if (this.debug) {
-      console.log(`[StoreBridge] insertColumnAt: type=${type}, index=${index}, insertColIndex=${insertColIndex}`);
+      console.log(`[StoreBridge] insertColumnAt: type=${type}, index=${index}`);
     }
     
     const result = this.legacyStore.dispatch('insertColumnAt', payload);
     this.saveCurrentState();
     
-    // 검증 처리: 삽입된 열에 대해 인덱스 재조정
+    // 고유 식별자 기반 에러 재매핑만 사용
+    const afterColumnMetas = this.getColumnMetas();
     if (this.validationManager) {
-      if (this.debug) {
-        console.log(`[StoreBridge] insertColumnAt: calling reindexErrorsAfterColumnAddition(${insertColIndex})`);
-      }
-      this.validationManager.reindexErrorsAfterColumnAddition(insertColIndex);
+      console.log('[StoreBridge] insertColumnAt: remapValidationErrorsByColumnIdentity 호출');
+      this.validationManager.remapValidationErrorsByColumnIdentity(beforeColumnMetas, afterColumnMetas);
     }
     
     return result;
@@ -644,49 +674,21 @@ export class StoreBridge {
    * 여러 열을 특정 위치에 삽입 (validation 처리 포함)
    */
   insertMultipleColumnsAt(payload) {
-    const { type, count, index } = payload;
-    
-    // 삽입 전에 현재 열 메타 정보 저장
     const beforeColumnMetas = this.getColumnMetas();
-    const addedColIndices = [];
-    
-    // --- 삽입될 열들의 전체 colIndex 계산 ---
-    // 1) 동일 type 중에서 cellIndex >= index 중 가장 작은 colIndex 찾기 (중간 삽입)
-    let insertColIndex;
-    const candidates = beforeColumnMetas
-      .filter(c => c.type === type && c.cellIndex >= index)
-      .sort((a, b) => a.cellIndex - b.cellIndex);
-
-    if (candidates.length > 0) {
-      // 중간에 삽입할 위치
-      insertColIndex = candidates[0].colIndex;
-    } else {
-      // 맨 뒤에 삽입 – 동일 type 중 가장 오른쪽 colIndex 다음
-      const sameType = beforeColumnMetas.filter(c => c.type === type);
-      if (sameType.length > 0) {
-        insertColIndex = Math.max(...sameType.map(c => c.colIndex)) + 1;
-      } else {
-        // 해당 type 열이 하나도 없으면, 전체 메타 끝에 삽입
-        insertColIndex = beforeColumnMetas.length;
-      }
-    }
+    const { type, count, index } = payload;
 
     if (this.debug) {
-      console.log('[StoreBridge] insertMultipleColumnsAt] Calculated insertColIndex:', insertColIndex);
+      console.log(`[StoreBridge] insertMultipleColumnsAt: type=${type}, count=${count}, index=${index}`);
     }
-    
-    // 기존 로직 실행
+
     this.legacyStore.dispatch('insertMultipleColumnsAt', payload);
     this.saveCurrentState();
     
-    // 삽입된 열들의 인덱스 수집
-    for (let i = 0; i < count; i++) {
-      addedColIndices.push(insertColIndex + i);
-    }
-    
-    // Validation 처리
-    if (this.validationManager && addedColIndices.length > 0) {
-      this.validationManager.reindexErrorsAfterMultipleColumnAddition(addedColIndices);
+    // 고유 식별자 기반 에러 재매핑만 사용
+    const afterColumnMetas = this.getColumnMetas();
+    if (this.validationManager && count > 0) {
+      console.log('[StoreBridge] insertMultipleColumnsAt: remapValidationErrorsByColumnIdentity 호출');
+      this.validationManager.remapValidationErrorsByColumnIdentity(beforeColumnMetas, afterColumnMetas);
     }
   }
   
@@ -707,37 +709,44 @@ export class StoreBridge {
    * 여러 열을 인덱스로 삭제 (validation 처리 포함)
    */
   deleteMultipleColumnsByIndex(payload) {
-    // 삭제 전에 현재 열 메타 정보 저장
+    console.log('[StoreBridge] deleteMultipleColumnsByIndex 시작');
+    
     const beforeColumnMetas = this.getColumnMetas();
     const { columns } = payload;
     const deletedColIndices = [];
     
-    if (this.debug) {
-      console.log('[StoreBridge] deleteMultipleColumnsByIndex payload:', JSON.stringify(payload));
-      console.log('[StoreBridge] beforeColumnMetas (first 20):', beforeColumnMetas.slice(0, 20));
-    }
+    console.log('[StoreBridge] payload:', JSON.stringify(payload));
+    console.log('[StoreBridge] beforeColumnMetas 개수:', beforeColumnMetas.length);
 
     // 삭제될 열들의 인덱스 수집
     columns.forEach(({ type, index }) => {
+      console.log(`[StoreBridge] 열 찾기: type=${type}, index=${index}`);
       // 실제 타입으로 직접 매칭 (이미 올바른 타입으로 전달됨)
       const targetColumns = beforeColumnMetas.filter(c => c.type === type && c.cellIndex === index);
+      console.log('[StoreBridge] 찾은 열들:', targetColumns);
       targetColumns.forEach(col => deletedColIndices.push(col.colIndex));
     });
 
-    if (this.debug) {
-      console.log('[StoreBridge] deletedColIndices (colIndex):', deletedColIndices);
-    }
+    console.log('[StoreBridge] deletedColIndices:', deletedColIndices);
+    console.log('[StoreBridge] validationManager 존재 여부:', !!this.validationManager);
     
     // 기존 로직 실행
     this.legacyStore.dispatch('deleteMultipleColumnsByIndex', payload);
     this.saveCurrentState();
     
-    // Validation 처리
+    const afterColumnMetas = this.getColumnMetas();
+    console.log('[StoreBridge] afterColumnMetas 개수:', afterColumnMetas.length);
+    
     if (this.validationManager && deletedColIndices.length > 0) {
-      if (this.debug) {
-        console.log('[StoreBridge] Calling validationManager.reindexErrorsAfterColumnDeletion with:', deletedColIndices);
-      }
-      this.validationManager.reindexErrorsAfterColumnDeletion(deletedColIndices);
+      console.log('[StoreBridge] remapValidationErrorsByColumnIdentity 호출 시작');
+      // 고유 식별자 기반 재매핑만 사용 (기존 reindexErrorsAfterColumnDeletion 제거)
+      this.validationManager.remapValidationErrorsByColumnIdentity(beforeColumnMetas, afterColumnMetas, deletedColIndices);
+      console.log('[StoreBridge] remapValidationErrorsByColumnIdentity 호출 완료');
+    } else {
+      console.log('[StoreBridge] remapValidationErrorsByColumnIdentity 호출 건너뜀:', {
+        hasValidationManager: !!this.validationManager,
+        deletedColIndicesLength: deletedColIndices.length
+      });
     }
   }
   
@@ -1059,6 +1068,25 @@ export class StoreBridge {
   }
   
   /**
+   * 확진자 여부 열 토글
+   */
+  toggleConfirmedCaseColumn() {
+    const result = this.legacyStore.dispatch('toggleConfirmedCaseColumn');
+    this.saveCurrentState();
+    return result;
+  }
+  
+  /**
+   * 확진자 여부 값 업데이트
+   * @param {Object} payload - { rowIndex, value }
+   */
+  updateConfirmedCase(payload) {
+    const result = this.legacyStore.dispatch('updateConfirmedCase', payload);
+    this.saveCurrentState();
+    return result;
+  }
+  
+  /**
    * 여러 헤더 일괄 업데이트
    * @param {Object} payload - 업데이트 페이로드
    */
@@ -1214,6 +1242,11 @@ export class StoreBridge {
             loadedData.settings.isIndividualExposureColumnVisible);
         }
         
+        if (loadedData.settings?.isConfirmedCaseColumnVisible !== undefined) {
+          this.legacyStore.commit('SET_CONFIRMED_CASE_COLUMN_VISIBILITY', 
+            loadedData.settings.isConfirmedCaseColumnVisible);
+        }
+        
         // validation 상태 복원
         if (loadedData.validationState) {
           if (this.debug) {
@@ -1248,6 +1281,74 @@ export class StoreBridge {
           console.log('[StoreBridge] 복원된 유효성 검사 오류:', errorMap);
           this.legacyStore.commit('SET_VALIDATION_ERRORS', errorMap);
           this.legacyStore.commit('SET_VALIDATION_VERSION', version);
+          
+          // 새로고침 후 오류 재매핑 (열 구조 변경에 대응)
+          if (this.validationManager && errorMap.size > 0) {
+            console.log('[StoreBridge] 새로고침 후 유효성 오류 재매핑 시작');
+            
+            // 현재 열 메타데이터 가져오기
+            const columnMetas = this.getColumnMetas();
+            if (columnMetas && columnMetas.length > 0) {
+              // ValidationManager의 columnMetas 업데이트
+              this.validationManager.updateColumnMetas(columnMetas);
+              
+              // 기존 오류들을 현재 열 구조에 맞게 재매핑
+              const currentErrors = this.legacyStore.state.validationState.errors;
+              if (currentErrors && currentErrors.size > 0) {
+                console.log('[StoreBridge] 기존 오류 개수:', currentErrors.size);
+                
+                // 각 오류 키를 현재 열 구조에 맞게 재계산
+                const remappedErrors = new Map();
+                
+                for (const [oldKey, error] of currentErrors) {
+                  // 오류 키 파싱
+                  const parsed = this.validationManager.parseErrorKey(oldKey);
+                  if (parsed) {
+                    const { rowIndex, uniqueKey } = parsed;
+                    
+                    // 고유 키에서 열 정보 추출
+                    const uniqueKeyParts = uniqueKey.split('__');
+                    if (uniqueKeyParts.length >= 3) {
+                      const columnType = uniqueKeyParts[1];
+                      const cellIndex = parseInt(uniqueKeyParts[2]);
+                      
+                      // 현재 열 구조에서 해당 타입과 cellIndex의 열 찾기
+                      const matchingColumn = columnMetas.find(col => 
+                        col.type === columnType && col.cellIndex === cellIndex
+                      );
+                      
+                      if (matchingColumn) {
+                        // 새로운 고유 키 생성
+                        const newUniqueKey = this.validationManager.getColumnUniqueKey(matchingColumn);
+                        const newErrorKey = this.validationManager.getErrorKey(rowIndex, newUniqueKey);
+                        
+                        remappedErrors.set(newErrorKey, error);
+                        console.log(`[StoreBridge] 오류 키 재매핑: ${oldKey} -> ${newErrorKey}`);
+                      } else {
+                        // 매칭되는 열이 없으면 기존 키 유지
+                        remappedErrors.set(oldKey, error);
+                        console.log(`[StoreBridge] 매칭되는 열 없음, 기존 키 유지: ${oldKey}`);
+                      }
+                    } else {
+                      // 고유 키 형식이 잘못된 경우 기존 키 유지
+                      remappedErrors.set(oldKey, error);
+                      console.log(`[StoreBridge] 잘못된 고유 키 형식, 기존 키 유지: ${oldKey}`);
+                    }
+                  } else {
+                    // 파싱 실패 시 기존 키 유지
+                    remappedErrors.set(oldKey, error);
+                    console.log(`[StoreBridge] 오류 키 파싱 실패, 기존 키 유지: ${oldKey}`);
+                  }
+                }
+                
+                // 재매핑된 오류들로 업데이트
+                this.legacyStore.commit('SET_VALIDATION_ERRORS', remappedErrors);
+                console.log('[StoreBridge] 새로고침 후 유효성 오류 재매핑 완료:', remappedErrors.size, '개');
+              }
+            } else {
+              console.log('[StoreBridge] 열 메타데이터가 없어 재매핑 건너뜀');
+            }
+          }
         }
         
         if (this.debug) {
@@ -1675,6 +1776,15 @@ export class StoreBridge {
       isEditable: true
     });
     
+    // 확진여부 컬럼 (colIndex 2)
+    columnMetas.push({
+      colIndex: colIndex++,
+      dataKey: 'isConfirmedCase',
+      cellIndex: null,
+      type: 'isConfirmedCase',
+      isEditable: true
+    });
+    
     // 기본정보 컬럼들
     this.legacyStore.state.headers.basic?.forEach((header, index) => {
       columnMetas.push({
@@ -1870,6 +1980,9 @@ export function useStoreBridge(legacyStore = null, validationManager = null, opt
   
   return {
     bridge,
+    // validationManager 접근을 위한 속성 추가
+    validationManager: bridge.validationManager,
+    
     // 편집 관련 메서드들
     startCellEdit: (cellInfo, originalValue, columnMeta) => 
       bridge.startCellEdit(cellInfo, originalValue, columnMeta),
@@ -1898,6 +2011,8 @@ export function useStoreBridge(legacyStore = null, validationManager = null, opt
     addRowsFromExcel: (rows) => bridge.addRowsFromExcel(rows),
     setIndividualExposureColumnVisibility: (isVisible) => 
       bridge.setIndividualExposureColumnVisibility(isVisible),
+    setConfirmedCaseColumnVisibility: (isVisible) => 
+      bridge.setConfirmedCaseColumnVisibility(isVisible),
     
     // getters
     headers: bridge.headers,
@@ -1953,6 +2068,8 @@ export function useStoreBridge(legacyStore = null, validationManager = null, opt
     updateExposureDateTime: (value) => bridge.updateExposureDateTime(value),
     updateIncubationInterval: (value) => bridge.updateIncubationInterval(value),
     toggleIndividualExposureColumn: () => bridge.toggleIndividualExposureColumn(),
+    toggleConfirmedCaseColumn: () => bridge.toggleConfirmedCaseColumn(),
+    updateConfirmedCase: (payload) => bridge.updateConfirmedCase(payload),
     updateHeadersBatch: (payload) => bridge.updateHeadersBatch(payload),
     clearRowData: (payload) => bridge.clearRowData(payload),
     clearMultipleRowsData: (payload) => bridge.clearMultipleRowsData(payload),

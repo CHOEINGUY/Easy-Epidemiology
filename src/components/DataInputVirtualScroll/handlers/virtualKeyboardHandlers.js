@@ -528,6 +528,12 @@ export function setupDateTimeInputHandling(cellElement, initialKey, clickX = nul
 
   // cleanup on blur
   const cleanup = async () => {
+    // 데이트피커가 열려있으면 blur 시 자동 저장하지 않음
+    if (context && context.dateTimePickerState && context.dateTimePickerState.visible) {
+      console.log('[DateTimeInput] DateTimePicker is open, skipping auto-save on blur');
+      return;
+    }
+    
     // blur 시 자동 저장 (다른 셀로 이동할 때)
     await saveCurrentValue();
     
@@ -614,8 +620,8 @@ async function handlePaste(context) {
     const startRow = selectedCell.rowIndex;
     const startCol = selectedCell.colIndex;
 
-    // 스토어 액션에서 기대하는 파라미터 이름에 맞춰 전달
-    await context.storeBridge.dispatch('pasteData', {
+    // storeBridge.pasteData를 직접 호출
+    await context.storeBridge.pasteData({
       startRowIndex: startRow,
       startColIndex: startCol,
       data: parsedData
@@ -667,6 +673,11 @@ export async function handleVirtualKeyDown(event, context) {
       const column = allColumnsMeta.find(c => c.colIndex === editCol);
       if (tempValue !== null && column) {
         context.storeBridge.saveCellValue(editRow, editCol, tempValue, column);
+        // ValidationManager 호출 추가
+        if (context.validationManager) {
+          console.log(`[virtualKeyboardHandlers] Validation 호출: row=${editRow}, col=${editCol}, value="${tempValue}", type="${column.type}"`);
+          context.validationManager.validateCell(editRow, editCol, tempValue, column.type);
+        }
       }
       // cellInputState 상태 정리
       context.cellInputState.confirmEditing();
@@ -686,6 +697,11 @@ export async function handleVirtualKeyDown(event, context) {
       const column = allColumnsMeta.find(c => c.colIndex === editCol);
       if (tempValue !== null && column) {
         context.storeBridge.saveCellValue(editRow, editCol, tempValue, column);
+        // ValidationManager 호출 추가
+        if (context.validationManager) {
+          console.log(`[virtualKeyboardHandlers] Validation 호출: row=${editRow}, col=${editCol}, value="${tempValue}", type="${column.type}"`);
+          context.validationManager.validateCell(editRow, editCol, tempValue, column.type);
+        }
       }
       // cellInputState 상태 정리
       context.cellInputState.confirmEditing();

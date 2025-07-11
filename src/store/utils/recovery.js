@@ -45,7 +45,8 @@ export function createDefaultData() {
     headers,
     rows,
     settings: { 
-      isIndividualExposureColumnVisible: false 
+      isIndividualExposureColumnVisible: false,
+      isConfirmedCaseColumnVisible: false
     }
   };
 }
@@ -157,11 +158,15 @@ function adjustArrayLength(array, targetLength) {
  */
 export function repairSettings(settings) {
   if (!settings || typeof settings !== 'object') {
-    return { isIndividualExposureColumnVisible: false };
+    return { 
+      isIndividualExposureColumnVisible: false,
+      isConfirmedCaseColumnVisible: false
+    };
   }
   
   return {
-    isIndividualExposureColumnVisible: Boolean(settings.isIndividualExposureColumnVisible)
+    isIndividualExposureColumnVisible: Boolean(settings.isIndividualExposureColumnVisible),
+    isConfirmedCaseColumnVisible: Boolean(settings.isConfirmedCaseColumnVisible)
   };
 }
 
@@ -203,6 +208,7 @@ export function safeLoadFromStorage() {
     const headersData = localStorage.getItem('headers');
     const rowsData = localStorage.getItem('rows');
     const visibilityData = localStorage.getItem('isIndividualExposureColumnVisible');
+    const confirmedCaseVisibilityData = localStorage.getItem('isConfirmedCaseColumnVisible');
     
     if (!headersData || !rowsData) {
       console.warn('[Recovery] localStorage에 데이터가 없어 기본값을 사용합니다.');
@@ -213,11 +219,16 @@ export function safeLoadFromStorage() {
     const rows = JSON.parse(rowsData);
     const isIndividualExposureColumnVisible = visibilityData ? 
       JSON.parse(visibilityData) : false;
+    const isConfirmedCaseColumnVisible = confirmedCaseVisibilityData ? 
+      JSON.parse(confirmedCaseVisibilityData) : false;
     
     const rawData = {
       headers,
       rows,
-      settings: { isIndividualExposureColumnVisible }
+      settings: { 
+        isIndividualExposureColumnVisible,
+        isConfirmedCaseColumnVisible
+      }
     };
     
     return repairData(rawData);

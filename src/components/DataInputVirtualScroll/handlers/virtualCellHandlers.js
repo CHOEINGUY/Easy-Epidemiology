@@ -296,7 +296,7 @@ export async function handleVirtualCellDoubleClick(rowIndex, colIndex, event, co
  * 날짜/시간 컬럼에 대한 데이트피커 편집 처리
  */
 async function handleDateTimePickerEdit(rowIndex, colIndex, event, context) {
-  const { allColumnsMeta, selectionSystem } = context;
+  const { allColumnsMeta } = context;
   
   // 데이트피커 참조가 없으면 경고하고 날짜 전용 인라인 편집으로 폴백
   if (!context.dateTimePickerRef || !context.dateTimePickerRef.value) {
@@ -322,10 +322,10 @@ async function handleDateTimePickerEdit(rowIndex, colIndex, event, context) {
   const cellRect = event.target.getBoundingClientRect();
   const pickerPosition = calculatePickerPosition(cellRect);
   
-  // 편집 상태 설정
-  selectionSystem.startEditing(rowIndex, colIndex, context.getCellValue, 
-    rowIndex >= 0 ? context.rows.value[rowIndex] : null, 
-    context.cellInputState, allColumnsMeta);
+  // 편집 상태 설정 (데이트피커 모드에서는 편집 모드 비활성화)
+  // selectionSystem.startEditing(rowIndex, colIndex, context.getCellValue, 
+  //   rowIndex >= 0 ? context.rows.value[rowIndex] : null, 
+  //   context.cellInputState, allColumnsMeta);
   
   // 메인 컴포넌트의 상태 업데이트 (반응형 방식)
   if (context.dateTimePickerState) {
@@ -333,18 +333,8 @@ async function handleDateTimePickerEdit(rowIndex, colIndex, event, context) {
     context.dateTimePickerState.position = pickerPosition;
     context.dateTimePickerState.initialValue = parsedDateTime;
     
-    // 셀 직접 입력 핸들러 부착 (더블클릭 시에도 숫자 입력 가능)
-    try {
-      const { setupDateTimeInputHandling } = await import('./virtualKeyboardHandlers.js');
-      const cellElement = event.target.closest('td, th');
-      if (cellElement && typeof setupDateTimeInputHandling === 'function') {
-        // 날짜/시간 컬럼에서는 마우스 클릭 위치 기반 캐럿 설정이 필요 없음
-        // 항상 맨 앞에서부터 입력 시작, context 전달하여 DateTimePicker 동기화
-        setupDateTimeInputHandling(cellElement, '', null, context);
-      }
-    } catch (err) {
-      console.warn('setupDateTimeInputHandling import failed', err);
-    }
+    // 데이트피커 모드에서는 셀 직접 입력 핸들러를 부착하지 않음
+    // (편집 모드가 아니므로 blur 이벤트 핸들러가 없음)
     
     // 현재 편집 중인 셀 정보 저장 (나중에 값 저장 시 사용)
     context.dateTimePickerState.currentEdit = {

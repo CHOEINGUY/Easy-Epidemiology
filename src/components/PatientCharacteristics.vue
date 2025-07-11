@@ -33,9 +33,33 @@
             <span class="summary-bar__unit">명</span>
           </div>
           <div class="participant-summary__item">
-            <span class="summary-bar__label">발병률&nbsp;</span>
-            <span class="summary-bar__value">{{ attackRate }}</span>
-            <span class="summary-bar__unit">%</span>
+            <div class="control-button-wrapper">
+              <div 
+                class="attack-rate-display"
+                @mouseenter="showTooltip('attackRate', '발병률 = (환자여부에 1을 입력한 사람 수 ÷ 전체 조사 대상자 수) × 100')"
+                @mouseleave="hideTooltip"
+              >
+                <span class="summary-bar__label">발병률&nbsp;</span>
+                <span class="summary-bar__value">{{ attackRate }}</span>
+                <span class="summary-bar__unit">%</span>
+              </div>
+              <div v-if="activeTooltip === 'attackRate'" class="control-tooltip attack-rate-tooltip">{{ tooltipText }}</div>
+            </div>
+          </div>
+          <!-- 확진율 (확진율 모드가 켜져 있을 때만 표시) -->
+          <div v-if="isConfirmedCaseColumnVisible" class="participant-summary__item">
+            <div class="control-button-wrapper">
+              <div 
+                class="confirmed-rate-display"
+                @mouseenter="showTooltip('confirmedRate', '확진율 = (확진여부에 1을 입력한 사람 수 ÷ 전체 조사 대상자 수) × 100')"
+                @mouseleave="hideTooltip"
+              >
+                <span class="summary-bar__label">확진율&nbsp;</span>
+                <span class="summary-bar__value">{{ confirmedRate }}</span>
+                <span class="summary-bar__unit">%</span>
+              </div>
+              <div v-if="activeTooltip === 'confirmedRate'" class="control-tooltip confirmed-rate-tooltip">{{ tooltipText }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -226,6 +250,7 @@ import { debounce } from 'lodash-es'; // (설치 필요: npm install lodash-es)
 const store = useStore();
 const headers = computed(() => store.getters.headers || { basic: [] }); // 기본값 보강
 const rows = computed(() => store.getters.rows || []); // 기본값 보강
+const isConfirmedCaseColumnVisible = computed(() => store.state.isConfirmedCaseColumnVisible);
 const selectedVariableIndex = ref(null);
 const selectedChartType = ref('total');
 const selectedDataType = ref('count'); // 'count' | 'percentage'
@@ -340,6 +365,27 @@ const attackRate = computed(() => {
   const patients = totalPatients.value;
   if (participants === 0) return '0.0';
   return ((patients / participants) * 100).toFixed(1);
+});
+
+// 확진율 계산 로직
+const totalConfirmedCases = computed(() => {
+  const currentRows = filteredRows.value;
+  if (currentRows.length === 0) return 0;
+  
+  let count = 0;
+  for (const row of currentRows) {
+    if (row && String(row.isConfirmedCase) === '1') {
+      count++;
+    }
+  }
+  return count;
+});
+
+const confirmedRate = computed(() => {
+  const participants = totalParticipants.value;
+  const confirmed = totalConfirmedCases.value;
+  if (participants === 0) return '0.0';
+  return ((confirmed / participants) * 100).toFixed(1);
 });
 const frequencyData = computed(() => { // 원본 로직 유지
   if (!headers.value?.basic || !Array.isArray(headers.value.basic)) return [];
@@ -1872,5 +1918,58 @@ watch(
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-top-color: #333;
+}
+
+/* +++ 발병률 툴팁 스타일 +++ */
+.attack-rate-display {
+  cursor: help;
+  display: flex;
+  align-items: baseline;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.attack-rate-display:hover {
+  background-color: rgba(26, 115, 232, 0.1);
+}
+
+/* +++ 발병률 툴팁 전용 스타일 +++ */
+.attack-rate-tooltip {
+  left: auto !important;
+  right: 0 !important;
+  transform: none !important;
+}
+
+.attack-rate-tooltip::after {
+  left: auto !important;
+  right: 10px !important;
+  transform: translateX(0) !important;
+}
+
+/* +++ 확진율 툴팁 스타일 +++ */
+.confirmed-rate-display {
+  cursor: help;
+  display: flex;
+  align-items: baseline;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.confirmed-rate-display:hover {
+  background-color: rgba(26, 115, 232, 0.1);
+}
+
+.confirmed-rate-tooltip {
+  left: auto !important;
+  right: 0 !important;
+  transform: none !important;
+}
+
+.confirmed-rate-tooltip::after {
+  left: auto !important;
+  right: 10px !important;
+  transform: translateX(0) !important;
 }
 </style>

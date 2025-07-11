@@ -2,8 +2,10 @@ const { defineConfig } = require('@vue/cli-service');
 module.exports = defineConfig({
   transpileDependencies: true,
   
-  // 오프라인 실행을 위한 상대 경로 설정
-  publicPath: './',
+  // GitHub Pages 배포를 위한 설정
+  publicPath: process.env.NODE_ENV === 'production' 
+    ? (process.env.GITHUB_REF === 'refs/heads/test-deploy' ? '/webpage_office/test/' : '/webpage_office/')
+    : '/',
   
   // 빌드 최적화 설정
   productionSourceMap: false,

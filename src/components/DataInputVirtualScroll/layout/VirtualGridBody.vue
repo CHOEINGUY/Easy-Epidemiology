@@ -70,6 +70,7 @@
 <script setup>
 import { ref, computed, defineProps, defineEmits, defineExpose } from 'vue';
 import AddRowsControls from '../parts/AddRowsControls.vue';
+import { hasValidationError, getValidationMessage as getValidationMessageFromUtils } from '../utils/validationUtils.js';
 
 const props = defineProps({
   visibleRows: { type: Array, required: true },
@@ -195,22 +196,18 @@ function getCellClasses(rowIndex, colIndex) {
     classes.push('cell-selected');
   }
 
-  // --- Validation error --------------------------------------------
-  if (props.validationErrors && props.validationErrors.has(`${rowIndex}_${colIndex}`)) {
-    console.log(`[CSS Debug] Adding validation-error class to cell ${rowIndex}_${colIndex}`);
+  // --- Validation error (고유 식별자 기반) --------------------------------------------
+  const columnMeta = props.allColumnsMeta[colIndex];
+  const hasError = hasValidationError(rowIndex, colIndex, columnMeta, props.validationErrors);
+  if (hasError) {
     classes.push('validation-error');
   }
   return classes;
 }
 
 function getValidationMessage(rowIndex, colIndex) {
-  if (props.validationErrors && props.validationErrors.has(`${rowIndex}_${colIndex}`)) {
-    const error = props.validationErrors.get(`${rowIndex}_${colIndex}`);
-    const message = error.message || '유효성 검사 오류';
-    console.log(`[Tooltip Debug] Validation message for ${rowIndex}_${colIndex}:`, message);
-    return message;
-  }
-  return '';
+  const columnMeta = props.allColumnsMeta[colIndex];
+  return getValidationMessageFromUtils(rowIndex, colIndex, columnMeta, props.validationErrors);
 }
 
 function handleCellMouseEnter(event, rowIndex, colIndex) {

@@ -66,6 +66,7 @@ function createInitialState() {
   };
   const initialRows = Array.from({ length: 10 }, () => ({
     isPatient: '',
+    isConfirmedCase: '', // <-- 추가
     basicInfo: Array(initialHeaders.basic.length).fill(''),
     clinicalSymptoms: Array(initialHeaders.clinical.length).fill(''),
     symptomOnset: '',
@@ -97,6 +98,7 @@ const store = createStore({
     })(),
     selectedIncubationInterval: 6, // 잠복기 간격 (기본값: 6시간)
     isIndividualExposureColumnVisible: false,
+    isConfirmedCaseColumnVisible: false, // <-- 추가
     // === Validation ===
     validationState: {
       errors: new Map(), // key: "row_col" , value: { message, timestamp }
@@ -141,6 +143,7 @@ const store = createStore({
       for (let i = 0; i < count; i++) {
         newRows.push({
           isPatient: '',
+          isConfirmedCase: '', // <-- 추가
           basicInfo: Array(state.headers.basic?.length || 0).fill(''),
           clinicalSymptoms: Array(state.headers.clinical?.length || 0).fill(''),
           symptomOnset: '',
@@ -546,6 +549,8 @@ const store = createStore({
           
           if (currentColumn === 1) {
             targetRow.isPatient = cellValue;
+          } else if (currentColumn === 2) {
+            targetRow.isConfirmedCase = cellValue;
           } else if (
             state.isIndividualExposureColumnVisible &&
             currentColumn === individualExposureIndex
@@ -707,6 +712,17 @@ const store = createStore({
     SET_INDIVIDUAL_EXPOSURE_COLUMN_VISIBILITY(state, isVisible) {
       state.isIndividualExposureColumnVisible = isVisible;
     },
+    TOGGLE_CONFIRMED_CASE_COLUMN(state) {
+      state.isConfirmedCaseColumnVisible = !state.isConfirmedCaseColumnVisible;
+    },
+    UPDATE_CONFIRMED_CASE(state, { rowIndex, value }) {
+      if (state.rows[rowIndex]) {
+        state.rows[rowIndex].isConfirmedCase = value;
+      }
+    },
+    SET_CONFIRMED_CASE_COLUMN_VISIBILITY(state, isVisible) {
+      state.isConfirmedCaseColumnVisible = isVisible;
+    },
 
     // --- Excel Upload Mutations ---
     
@@ -775,6 +791,7 @@ const store = createStore({
       
       // 행의 모든 데이터를 초기값으로 설정
       row.isPatient = '';
+      row.isConfirmedCase = ''; // <-- 추가
       row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
       row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
       row.symptomOnset = '';
@@ -792,6 +809,7 @@ const store = createStore({
         
         // 각 행의 데이터를 초기값으로 설정
         row.isPatient = '';
+        row.isConfirmedCase = ''; // <-- 추가
         row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
         row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
         row.symptomOnset = '';
@@ -812,6 +830,7 @@ const store = createStore({
         
         // 행의 모든 데이터를 초기값으로 설정
         row.isPatient = '';
+        row.isConfirmedCase = ''; // <-- 추가
         row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
         row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
         row.symptomOnset = '';
@@ -871,6 +890,34 @@ const store = createStore({
     },
     SET_VALIDATION_VERSION(state, version) {
       state.validationState.version = version;
+    },
+    
+    /* ===== 고유 식별자 기반 Validation mutations ===== */
+    ADD_VALIDATION_ERROR_BY_UNIQUE_KEY(state, { errorKey, message }) {
+      const newMap = new Map(state.validationState.errors);
+      newMap.set(errorKey, { message, timestamp: Date.now() });
+      state.validationState.errors = newMap;
+      state.validationState.version++;
+      
+      // 유효성 검사 오류가 변경되면 자동 저장
+      if (window.storeBridge) {
+        window.storeBridge.saveCurrentState();
+      }
+    },
+    
+    REMOVE_VALIDATION_ERROR_BY_UNIQUE_KEY(state, { errorKey }) {
+      if (!state.validationState.errors.has(errorKey)) {
+        return;
+      }
+      const newMap = new Map(state.validationState.errors);
+      newMap.delete(errorKey);
+      state.validationState.errors = newMap;
+      state.validationState.version++;
+      
+      // 유효성 검사 오류가 변경되면 자동 저장
+      if (window.storeBridge) {
+        window.storeBridge.saveCurrentState();
+      }
     }
   },
   actions: {
@@ -1019,6 +1066,17 @@ const store = createStore({
     },
     setIndividualExposureColumnVisibility({ commit }, isVisible) {
       commit('SET_INDIVIDUAL_EXPOSURE_COLUMN_VISIBILITY', isVisible);
+    },
+    toggleConfirmedCaseColumn({ commit }) {
+      commit('TOGGLE_CONFIRMED_CASE_COLUMN');
+      // 참고: 이 액션은 UI 표시 여부만 바꾸므로 히스토리 저장 불필요
+    },
+    updateConfirmedCase({ commit }, { rowIndex, value }) {
+      commit('SAVE_HISTORY'); // 상태 변경 전 히스토리 저장
+      commit('UPDATE_CONFIRMED_CASE', { rowIndex, value });
+    },
+    setConfirmedCaseColumnVisibility({ commit }, isVisible) {
+      commit('SET_CONFIRMED_CASE_COLUMN_VISIBILITY', isVisible);
     },
 
     // --- Excel Upload Actions ---

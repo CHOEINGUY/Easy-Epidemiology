@@ -5,6 +5,8 @@
     class="datetime-picker-overlay"
     :style="pickerStyle"
     @click.stop
+    @mousedown.stop
+    @mouseup.stop
     @keydown="handleKeyDown"
     tabindex="0"
     ref="pickerRef"
@@ -16,22 +18,22 @@
       <!-- 캘린더 부분 -->
       <div class="calendar-section">
         <div class="month-year-header">
-          <button @click="prevMonth" class="nav-btn">‹</button>
+          <button @click.stop="prevMonth" class="nav-btn">‹</button>
           
           <div class="date-selectors">
-            <select v-model="currentYear" class="year-select">
+            <select v-model="currentYear" class="year-select" @click.stop>
               <option v-for="year in availableYears" :key="year" :value="year"
                       :class="{ 'current-year': year === new Date().getFullYear() }">
                 {{ year }}년
               </option>
             </select>
             
-            <select v-model="currentMonth" class="month-select">
+            <select v-model="currentMonth" class="month-select" @click.stop>
               <option v-for="m in 12" :key="m" :value="m">{{ m }}월</option>
             </select>
           </div>
           
-          <button @click="nextMonth" class="nav-btn">›</button>
+          <button @click.stop="nextMonth" class="nav-btn">›</button>
         </div>
         
         <!-- 요일 헤더 -->
@@ -49,7 +51,7 @@
             v-for="date in calendarDates" 
             :key="date.key"
             :class="getDateClass(date)"
-            @click="selectDate(date)"
+            @click.stop="selectDate(date)"
             :disabled="date.disabled"
             role="gridcell"
             :aria-label="`${date.year}년 ${date.month}월 ${date.day}일`"
@@ -76,6 +78,7 @@
                 v-model="selectedHour" 
                 class="time-select"
                 aria-label="시간 선택"
+                @click.stop
               >
                 <option v-for="h in 24" :key="h-1" :value="String(h-1).padStart(2, '0')">
                   {{ String(h-1).padStart(2, '0') }}
@@ -92,6 +95,7 @@
                 v-model="selectedMinute" 
                 class="time-select"
                 aria-label="분 선택"
+                @click.stop
               >
                 <option v-for="m in 12" :key="m-1" :value="String((m-1) * 5).padStart(2, '0')">
                   {{ String((m-1) * 5).padStart(2, '0') }}
@@ -116,6 +120,7 @@
                 @input="handleDirectInput"
                 @blur="handleDirectInputBlur"
                 @focus="handleDirectInputFocus"
+                @click.stop
               />
             </div>
           </div>
@@ -129,8 +134,8 @@
           </div>
           
           <div class="action-buttons">
-            <button @click="cancel" class="cancel-btn">취소</button>
-            <button @click="confirm" class="confirm-btn">확인</button>
+            <button @click.stop="cancel" class="cancel-btn">취소</button>
+            <button @click.stop="confirm" class="confirm-btn">확인</button>
           </div>
         </div>
       </div>
@@ -340,6 +345,14 @@ const selectDate = (date) => {
     currentYear.value = date.year;
     currentMonth.value = date.month;
   }
+  
+  // 셀 포커스 복원 (blur 이벤트 방지)
+  nextTick(() => {
+    const cellElement = document.querySelector(`[data-row="${props.initialValue?.rowIndex}"][data-col="${props.initialValue?.colIndex}"]`);
+    if (cellElement) {
+      cellElement.focus();
+    }
+  });
 };
 
 // 현재 선택 상태 포맷

@@ -154,6 +154,20 @@
                   <div v-if="activeTooltip === 'displayModeDateTime'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
               </div>
+              <!-- 확진자 꺾은선 표시 토글 추가 -->
+              <div v-if="isConfirmedCaseColumnVisible" class="control-group">
+                <label class="control-label">확진자 꺾은선:</label>
+                <div class="control-button-wrapper">
+                  <button @click="showConfirmedCaseLine = !showConfirmedCaseLine" 
+                          :class="{ 'chart-select-button--active': showConfirmedCaseLine }" 
+                          class="chart-select-button"
+                          @mouseenter="showTooltip('confirmedCaseLine', '확진자 꺾은선 표시/숨김')" 
+                          @mouseleave="hideTooltip">
+                    {{ showConfirmedCaseLine ? '표시' : '숨김' }}
+                  </button>
+                  <div v-if="activeTooltip === 'confirmedCaseLine'" class="control-tooltip">{{ tooltipText }}</div>
+                </div>
+              </div>
             </div>
             <div class="chart-container-wrapper epi-chart-wrapper">
               <div class="chart-buttons">
@@ -424,6 +438,12 @@ const rows = computed(() => store.getters.rows || []);
 
 // '개별 노출 시간' 열 표시 여부 상태
 const isIndividualExposureColumnVisible = computed(() => store.state.isIndividualExposureColumnVisible);
+
+// 확진 여부 열 표시 여부 상태 추가
+const isConfirmedCaseColumnVisible = computed(() => store.state.isConfirmedCaseColumnVisible);
+
+// 확진자 꺾은선 표시 여부 상태 추가
+const showConfirmedCaseLine = ref(true);
 
 const selectedSymptomInterval = computed({
   get: () => store.getters.getSelectedSymptomInterval,
@@ -1244,6 +1264,7 @@ const symptomOnsetTableData = computed(() => {
 });
 
 
+
 // --- Incubation Period Data Calculations ---
 const exposureTimestamp = computed(() => {
   const expStr = exposureDateTime.value;
@@ -1407,6 +1428,93 @@ function getNiceYAxisMaxAndStep(maxValue) {
   return { yMax, step };
 }
 
+// 확진자 증상발현시간 데이터 계산 추가
+const confirmedCaseOnsetTimes = computed(() => {
+  if (!rows.value || rows.value.length === 0) return [];
+  return rows.value
+    .filter((r) => r.isPatient === '1' && r.symptomOnset && r.isConfirmedCase === '1')
+    .map((r) => {
+      try {
+        const dateStr = r.symptomOnset.includes('T')
+          ? r.symptomOnset
+          : r.symptomOnset.replace(' ', 'T');
+        const d = new Date(dateStr);
+        return !isNaN(d.getTime()) ? d : null;
+      } catch {
+        return null;
+      }
+    })
+    .filter((d) => d)
+    .sort((a, b) => a.getTime() - b.getTime());
+});
+
+// 확진자 증상발현시간 테이블 데이터 계산 추가
+const confirmedCaseOnsetTableData = computed(() => {
+  const intervalHours = selectedSymptomInterval.value;
+  if (
+    !intervalHours ||
+    !confirmedCaseOnsetTimes.value ||
+    confirmedCaseOnsetTimes.value.length === 0 ||
+    !firstOnsetTime.value ||
+    !lastOnsetTime.value
+  )
+    return [];
+
+  const intervalMillis = intervalHours * 3600000;
+  const minTimestamp = firstOnsetTime.value.getTime();
+  const maxTimestamp = lastOnsetTime.value.getTime();
+
+  const PADDING_INTERVALS_BEFORE = 1;
+  const PADDING_INTERVALS_AFTER = 1;
+
+  const blockStartTimestamp = floorToIntervalStart(minTimestamp, intervalHours);
+  if (isNaN(blockStartTimestamp)) {
+    console.error('Invalid blockStartTimestamp calculated for confirmed cases.');
+    return [];
+  }
+
+  let firstPatientIntervalStart = blockStartTimestamp;
+  while (firstPatientIntervalStart > minTimestamp) {
+    firstPatientIntervalStart -= intervalMillis;
+  }
+  if (minTimestamp >= firstPatientIntervalStart + intervalMillis) {
+    firstPatientIntervalStart += intervalMillis;
+  }
+  
+  const firstIntervalStart = firstPatientIntervalStart - (PADDING_INTERVALS_BEFORE * intervalMillis);
+  const extendedMaxTimestamp = maxTimestamp + (PADDING_INTERVALS_AFTER * intervalMillis);
+
+  const data = [];
+  let currentIntervalStart = firstIntervalStart;
+  let guard = 0;
+
+  while (currentIntervalStart <= extendedMaxTimestamp && guard < 1000) {
+    const currentIntervalEnd = currentIntervalStart + intervalMillis;
+    
+    let count = 0;
+    for (const time of confirmedCaseOnsetTimes.value) {
+      const timestamp = time.getTime();
+      if (timestamp >= currentIntervalStart && timestamp < currentIntervalEnd) {
+        count++;
+      }
+    }
+
+    const displayEndTime = new Date(currentIntervalEnd - 60000);
+    data.push({
+      intervalLabel: `${formatDateTime(
+        new Date(currentIntervalStart)
+      )} ~ ${formatDateTimeEnd(displayEndTime)}`,
+      count
+    });
+
+    currentIntervalStart = currentIntervalEnd;
+    guard++;
+  }
+  if (guard >= 1000) console.error('Loop guard hit in confirmed case symptom onset');
+
+  return data;
+});
+
 /**
  * 유행곡선 차트 옵션 생성
  * @returns {Object} ECharts 옵션 객체
@@ -1472,6 +1580,10 @@ const generateEpiCurveChartOptions = () => {
     const timeData = processedData.map(item => item.formattedTime);
     const seriesData = processedData.map(item => item.value);
 
+    // 확진자 데이터 처리
+    const confirmedCaseData = confirmedCaseOnsetTableData.value;
+    const confirmedCaseSeriesData = confirmedCaseData.map(item => item.count);
+
     // 2. 날짜 그룹 정보 생성
     const dateGroups = [];
     const dateMap = new Map();
@@ -1485,8 +1597,9 @@ const generateEpiCurveChartOptions = () => {
       dateGroups.push({ name: key, ...value });
     });
 
-    // y축 최대값과 간격 계산
-    const maxValue = Math.max(...seriesData);
+    // y축 최대값과 간격 계산 (전체 환자와 확진자 모두 고려)
+    const allValues = [...seriesData, ...confirmedCaseSeriesData];
+    const maxValue = Math.max(...allValues);
     const { yMax, step } = getNiceYAxisMaxAndStep(maxValue);
 
     return {
@@ -1505,13 +1618,23 @@ const generateEpiCurveChartOptions = () => {
         formatter: (params) => {
           const dataIndex = params[0].dataIndex;
           const item = processedData[dataIndex];
+          const confirmedCaseCount = confirmedCaseSeriesData[dataIndex] || 0;
+          
+          let tooltipContent = '';
           if (chartDisplayMode.value === 'datetime') {
             // 날짜+시간 모드: 간단한 툴팁
-            return `<strong>${item.formattedTime}</strong><br/>환자 수: <strong>${item.value}</strong> 명`;
+            tooltipContent = `<strong>${item.formattedTime}</strong><br/>환자 수: <strong>${item.value}</strong> 명`;
           } else {
             // 시 단위 모드: 기존 툴팁
-            return `<strong>${item.formattedDate}</strong><br/>${item.formattedTime} : <strong>${item.value}</strong> 명`;
+            tooltipContent = `<strong>${item.formattedDate}</strong><br/>${item.formattedTime} : <strong>${item.value}</strong> 명`;
           }
+          
+          // 확진자 정보 추가
+          if (isConfirmedCaseColumnVisible.value && showConfirmedCaseLine.value && confirmedCaseCount > 0) {
+            tooltipContent += `<br/>확진자 수: <strong style="color: #e74c3c;">${confirmedCaseCount}</strong> 명`;
+          }
+          
+          return tooltipContent;
         }
       },
       grid: {
@@ -1594,6 +1717,13 @@ const generateEpiCurveChartOptions = () => {
         max: yMax,
         interval: step
       },
+      legend: {
+        show: isConfirmedCaseColumnVisible.value && showConfirmedCaseLine.value && confirmedCaseSeriesData.length > 0,
+        data: ['환자 수', '확진자 수'],
+        top: 50,
+        right: 20,
+        textStyle: { fontSize: epiChartFontSize.value || 15 }
+      },
       series: [
         {
           name: '환자 수',
@@ -1623,7 +1753,45 @@ const generateEpiCurveChartOptions = () => {
             position: 'top', 
             fontSize: Math.max(10, (epiChartFontSize.value || 15) - 1)
           }
-        }
+        },
+        // 확진자 꺾은선 시리즈 추가
+        ...(isConfirmedCaseColumnVisible.value && showConfirmedCaseLine.value && confirmedCaseSeriesData.length > 0 ? [{
+          name: '확진자 수',
+          type: 'line',
+          xAxisIndex: 0,
+          data: confirmedCaseSeriesData,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: {
+            color: '#e74c3c',
+            width: 3
+          },
+          itemStyle: {
+            color: '#e74c3c',
+            borderColor: '#fff',
+            borderWidth: 2
+          },
+          emphasis: {
+            focus: 'series',
+            itemStyle: {
+              color: '#c0392b',
+              borderColor: '#fff',
+              borderWidth: 2
+            }
+          },
+          label: {
+            show: true,
+            position: 'top',
+            fontSize: Math.max(10, (epiChartFontSize.value || 15) - 1),
+            color: '#e74c3c',
+            formatter: (params) => {
+              // 막대 그래프와 값이 다른 경우에만 라벨 표시
+              const barValue = seriesData[params.dataIndex] || 0;
+              const lineValue = params.value || 0;
+              return barValue !== lineValue ? lineValue : '';
+            }
+          }
+        }] : [])
       ]
     };
   } catch (error) {
@@ -2093,10 +2261,11 @@ watch(
     incubationBarColor,
     incubationChartFontSize,
     chartDisplayMode,
-    incubationChartDisplayMode
+    incubationChartDisplayMode,
+    showConfirmedCaseLine
   ],
-  ([newSymptomInterval, newExposureDateTime, newIncubationInterval, newEpiBarColor, newEpiFontSize, newIncubationBarColor, newIncubationFontSize, newDisplayMode, newIncubationDisplayMode],
-    [oldSymptomInterval, oldExposureDateTime, oldIncubationInterval, oldEpiBarColor, oldEpiFontSize, oldIncubationBarColor, oldIncubationFontSize, oldDisplayMode, oldIncubationDisplayMode]) => {
+  ([newSymptomInterval, newExposureDateTime, newIncubationInterval, newEpiBarColor, newEpiFontSize, newIncubationBarColor, newIncubationFontSize, newDisplayMode, newIncubationDisplayMode, newShowConfirmedCaseLine],
+    [oldSymptomInterval, oldExposureDateTime, oldIncubationInterval, oldEpiBarColor, oldEpiFontSize, oldIncubationBarColor, oldIncubationFontSize, oldDisplayMode, oldIncubationDisplayMode, oldShowConfirmedCaseLine]) => {
     
     // 실제 변경사항 확인 (불필요한 업데이트 방지)
     const hasSymptomChange = newSymptomInterval !== oldSymptomInterval;
@@ -2106,13 +2275,14 @@ watch(
     const hasIncubationStyleChange = newIncubationBarColor !== oldIncubationBarColor || newIncubationFontSize !== oldIncubationFontSize;
     const hasDisplayModeChange = newDisplayMode !== oldDisplayMode;
     const hasIncubationDisplayModeChange = newIncubationDisplayMode !== oldIncubationDisplayMode;
+    const hasConfirmedCaseLineChange = newShowConfirmedCaseLine !== oldShowConfirmedCaseLine;
     
-    if (!hasSymptomChange && !hasExposureChange && !hasIncubationChange && !hasEpiStyleChange && !hasIncubationStyleChange && !hasDisplayModeChange && !hasIncubationDisplayModeChange) {
+    if (!hasSymptomChange && !hasExposureChange && !hasIncubationChange && !hasEpiStyleChange && !hasIncubationStyleChange && !hasDisplayModeChange && !hasIncubationDisplayModeChange && !hasConfirmedCaseLineChange) {
       return; // 변경사항 없으면 조기 종료
     }
     
     console.log('Chart update triggered with changes:', {
-      hasSymptomChange, hasExposureChange, hasIncubationChange, hasEpiStyleChange, hasIncubationStyleChange, hasDisplayModeChange, hasIncubationDisplayModeChange
+      hasSymptomChange, hasExposureChange, hasIncubationChange, hasEpiStyleChange, hasIncubationStyleChange, hasDisplayModeChange, hasIncubationDisplayModeChange, hasConfirmedCaseLineChange
     });
     
     nextTick(() => {
@@ -2146,6 +2316,22 @@ watch(
           clearCharts();
         } else {
           console.log('유효한 환자 데이터 있음, 차트 업데이트');
+          safeUpdateCharts();
+        }
+      });
+    }
+  },
+  { deep: true, immediate: false }
+);
+
+// 확진자 데이터 변경 감시
+watch(
+  () => confirmedCaseOnsetTableData.value,
+  (newData, oldData) => {
+    if (JSON.stringify(newData) !== JSON.stringify(oldData)) {
+      console.log('확진자 데이터 변경됨, 차트 업데이트');
+      nextTick(() => {
+        if (hasValidPatientData.value) {
           safeUpdateCharts();
         }
       });
@@ -2215,8 +2401,6 @@ const exportIncubationChart = async () => {
     alert(message);
   }
 };
-
-
 
 
 </script>

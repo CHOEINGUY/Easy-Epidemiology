@@ -45,9 +45,24 @@
       </div>
     </div>
     <div class="action-buttons">
-      <!-- 그룹 1: 개별 노출시간 -->
-      <div class="button-group individual-exposure">
+      <!-- 그룹 1: 열 토글 -->
+      <div class="button-group column-toggles">
         <div class="control-button-wrapper">
+          <button
+            :class="['function-button', { active: isConfirmedCaseColumnVisible }]"
+            aria-label="확진자 여부 토글"
+            tabindex="-1"
+            @click="onToggleConfirmedCaseColumn"
+            @mouseenter="showTooltip('toggleConfirmedCase', '확진자 여부 열을 표시하거나 숨깁니다', $event)"
+            @mouseleave="hideTooltip"
+          >
+            <span class="material-icons-outlined function-button-icon">
+              verified_user
+            </span>
+            확진여부
+          </button>
+        </div>
+        <div class="control-button-wrapper" style="margin-left: 2px;">
           <button
             :class="['function-button', { active: isIndividualExposureColumnVisible }]"
             aria-label="개별 노출시간 토글"
@@ -219,7 +234,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update-cell-value', 'enter-pressed', 'excel-file-selected', 'download-template', 'export-data', 'copy-entire-data', 'delete-empty-cols', 'reset-sheet', 'toggle-exposure-col', 'undo', 'redo']);
+const emit = defineEmits(['update-cell-value', 'enter-pressed', 'excel-file-selected', 'download-template', 'export-data', 'copy-entire-data', 'delete-empty-cols', 'reset-sheet', 'toggle-exposure-col', 'toggle-confirmed-case-col', 'undo', 'redo']);
 
 const store = useStore();
 const inputValue = ref(props.cellValue);
@@ -228,6 +243,11 @@ const showTemplateMenu = ref(false);
 // 개별 노출시간 컬럼 가시성 상태
 const isIndividualExposureColumnVisible = computed(
   () => store.state.isIndividualExposureColumnVisible
+);
+
+// 확진자 여부 컬럼 가시성 상태
+const isConfirmedCaseColumnVisible = computed(
+  () => store.state.isConfirmedCaseColumnVisible
 );
 
 // === Tooltip State ===
@@ -324,6 +344,10 @@ function onResetSheet() {
 
 function onToggleExposureColumn() {
   emit('toggle-exposure-col');
+}
+
+function onToggleConfirmedCaseColumn() {
+  emit('toggle-confirmed-case-col');
 }
 
 function onSelectTemplate(type) {

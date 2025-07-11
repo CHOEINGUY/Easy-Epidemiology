@@ -27,7 +27,7 @@ describe('asyncProcessor', () => {
         processed.push(item);
       };
 
-      const task = processInChunks(data, processor, {
+      processInChunks(data, processor, {
         chunkSize: 10,
         onComplete: () => {
           expect(processed).toHaveLength(100);
@@ -41,11 +41,11 @@ describe('asyncProcessor', () => {
       const data = Array.from({ length: 50 }, (_, i) => i);
       const progressReports = [];
       
-      const processor = (item) => {
+      const processor = () => {
         // 간단한 처리
       };
 
-      const task = processInChunks(data, processor, {
+      processInChunks(data, processor, {
         chunkSize: 10,
         onProgress: (progress) => {
           progressReports.push(progress);
@@ -68,7 +68,7 @@ describe('asyncProcessor', () => {
         }
       };
 
-      const task = processInChunks(data, processor, {
+      processInChunks(data, processor, {
         onError: (error) => {
           errors.push(error);
         },
@@ -83,7 +83,7 @@ describe('asyncProcessor', () => {
       const data = Array.from({ length: 1000 }, (_, i) => i);
       let processedCount = 0;
       
-      const processor = (item) => {
+      const processor = () => {
         processedCount++;
       };
 
@@ -114,11 +114,11 @@ describe('asyncProcessor', () => {
         { isEditable: true, colIndex: 0, type: 'text', dataKey: 'basicInfo', cellIndex: 0 }
       ];
 
-      const validator = (value, type) => {
+      const validator = (value) => {
         return { valid: value.length > 0, message: value.length === 0 ? 'Empty value' : '' };
       };
 
-      const task = validateDataAsync(rows, columnMetas, validator, {
+      validateDataAsync(rows, columnMetas, validator, {
         onComplete: (invalidCells) => {
           expect(Array.isArray(invalidCells)).toBe(true);
           done();

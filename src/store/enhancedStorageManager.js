@@ -338,7 +338,8 @@ export class EnhancedStorageManager {
       headers: currentState.headers,
       rows: currentState.rows,
       settings: {
-        isIndividualExposureColumnVisible: currentState.isIndividualExposureColumnVisible
+        isIndividualExposureColumnVisible: currentState.isIndividualExposureColumnVisible,
+        isConfirmedCaseColumnVisible: currentState.isConfirmedCaseColumnVisible
       },
       validationState: {
         errors: validationErrors,

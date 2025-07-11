@@ -13,6 +13,12 @@ export const VALIDATION_RULES = {
     allowEmpty: true,
     message: '0 또는 1만 입력 가능합니다.'
   },
+  isConfirmedCase: {
+    type: 'binary',
+    required: false,
+    allowEmpty: true,
+    message: '0 또는 1만 입력 가능합니다.'
+  },
   basicInfo: {
     type: 'string',
     maxLength: 100,
@@ -149,6 +155,7 @@ export function validateDateTime(value, rule) {
  */
 export function validateCell(value, columnType) {
   const rule = VALIDATION_RULES[columnType];
+  console.log('[validateCell] 호출', value, columnType, rule);
   if (!rule) {
     return { valid: true };
   }
@@ -192,6 +199,14 @@ export function validateRow(row) {
     const result = validateCell(row.isPatient, 'isPatient');
     if (!result.valid) {
       errors.push({ field: 'isPatient', message: result.message });
+    }
+  }
+  
+  // 확진자 여부 검증
+  if (row.isConfirmedCase !== undefined) {
+    const result = validateCell(row.isConfirmedCase, 'isConfirmedCase');
+    if (!result.valid) {
+      errors.push({ field: 'isConfirmedCase', message: result.message });
     }
   }
   

@@ -18,7 +18,7 @@
               :style="group.style"
               role="columnheader"
               :class="{ 
-                'allow-wrap': group.startColIndex === 1,
+                'allow-wrap': group.startColIndex === 1 || group.startColIndex === 2,
                 'serial-header': group.startColIndex === 0 
               }"
               @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, group.startColIndex)"
@@ -208,8 +208,8 @@ function getValidationMessage() {
 }
 
 const getHeaderText = (group) => {
-  // COL_IDX_IS_PATIENT === 1
-  if (group.startColIndex === 1) {
+  // 환자여부(1)와 확진여부(2) 열은 두 줄 표시 허용
+  if (group.startColIndex === 1 || group.startColIndex === 2) {
     return group.text;
   }
   return String(group.text).replace(/<br\s*\/?>/gi, ' ');
@@ -271,7 +271,7 @@ th {
   user-select: none;
 }
 
-/* '환자여부' 헤더에만 줄바꿈을 허용하는 스타일 */
+/* '환자여부'와 '확진여부' 헤더에 줄바꿈을 허용하는 스타일 */
 th.allow-wrap {
   white-space: normal;
 }

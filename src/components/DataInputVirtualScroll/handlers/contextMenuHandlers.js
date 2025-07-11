@@ -52,6 +52,13 @@ export function handleContextMenu(event, virtualRowIndex, colIndex, context) {
   const menuItems = getMenuItemsForContext(originalRowIndex, colIndex, selectionSystem.state, allColumnsMeta);
   const targetInfo = { rowIndex: originalRowIndex, colIndex };
 
+  console.log('[ContextMenu] 메뉴 아이템 생성:', {
+    originalRowIndex,
+    colIndex,
+    menuItems: menuItems.map(item => ({ label: item.label, action: item.action })),
+    targetInfo
+  });
+
   if (menuItems.length > 0) {
     showContextMenu(event.clientX, event.clientY, menuItems, targetInfo);
   }
@@ -150,9 +157,9 @@ function getMenuItemsForContext(rowIndex, colIndex, selectionState, allColumnsMe
         });
       }
     } 
-    // 2. 고정 열 (환자여부, 증상발현시간 등) - 데이터 지우기만 가능
+    // 2. 고정 열 (환자여부, 확진자여부, 증상발현시간 등) - 데이터 지우기만 가능
     else if (Array.from(targetColumnTypes).some(type => 
-      [COL_TYPE_IS_PATIENT, COL_TYPE_ONSET, 'individualExposureTime'].includes(type)
+      [COL_TYPE_IS_PATIENT, 'isConfirmedCase', COL_TYPE_ONSET, 'individualExposureTime'].includes(type)
     )) {
       menuItems.push(
         { label: `열 데이터 삭제${isMultiCol ? ` (${effectiveColCount}개)` : ''}`, action: 'clear-cols-data', icon: '×' }

@@ -7,7 +7,8 @@
 const LEGACY_KEYS = {
   HEADERS: 'headers',
   ROWS: 'rows',
-  VISIBILITY: 'isIndividualExposureColumnVisible'
+  VISIBILITY: 'isIndividualExposureColumnVisible',
+  CONFIRMED_CASE_VISIBILITY: 'isConfirmedCaseColumnVisible'
 };
 
 // 새로운 localStorage 키들
@@ -29,6 +30,7 @@ export function backupLegacyData() {
       headers: null,
       rows: null,
       visibility: null,
+      confirmedCaseVisibility: null,
       success: false
     };
     
@@ -36,6 +38,7 @@ export function backupLegacyData() {
     const headers = localStorage.getItem(LEGACY_KEYS.HEADERS);
     const rows = localStorage.getItem(LEGACY_KEYS.ROWS);
     const visibility = localStorage.getItem(LEGACY_KEYS.VISIBILITY);
+    const confirmedCaseVisibility = localStorage.getItem(LEGACY_KEYS.CONFIRMED_CASE_VISIBILITY);
     
     if (headers) {
       backup.headers = JSON.parse(headers);
@@ -49,7 +52,12 @@ export function backupLegacyData() {
     
     if (visibility) {
       backup.visibility = JSON.parse(visibility);
-      console.log('[Migration] 가시성 설정 백업 완료');
+      console.log('[Migration] 개별 노출시간 열 가시성 설정 백업 완료');
+    }
+    
+    if (confirmedCaseVisibility) {
+      backup.confirmedCaseVisibility = JSON.parse(confirmedCaseVisibility);
+      console.log('[Migration] 확진자 여부 열 가시성 설정 백업 완료');
     }
     
     // 백업 데이터를 localStorage에 저장
@@ -80,6 +88,7 @@ export function migrateLegacyData() {
     const headers = localStorage.getItem(LEGACY_KEYS.HEADERS);
     const rows = localStorage.getItem(LEGACY_KEYS.ROWS);
     const visibility = localStorage.getItem(LEGACY_KEYS.VISIBILITY);
+    const confirmedCaseVisibility = localStorage.getItem(LEGACY_KEYS.CONFIRMED_CASE_VISIBILITY);
     
     if (!headers && !rows) {
       console.log('[Migration] 마이그레이션할 기존 데이터가 없습니다.');
@@ -93,7 +102,8 @@ export function migrateLegacyData() {
       headers: headers ? JSON.parse(headers) : null,
       rows: rows ? JSON.parse(rows) : null,
       settings: {
-        isIndividualExposureColumnVisible: visibility ? JSON.parse(visibility) : false
+        isIndividualExposureColumnVisible: visibility ? JSON.parse(visibility) : false,
+        isConfirmedCaseColumnVisible: confirmedCaseVisibility ? JSON.parse(confirmedCaseVisibility) : false
       }
     };
     
