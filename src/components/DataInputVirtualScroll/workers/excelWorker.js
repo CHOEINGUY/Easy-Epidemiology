@@ -21,6 +21,12 @@ function findColumnRanges(headerRow1, headerRow2) {
   );
   ranges.isPatient = isPatientIndex !== -1 ? isPatientIndex : 1;
 
+  // 확진 여부 컬럼 위치 탐색 (환자여부 다음)
+  const isConfirmedCaseIndex = headerRow1.findIndex(cell =>
+    cell?.toString().includes('확진여부') || cell?.toString().includes('확진 여부')
+  );
+  ranges.isConfirmedCase = isConfirmedCaseIndex !== -1 ? isConfirmedCaseIndex : -1;
+
   // 기본정보 범위
   const basicStart = headerRow1.findIndex(cell => cell?.toString().includes('기본정보'));
   if (basicStart === -1) throw new Error('기본정보 카테고리 없음');
@@ -131,6 +137,7 @@ function parseAOAData(aoa) {
 
   const ranges = findColumnRanges(headerRow1, headerRow2);
   const hasIndividualExposureTime = ranges.individualExposureTime !== -1;
+  const hasConfirmedCase = ranges.isConfirmedCase !== -1;
 
   // 스마트 매칭을 사용하여 각 카테고리 처리
   const basicResult = smartColumnMatching(headerRow2, dataRows, ranges.basic.start, ranges.basic.end);
@@ -151,6 +158,7 @@ function parseAOAData(aoa) {
     })
     .map((row, index) => ({
       isPatient: (row[ranges.isPatient] ?? '').toString().trim(),
+      isConfirmedCase: hasConfirmedCase ? (row[ranges.isConfirmedCase] ?? '').toString().trim() : '',
       basicInfo: basicResult.rows[index] || [],
       clinicalSymptoms: clinicalResult.rows[index] || [],
       symptomOnset: convertExcelDate(row[ranges.symptomOnset]),
@@ -165,6 +173,7 @@ function parseAOAData(aoa) {
     headers, 
     rows, 
     hasIndividualExposureTime,
+    hasConfirmedCase,
     emptyColumnCount: totalEmptyColumns
   };
 }

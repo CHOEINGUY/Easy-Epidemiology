@@ -221,13 +221,14 @@ export function processExcelFileSync(file, onProgress = () => {}) {
  * @returns {Promise} 파싱된 데이터
  */
 // 청크 처리 함수를 함수 본문 루트로 이동
-function processChunk(startIndex, endIndex, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, onProgress, resolve) {
+function processChunk(startIndex, endIndex, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, hasConfirmedCase, onProgress, resolve) {
   const actualEndIndex = Math.min(startIndex + endIndex, filteredRows.length);
   
   for (let i = startIndex; i < actualEndIndex; i++) {
     const row = filteredRows[i];
     processedRows.push({
       isPatient: (row[ranges.isPatient] ?? '').toString().trim(),
+      isConfirmedCase: hasConfirmedCase ? (row[ranges.isConfirmedCase] ?? '').toString().trim() : '',
       basicInfo: basicResult.rows[i] || [],
       clinicalSymptoms: clinicalResult.rows[i] || [],
       symptomOnset: convertExcelDate(row[ranges.symptomOnset]),
@@ -242,9 +243,9 @@ function processChunk(startIndex, endIndex, filteredRows, processedRows, ranges,
   if (actualEndIndex < filteredRows.length) {
     // 다음 청크를 비동기적으로 처리
     if (window.requestIdleCallback) {
-      window.requestIdleCallback(() => processChunk(actualEndIndex, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, onProgress, resolve));
+      window.requestIdleCallback(() => processChunk(actualEndIndex, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, hasConfirmedCase, onProgress, resolve));
     } else {
-      setTimeout(() => processChunk(actualEndIndex, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, onProgress, resolve), 0);
+      setTimeout(() => processChunk(actualEndIndex, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, hasConfirmedCase, onProgress, resolve), 0);
     }
   } else {
     // 모든 처리 완료
@@ -259,6 +260,7 @@ function processChunk(startIndex, endIndex, filteredRows, processedRows, ranges,
       },
       rows: processedRows,
       hasIndividualExposureTime,
+      hasConfirmedCase,
       emptyColumnCount: totalEmptyColumns
     });
   }
@@ -294,6 +296,7 @@ export function processExcelFileAsync(file, onProgress = () => {}) {
           // 헤더 파싱 (동기)
           const ranges = findColumnRanges(headerRow1, headerRow2);
           const hasIndividualExposureTime = ranges.individualExposureTime !== -1;
+          const hasConfirmedCase = ranges.isConfirmedCase !== -1;
 
           // 스마트 매칭을 사용하여 각 카테고리 처리
           const basicResult = smartColumnMatching(headerRow2, dataRows, ranges.basic.start, ranges.basic.end);
@@ -314,7 +317,7 @@ export function processExcelFileAsync(file, onProgress = () => {}) {
           const processedRows = [];
           
           // 첫 번째 청크 처리 시작
-          processChunk(0, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, onProgress, resolve);
+          processChunk(0, 100, filteredRows, processedRows, ranges, basicResult, clinicalResult, dietResult, hasIndividualExposureTime, hasConfirmedCase, onProgress, resolve);
           
         } catch (error) {
           reject(new Error(error.message || 'Excel 파싱 실패'));
