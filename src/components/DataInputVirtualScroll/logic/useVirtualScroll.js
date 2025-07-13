@@ -31,10 +31,15 @@ export function useVirtualScroll(allRows, options) {
   });
 
   const visibleRows = computed(() => {
-    return allRows.value.slice(startIndex.value, endIndex.value + 1).map((data, index) => ({
-      data,
-      originalIndex: startIndex.value + index
-    }));
+    return allRows.value.slice(startIndex.value, endIndex.value + 1).map((data, index) => {
+      // data가 이미 _originalIndex를 가지고 있는지 확인
+      const originalIndex = data._originalIndex !== undefined ? data._originalIndex : (startIndex.value + index);
+      
+      return {
+        ...data, // 모든 원본 속성을 유지
+        originalIndex
+      };
+    });
   });
   
   const paddingTop = computed(() => startIndex.value * rowHeight);

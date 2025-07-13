@@ -1,5 +1,10 @@
 <template>
-  <div class="grid-body-virtual" ref="bodyContainer" @scroll.passive="handleScroll">
+  <div 
+    class="grid-body-virtual" 
+    :class="{ 'filtered': isFiltered }"
+    ref="bodyContainer" 
+    @scroll.passive="handleScroll"
+  >
           <div :style="{ height: containerHeight + 'px', position: 'relative', width: tableWidth }">
         <table 
           class="data-table" 
@@ -29,15 +34,15 @@
               :class="getCellClasses(item.originalIndex, column.colIndex)"
               :data-validation-message="getValidationMessage(item.originalIndex, column.colIndex)"
               :contenteditable="isCellEditing(item.originalIndex, column.colIndex)"
-              @input="$emit('cell-input', $event, item.originalIndex, column.colIndex)"
-              @dblclick="$emit('cell-dblclick', index, column.colIndex, $event)"
-              @mousedown="$emit('cell-mousedown', index, column.colIndex, $event)"
-              @mousemove="$emit('cell-mousemove', index, column.colIndex, $event)"
-              @contextmenu.prevent="$emit('cell-contextmenu', $event, index, column.colIndex)"
+              @input="handleCellInput($event, item, column.colIndex)"
+              @dblclick="handleCellDoubleClick(index, column.colIndex, $event)"
+              @mousedown="handleCellMouseDown(index, column.colIndex, $event)"
+              @mousemove="handleCellMouseMove(index, column.colIndex, $event)"
+              @contextmenu.prevent="handleCellContextMenu($event, index, column.colIndex)"
               @mouseenter="handleCellMouseEnter($event, item.originalIndex, column.colIndex)"
               @mouseleave="handleCellMouseLeave"
             >
-              {{ getCellValue(item.data, column, item.originalIndex) }}
+              {{ getCellValue(item, column, item.originalIndex) }}
             </td>
           </tr>
         </tbody>
@@ -70,7 +75,8 @@
 <script setup>
 import { ref, computed, defineProps, defineEmits, defineExpose } from 'vue';
 import AddRowsControls from '../parts/AddRowsControls.vue';
-import { hasValidationError, getValidationMessage as getValidationMessageFromUtils } from '../utils/validationUtils.js';
+import { hasValidationError } from '../utils/validationUtils.js';
+import { FilterRowValidationManager } from '../utils/FilterRowValidationManager.js';
 
 const props = defineProps({
   visibleRows: { type: Array, required: true },
@@ -92,12 +98,16 @@ const props = defineProps({
   individualSelectedCells: { type: Object, default: null },
   individualSelectedRows: { type: Object, default: null },
   bufferSize: { type: Number, default: 4 },
-  validationErrors: { type: Object, default: null }
+  validationErrors: { type: Object, default: null },
+  isFiltered: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['scroll', 'cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-rows', 'delete-empty-rows', 'clear-selection']);
 
 const bodyContainer = ref(null);
+
+// 필터 + 행 변경 통합 매니저 인스턴스
+const filterRowValidationManager = new FilterRowValidationManager();
 
 // AddRowsControls 위치 및 컨테이너 높이 계산
 const ADD_ROWS_HEIGHT = 35; // px (controls 자체 높이)
@@ -196,18 +206,33 @@ function getCellClasses(rowIndex, colIndex) {
     classes.push('cell-selected');
   }
 
-  // --- Validation error (고유 식별자 기반) --------------------------------------------
+  // --- Validation error (통합 시스템 사용) ---
   const columnMeta = props.allColumnsMeta[colIndex];
-  const hasError = hasValidationError(rowIndex, colIndex, columnMeta, props.validationErrors);
-  if (hasError) {
+  
+  // 1. 열 변경 시스템: 고유키 기반 에러 확인 (기존 로직)
+  const hasColumnError = hasValidationError(rowIndex, colIndex, columnMeta, props.validationErrors);
+  
+  // 2. 필터 + 행 변경 시스템: 가시성 확인
+  filterRowValidationManager.updateFilterState(
+    props.isFiltered, 
+    props.visibleRows, 
+    props.validationErrors
+  );
+  const isVisible = filterRowValidationManager.isErrorVisible(rowIndex, colIndex);
+  
+  // 두 시스템 모두 통과해야 에러 표시
+  if (hasColumnError && isVisible) {
     classes.push('validation-error');
   }
+  
   return classes;
 }
 
 function getValidationMessage(rowIndex, colIndex) {
   const columnMeta = props.allColumnsMeta[colIndex];
-  return getValidationMessageFromUtils(rowIndex, colIndex, columnMeta, props.validationErrors);
+  
+  // 새로운 시스템으로 에러 메시지 조회
+  return filterRowValidationManager.getErrorMessage(rowIndex, colIndex, columnMeta);
 }
 
 function handleCellMouseEnter(event, rowIndex, colIndex) {
@@ -239,6 +264,121 @@ function handleCellMouseLeave() {
   tooltipVisible.value = false;
 }
 
+// 필터된 상태에서 올바른 원본 인덱스를 전달하는 이벤트 핸들러들
+function handleCellInput(event, item, colIndex) {
+  // 필터된 상태에서는 원본 인덱스를 전달
+  let originalRowIndex;
+  
+  if (props.isFiltered) {
+    // 필터된 상태에서는 _originalIndex를 우선 사용
+    if (item._originalIndex !== undefined) {
+      originalRowIndex = item._originalIndex;
+    } else if (item._filteredOriginalIndex !== undefined) {
+      originalRowIndex = item._filteredOriginalIndex;
+    } else if (item.originalIndex !== undefined) {
+      originalRowIndex = item.originalIndex;
+    } else {
+      // 둘 다 없는 경우 fallback
+      originalRowIndex = 0;
+    }
+  } else {
+    // 필터되지 않은 상태에서는 originalIndex 사용
+    originalRowIndex = item.originalIndex || 0;
+  }
+  
+  console.log('[VirtualGridBody] handleCellInput:', {
+    isFiltered: props.isFiltered,
+    item,
+    item_originalIndex: item._originalIndex,
+    item_filteredOriginalIndex: item._filteredOriginalIndex,
+    item_originalIndex_alt: item.originalIndex,
+    calculatedOriginalRowIndex: originalRowIndex,
+    colIndex
+  });
+  
+  emit('cell-input', event, originalRowIndex, colIndex);
+}
+
+function handleCellDoubleClick(index, colIndex, event) {
+  // 필터된 상태에서는 원본 인덱스를 전달
+  const item = props.visibleRows[index];
+  let originalRowIndex;
+  
+  if (props.isFiltered) {
+    if (item._originalIndex !== undefined) {
+      originalRowIndex = item._originalIndex;
+    } else if (item._filteredOriginalIndex !== undefined) {
+      originalRowIndex = item._filteredOriginalIndex;
+    } else {
+      originalRowIndex = item.originalIndex;
+    }
+  } else {
+    originalRowIndex = item.originalIndex;
+  }
+  
+  emit('cell-dblclick', originalRowIndex, colIndex, event);
+}
+
+function handleCellMouseDown(index, colIndex, event) {
+  // 필터된 상태에서는 원본 인덱스를 전달
+  const item = props.visibleRows[index];
+  let originalRowIndex;
+  
+  if (props.isFiltered) {
+    if (item._originalIndex !== undefined) {
+      originalRowIndex = item._originalIndex;
+    } else if (item._filteredOriginalIndex !== undefined) {
+      originalRowIndex = item._filteredOriginalIndex;
+    } else {
+      originalRowIndex = item.originalIndex;
+    }
+  } else {
+    originalRowIndex = item.originalIndex;
+  }
+  
+  emit('cell-mousedown', originalRowIndex, colIndex, event);
+}
+
+function handleCellMouseMove(index, colIndex, event) {
+  // 필터된 상태에서는 원본 인덱스를 전달
+  const item = props.visibleRows[index];
+  let originalRowIndex;
+  
+  if (props.isFiltered) {
+    if (item._originalIndex !== undefined) {
+      originalRowIndex = item._originalIndex;
+    } else if (item._filteredOriginalIndex !== undefined) {
+      originalRowIndex = item._filteredOriginalIndex;
+    } else {
+      originalRowIndex = item.originalIndex;
+    }
+  } else {
+    originalRowIndex = item.originalIndex;
+  }
+  
+  emit('cell-mousemove', originalRowIndex, colIndex, event);
+}
+
+function handleCellContextMenu(event, index, colIndex) {
+  // 필터된 상태에서는 원본 인덱스를 전달
+  const item = props.visibleRows[index];
+  let originalRowIndex;
+  
+  if (props.isFiltered) {
+    if (item._originalIndex !== undefined) {
+      originalRowIndex = item._originalIndex;
+    } else if (item._filteredOriginalIndex !== undefined) {
+      originalRowIndex = item._filteredOriginalIndex;
+    } else {
+      originalRowIndex = item.originalIndex;
+    }
+  } else {
+    originalRowIndex = item.originalIndex;
+  }
+  
+  emit('cell-contextmenu', event, originalRowIndex, colIndex);
+}
+
 defineExpose({ bodyContainer });
 </script>
 
@@ -250,6 +390,18 @@ defineExpose({ bodyContainer });
   will-change: scroll-position;
   background-color: #f8f9fa; /* 헤더와 동일한 배경색 */
 }
+
+/* 필터가 적용되었을 때는 전체 배경 변경 없음 */
+.grid-body-virtual.filtered {
+  position: relative;
+}
+
+/* 필터된 상태에서 유효성 에러 셀의 배경색 조정 */
+.grid-body-virtual.filtered .validation-error {
+  background-color: rgba(255, 68, 68, 0.15) !important; /* 필터 상태에서는 더 진한 빨간색 */
+}
+
+
 
 .data-table {
   border-collapse: collapse;
@@ -316,6 +468,7 @@ td {
   box-shadow: 0 0 0 2px #ff4444 inset !important;
   background-color: rgba(255, 68, 68, 0.1) !important;
   position: relative;
+  z-index: 5; /* 필터 배경보다 위에 표시 */
 }
 
 /* When the cell is also in editing state, layer red border inside blue border */
@@ -353,5 +506,14 @@ td {
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-top: 6px solid #333333;
+}
+
+.grid-body-virtual.filtered td.serial-cell {
+  background-color: rgba(26, 115, 232, 0.2) !important; /* 더 진한 파란색 */
+  border-right: 1px solid #ced4da !important; /* 기존 테두리 */
+  border-left: 1px solid #ced4da !important;
+  color: #185abc;
+  font-weight: 600;
+  z-index: 2;
 }
 </style> 

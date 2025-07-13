@@ -18,6 +18,7 @@ import {
   getErrorKey, 
   parseErrorKey 
 } from '../components/DataInputVirtualScroll/utils/validationUtils.js';
+import { FilterRowValidationManager } from '../components/DataInputVirtualScroll/utils/FilterRowValidationManager.js';
 
 /**
  * @typedef {object} ValidationManagerOptions
@@ -56,6 +57,9 @@ export class ValidationManager {
 
     this._destroyed = false;
     this.columnMetas = []; // 현재 열 메타데이터 저장
+    
+    // 필터 + 행 변경 통합 매니저 인스턴스
+    this.filterRowManager = new FilterRowValidationManager();
 
     if (this.useWorker) {
       // 안전한 워커 생성
@@ -993,50 +997,16 @@ export class ValidationManager {
     console.log('[ValidationManager] remapValidationErrorsByRowDeletion 시작');
     console.log('[ValidationManager] 삭제된 행 인덱스:', deletedRowIndices);
     console.log('[ValidationManager] 변경 전 오류 개수:', currentErrors.size);
-    console.log('[ValidationManager] 변경 전 오류 키들:', Array.from(currentErrors.keys()));
 
-    // 1. 삭제된 행들의 오류 제거 및 아래 행들의 오류 키 재계산
-    const newErrors = new Map();
-    const sortedDeletedIndices = [...deletedRowIndices].sort((a, b) => a - b);
-
-    for (const [oldErrorKey, error] of currentErrors) {
-      // 오류 키 파싱
-      const parsed = this.parseErrorKey(oldErrorKey);
-      if (!parsed) {
-        console.warn('[ValidationManager] 잘못된 오류 키 형식:', oldErrorKey);
-        continue;
-      }
-
-      const { rowIndex, uniqueKey } = parsed;
-
-      // 삭제된 행의 오류는 제거
-      if (deletedRowIndices.includes(rowIndex)) {
-        console.log(`[ValidationManager] 삭제된 행의 오류 제거: ${oldErrorKey}`);
-        continue;
-      }
-
-      // 아래 행들의 오류 키 재계산
-      let newRowIndex = rowIndex;
-      let shiftCount = 0;
-
-      // 삭제된 행들 중 현재 행보다 작은 것들의 개수만큼 이동
-      for (const deletedIndex of sortedDeletedIndices) {
-        if (deletedIndex < rowIndex) {
-          shiftCount++;
-        }
-      }
-
-      newRowIndex = rowIndex - shiftCount;
-      const newErrorKey = this.getErrorKey(newRowIndex, uniqueKey);
-
-      newErrors.set(newErrorKey, error);
-      console.log(`[ValidationManager] 오류 키 변환: ${oldErrorKey} -> ${newErrorKey}`);
-    }
-
+    // 새로운 FilterRowValidationManager 사용
+    this.filterRowManager.handleRowChanges(deletedRowIndices, []);
+    
+    // 기존 로직은 유지하되 새로운 매니저와 연동
+    const newErrors = this.filterRowManager.getRemappedErrors(currentErrors);
+    
     console.log('[ValidationManager] 변경 후 오류 개수:', newErrors.size);
-    console.log('[ValidationManager] 변경 후 오류 키들:', Array.from(newErrors.keys()));
 
-    // 2. 새로운 오류 맵 적용
+    // 새로운 오류 맵 적용
     this.store.commit('SET_VALIDATION_ERRORS', newErrors);
   }
 

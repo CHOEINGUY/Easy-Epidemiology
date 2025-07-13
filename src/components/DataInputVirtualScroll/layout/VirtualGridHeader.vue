@@ -1,5 +1,9 @@
 <template>
-  <div class="grid-header-virtual" ref="headerContainer" :style="headerContainerStyle">
+  <div 
+    class="grid-header-virtual" 
+    ref="headerContainer" 
+    :style="headerContainerStyle"
+  >
     <table class="data-table" :style="{ width: tableWidth }">
       <colgroup>
         <col 

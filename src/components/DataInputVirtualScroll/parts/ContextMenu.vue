@@ -9,6 +9,15 @@
     <template v-for="(item, index) in items" :key="index">
       <div v-if="item.type === 'separator'" class="context-menu-separator"></div>
       <div
+        v-else-if="item.type === 'checkbox'"
+        class="context-menu-item"
+        @click="onItemClick(item)"
+      >
+        <input type="checkbox" :checked="item.checked" readonly style="margin-right:6px;pointer-events:none;" />
+        <span class="context-menu-text">{{ getLabelText(item.label) }}</span>
+        <span v-if="getCountText(item.label)" class="context-menu-count">{{ getCountText(item.label) }}</span>
+      </div>
+      <div
         v-else
         class="context-menu-item"
         :class="{ 'is-disabled': item.disabled, 'is-danger': item.danger }"
@@ -91,6 +100,17 @@ const onItemClick = (item) => {
   if (item.disabled) return;
   emit('select', item.action);
 };
+
+// 괄호 부분을 분리하는 함수들
+const getLabelText = (label) => {
+  const match = label.match(/^(.+?)\s*\(\d+\)$/);
+  return match ? match[1] : label;
+};
+
+const getCountText = (label) => {
+  const match = label.match(/\((\d+)\)$/);
+  return match ? `${match[1]}개` : '';
+};
 </script>
 
 <style scoped>
@@ -112,7 +132,7 @@ const onItemClick = (item) => {
 .context-menu-item {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
+  padding: 8px 14px;
   cursor: pointer;
   transition: background-color 0.1s ease;
 }
@@ -144,7 +164,7 @@ const onItemClick = (item) => {
 }
 
 .context-menu-text {
-  font-size: 14px;
+  font-size: 13px;
   color: #202124;
   font-family: "Google Sans", Roboto, Arial, sans-serif;
   flex-grow: 1;
@@ -153,6 +173,13 @@ const onItemClick = (item) => {
 .context-menu-shortcut {
   color: #70757a;
   font-size: 12px;
+}
+
+.context-menu-count {
+  color: #70757a;
+  font-size: 11px;
+  margin-left: auto;
+  padding-left: 8px;
 }
 
 .context-menu-separator {

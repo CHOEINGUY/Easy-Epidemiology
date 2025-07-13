@@ -1015,6 +1015,9 @@ const store = createStore({
     resetSheet({ commit }) {
       const { headers, rows } = createInitialState();
       commit('SET_INITIAL_DATA', { headers, rows });
+      // 개별노출시간 열과 확진자 여부 열 가시성 초기화 (꺼짐)
+      commit('SET_INDIVIDUAL_EXPOSURE_COLUMN_VISIBILITY', false);
+      commit('SET_CONFIRMED_CASE_COLUMN_VISIBILITY', false);
     },
     pasteData({ commit }, payload) {
       commit('PASTE_DATA', payload);

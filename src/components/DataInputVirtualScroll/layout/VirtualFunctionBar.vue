@@ -187,7 +187,28 @@
       <!-- 구분선 -->
       <div class="button-group-divider"></div>
       
-      <!-- 그룹 4: Undo/Redo -->
+      <!-- 그룹 4: 필터 상태 -->
+      <div class="button-group filter-status" v-if="isFiltered">
+        <div class="control-button-wrapper">
+          <button 
+            class="function-button filter-button" 
+            :class="{ active: isFiltered }"
+            aria-label="필터 관리"
+            tabindex="-1"
+            @click="onFilterButtonClick"
+            @mouseenter="showTooltip('filter', `필터 적용됨 (${filteredRowCount}/${originalRowCount} 행 표시)`, $event)"
+            @mouseleave="hideTooltip"
+          >
+            <span class="material-icons-outlined function-button-icon">
+              filter_list
+            </span>
+            필터
+            <span class="filter-badge">적용됨</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- 그룹 5: Undo/Redo -->
       <div class="button-group undo-redo">
 
       </div>
@@ -231,10 +252,23 @@ const props = defineProps({
   canRedo: {
     type: Boolean,
     default: false
+  },
+  // 필터 관련 props
+  isFiltered: {
+    type: Boolean,
+    default: false
+  },
+  filteredRowCount: {
+    type: Number,
+    default: 0
+  },
+  originalRowCount: {
+    type: Number,
+    default: 0
   }
 });
 
-const emit = defineEmits(['update-cell-value', 'enter-pressed', 'excel-file-selected', 'download-template', 'export-data', 'copy-entire-data', 'delete-empty-cols', 'reset-sheet', 'toggle-exposure-col', 'toggle-confirmed-case-col', 'undo', 'redo']);
+const emit = defineEmits(['update-cell-value', 'enter-pressed', 'excel-file-selected', 'download-template', 'export-data', 'copy-entire-data', 'delete-empty-cols', 'reset-sheet', 'toggle-exposure-col', 'toggle-confirmed-case-col', 'undo', 'redo', 'clear-all-filters']);
 
 const store = useStore();
 const inputValue = ref(props.cellValue);
@@ -361,6 +395,11 @@ function onUndo() {
 
 function onRedo() {
   emit('redo');
+}
+
+function onFilterButtonClick() {
+  // 필터 버튼 클릭 시 모든 필터 해제
+  emit('clear-all-filters');
 }
 </script>
 
@@ -641,5 +680,31 @@ function onRedo() {
 
 .function-bar-tooltip.visible {
   opacity: 1;
+}
+
+/* 필터 버튼 스타일 */
+.filter-button {
+  position: relative;
+}
+
+.filter-badge {
+  background: #1a73e8;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.filter-button.active {
+  background: #e8f0fe;
+  color: #1967d2;
+  font-weight: 500;
+}
+
+.filter-button.active .filter-badge {
+  background: #1967d2;
 }
 </style> 

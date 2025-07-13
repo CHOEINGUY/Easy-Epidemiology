@@ -1,11 +1,18 @@
 <template>
   <div class="add-rows-controls">
-    <span class="add-rows-button" @click="emitAdd">하단에</span>
+    <span 
+      :class="['add-rows-button', { disabled: isFiltered }]" 
+      @click="emitAdd"
+      :title="isFiltered ? '필터 적용 중에는 행을 추가할 수 없습니다' : '하단에 행 추가'"
+    >
+      하단에
+    </span>
     <input
       v-model.number="rowsToAdd"
       type="number"
       min="1"
       class="rows-count-input"
+      :disabled="isFiltered"
       aria-label="추가할 행 수"
       tabindex="-1"
       @focus="emit('clear-selection')"
@@ -25,12 +32,23 @@
 </template>
 
 <script setup>
-import { ref, defineEmits } from 'vue';
+import { ref, defineEmits, defineProps } from 'vue';
+
+const props = defineProps({
+  isFiltered: {
+    type: Boolean,
+    default: false
+  }
+});
 
 const emit = defineEmits(['add-rows', 'delete-empty-rows', 'clear-selection']);
 const rowsToAdd = ref(10);
 
 function emitAdd() {
+  if (props.isFiltered) {
+    return; // 필터 적용 중에는 행 추가 불가
+  }
+  
   if (rowsToAdd.value >= 1) {
     emit('add-rows', rowsToAdd.value);
     rowsToAdd.value = 10;
@@ -66,6 +84,15 @@ function emitDeleteEmpty() {
   background-color: rgba(26, 115, 232, 0.1);
 }
 
+.add-rows-button.disabled {
+  color: #9aa0a6;
+  cursor: not-allowed;
+}
+
+.add-rows-button.disabled:hover {
+  background-color: transparent;
+}
+
 .rows-count-input {
   width: 50px;
   padding: 4px;
@@ -80,6 +107,12 @@ function emitDeleteEmpty() {
 .rows-count-input::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+.rows-count-input:disabled {
+  background-color: #f1f3f4;
+  color: #9aa0a6;
+  cursor: not-allowed;
 }
 
 .add-rows-label {

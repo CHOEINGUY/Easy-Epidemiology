@@ -18,6 +18,19 @@ export class StoreBridge {
     this._canUndo = ref(false);
     this._canRedo = ref(false);
     
+    // 필터 상태 관리 (환자여부 컬럼만)
+    this.filterState = {
+      activeFilters: new Map(), // colIndex -> FilterConfig
+      isFiltered: false,
+      filteredRowCount: 0,
+      originalRowCount: 0,
+      lastAppliedAt: null
+    };
+    
+    // 필터된 행 인덱스 매핑
+    this._filteredRowMapping = new Map();
+    this._originalToFilteredMapping = new Map();
+    
     // 디버그 옵션 설정
     this.debug = options.debug ?? (import.meta.env?.MODE === 'development' || false);
     
@@ -27,6 +40,9 @@ export class StoreBridge {
     
     // 초기 undo/redo 상태 업데이트
     this._updateUndoRedoState();
+    
+    // 필터 상태 복원
+    this.loadFilterState();
   }
   
   /**
@@ -222,10 +238,11 @@ export class StoreBridge {
     this.legacyStore.dispatch('deleteRow', rowIndex);
     this.saveCurrentState();
     
-    // Validation 처리 - 고유 키 기반 재매핑
+    // 새로운 FilterRowValidationManager 사용
     if (this.validationManager) {
       const columnMetas = this.getColumnMetas();
-      this.validationManager.handleRowDeletion([rowIndex], columnMetas);
+      this.validationManager.filterRowManager.handleRowChanges([rowIndex], []);
+      this.validationManager.remapValidationErrorsByRowDeletion([rowIndex], columnMetas);
     }
   }
   
@@ -238,7 +255,7 @@ export class StoreBridge {
     this.legacyStore.dispatch('deleteMultipleRows', payload);
     this.saveCurrentState();
     
-    // Validation 처리 - 삭제된 행들 오류 제거 + 남은 행들 인덱스 재조정
+    // 새로운 FilterRowValidationManager 사용
     if (this.validationManager) {
       let deletedRowIndices = [];
       
@@ -254,7 +271,8 @@ export class StoreBridge {
       
       if (deletedRowIndices.length > 0) {
         const columnMetas = this.getColumnMetas();
-        this.validationManager.handleRowDeletion(deletedRowIndices, columnMetas);
+        this.validationManager.filterRowManager.handleRowChanges(deletedRowIndices, []);
+        this.validationManager.remapValidationErrorsByRowDeletion(deletedRowIndices, columnMetas);
       }
     }
   }
@@ -268,7 +286,7 @@ export class StoreBridge {
     this.legacyStore.dispatch('deleteIndividualRows', payload);
     this.saveCurrentState();
     
-    // Validation 처리 - 고유 키 기반 재매핑
+    // 새로운 FilterRowValidationManager 사용
     if (this.validationManager) {
       let deletedRowIndices = [];
       
@@ -282,7 +300,8 @@ export class StoreBridge {
       
       if (deletedRowIndices.length > 0) {
         const columnMetas = this.getColumnMetas();
-        this.validationManager.handleRowDeletion(deletedRowIndices, columnMetas);
+        this.validationManager.filterRowManager.handleRowChanges(deletedRowIndices, []);
+        this.validationManager.remapValidationErrorsByRowDeletion(deletedRowIndices, columnMetas);
       }
     }
   }
@@ -330,10 +349,11 @@ export class StoreBridge {
     const result = this.legacyStore.dispatch('deleteEmptyRows');
     this.saveCurrentState();
     
-    // 검증 처리
+    // 새로운 FilterRowValidationManager 사용
     if (this.validationManager && deletedRowIndices.length > 0) {
       const columnMetas = this.getColumnMetas();
-      this.validationManager.handleRowDeletion(deletedRowIndices, columnMetas);
+      this.validationManager.filterRowManager.handleRowChanges(deletedRowIndices, []);
+      this.validationManager.remapValidationErrorsByRowDeletion(deletedRowIndices, columnMetas);
     }
     
     return result;
@@ -1972,6 +1992,724 @@ export class StoreBridge {
     this._canUndo.value = this.history.canUndo();
     this._canRedo.value = this.history.canRedo();
   }
+
+  // ===== 필터 관련 메서드들 (환자여부 컬럼만) =====
+
+  /**
+   * 환자여부 필터 토글 (1 또는 0)
+   * @param {string} value - '1' 또는 '0'
+   */
+  togglePatientFilter(value) {
+    console.log('[Filter] togglePatientFilter 호출:', { value });
+    
+    const colIndex = 1; // 환자여부 컬럼 인덱스
+    const currentFilter = this.filterState.activeFilters.get(colIndex);
+    
+    console.log('[Filter] 현재 필터 상태:', { currentFilter });
+    
+    let newValues;
+    
+    if (!currentFilter) {
+      // 필터가 없으면 클릭한 값만 선택 (포함 방식)
+      console.log('[Filter] 필터 없음 - 단일 값 선택');
+      newValues = [value];
+    } else {
+      // 현재 필터에서 해당 값 토글
+      newValues = [...currentFilter.values];
+      const valueIndex = newValues.indexOf(value);
+      
+      console.log('[Filter] 값 토글:', { value, valueIndex, newValues });
+      
+      if (valueIndex > -1) {
+        // 값이 있으면 제거
+        newValues.splice(valueIndex, 1);
+        console.log('[Filter] 값 제거됨:', newValues);
+      } else {
+        // 값이 없으면 추가
+        newValues.push(value);
+        console.log('[Filter] 값 추가됨:', newValues);
+      }
+    }
+    
+    // 모든 값이 해제되면 필터 제거 (모든 행 표시)
+    if (newValues.length === 0) {
+      console.log('[Filter] 모든 값 제거됨 - 필터 제거');
+      this.removeFilter(colIndex);
+      return;
+    }
+    
+    console.log('[Filter] 최종 필터 적용:', { colIndex, newValues });
+    this.applyFilter(colIndex, {
+      type: 'binary',
+      values: newValues,
+      columnType: 'isPatient'
+    });
+  }
+
+  /**
+   * 임상증상 필터 토글 (1 또는 0)
+   * @param {number} colIndex - 컬럼 인덱스
+   * @param {string} value - '1' 또는 '0' 또는 'empty'
+   */
+  toggleClinicalFilter(colIndex, value) {
+    console.log('[Filter] toggleClinicalFilter 호출:', { colIndex, value });
+    
+    const currentFilter = this.filterState.activeFilters.get(colIndex);
+    
+    console.log('[Filter] 현재 필터 상태:', { currentFilter });
+    
+    let newValues;
+    
+    if (!currentFilter) {
+      // 필터가 없으면 클릭한 값만 선택 (포함 방식)
+      console.log('[Filter] 필터 없음 - 단일 값 선택');
+      newValues = [value];
+    } else {
+      // 현재 필터에서 해당 값 토글
+      newValues = [...currentFilter.values];
+      const valueIndex = newValues.indexOf(value);
+      
+      console.log('[Filter] 값 토글:', { value, valueIndex, newValues });
+      
+      if (valueIndex > -1) {
+        // 값이 있으면 제거
+        newValues.splice(valueIndex, 1);
+        console.log('[Filter] 값 제거됨:', newValues);
+      } else {
+        // 값이 없으면 추가
+        newValues.push(value);
+        console.log('[Filter] 값 추가됨:', newValues);
+      }
+    }
+    
+    // 모든 값이 해제되면 필터 제거 (모든 행 표시)
+    if (newValues.length === 0) {
+      console.log('[Filter] 모든 값 제거됨 - 필터 제거');
+      this.removeFilter(colIndex);
+      return;
+    }
+    
+    console.log('[Filter] 최종 필터 적용:', { colIndex, newValues });
+    this.applyFilter(colIndex, {
+      type: 'binary',
+      values: newValues,
+      columnType: 'clinicalSymptoms'
+    });
+  }
+
+  /**
+   * 식단 필터 토글 (1 또는 0)
+   * @param {number} colIndex - 컬럼 인덱스
+   * @param {string} value - '1' 또는 '0' 또는 'empty'
+   */
+  toggleDietFilter(colIndex, value) {
+    console.log('[Filter] toggleDietFilter 호출:', { colIndex, value });
+    
+    const currentFilter = this.filterState.activeFilters.get(colIndex);
+    
+    console.log('[Filter] 현재 필터 상태:', { currentFilter });
+    
+    let newValues;
+    
+    if (!currentFilter) {
+      // 필터가 없으면 클릭한 값만 선택 (포함 방식)
+      console.log('[Filter] 필터 없음 - 단일 값 선택');
+      newValues = [value];
+    } else {
+      // 현재 필터에서 해당 값 토글
+      newValues = [...currentFilter.values];
+      const valueIndex = newValues.indexOf(value);
+      
+      console.log('[Filter] 값 토글:', { value, valueIndex, newValues });
+      
+      if (valueIndex > -1) {
+        // 값이 있으면 제거
+        newValues.splice(valueIndex, 1);
+        console.log('[Filter] 값 제거됨:', newValues);
+      } else {
+        // 값이 없으면 추가
+        newValues.push(value);
+        console.log('[Filter] 값 추가됨:', newValues);
+      }
+    }
+    
+    // 모든 값이 해제되면 필터 제거 (모든 행 표시)
+    if (newValues.length === 0) {
+      console.log('[Filter] 모든 값 제거됨 - 필터 제거');
+      this.removeFilter(colIndex);
+      return;
+    }
+    
+    console.log('[Filter] 최종 필터 적용:', { colIndex, newValues });
+    this.applyFilter(colIndex, {
+      type: 'binary',
+      values: newValues,
+      columnType: 'dietInfo'
+    });
+  }
+
+  /**
+   * 기본정보 필터 토글 (텍스트 검색)
+   * @param {number} colIndex - 컬럼 인덱스
+   * @param {string} value - 검색할 텍스트 또는 'empty'
+   */
+  toggleBasicFilter(colIndex, value) {
+    console.log('[Filter] toggleBasicFilter 호출:', { colIndex, value });
+    
+    const currentFilter = this.filterState.activeFilters.get(colIndex);
+    
+    console.log('[Filter] 현재 필터 상태:', { 
+      currentFilter,
+      activeFiltersSize: this.filterState.activeFilters.size,
+      allActiveFilters: Array.from(this.filterState.activeFilters.entries())
+    });
+    
+    let newValues;
+    
+    if (!currentFilter) {
+      // 필터가 없으면 새로 생성
+      console.log('[Filter] 필터 없음 - 새로 생성');
+      newValues = [value];
+    } else {
+      // 현재 필터에서 해당 값 토글
+      newValues = [...currentFilter.values];
+      const valueIndex = newValues.indexOf(value);
+      
+      console.log('[Filter] 값 토글:', { value, valueIndex, newValues });
+      
+      if (valueIndex > -1) {
+        // 값이 있으면 제거
+        newValues.splice(valueIndex, 1);
+        console.log('[Filter] 값 제거됨:', newValues);
+      } else {
+        // 값이 없으면 추가
+        newValues.push(value);
+        console.log('[Filter] 값 추가됨:', newValues);
+      }
+    }
+    
+    // 빈 값 필터는 항상 유지 가능
+    if (newValues.length === 0) {
+      // 모두 해제하려고 하면 필터 제거
+      console.log('[Filter] 모든 값 제거됨 - 필터 제거');
+      this.removeFilter(colIndex);
+      return;
+    }
+    
+    console.log('[Filter] 최종 필터 적용:', { colIndex, newValues });
+    this.applyFilter(colIndex, {
+      type: 'text',
+      values: newValues,
+      columnType: 'basicInfo'
+    });
+  }
+
+  toggleConfirmedFilter(colIndex, value) {
+    console.log('[Filter] toggleConfirmedFilter 호출:', { colIndex, value });
+    
+    const currentFilter = this.filterState.activeFilters.get(colIndex);
+    
+    console.log('[Filter] 현재 필터 상태:', { 
+      currentFilter,
+      activeFiltersSize: this.filterState.activeFilters.size,
+      allActiveFilters: Array.from(this.filterState.activeFilters.entries())
+    });
+    
+    let newValues;
+    
+    if (!currentFilter) {
+      // 필터가 없으면 새로 생성
+      console.log('[Filter] 필터 없음 - 새로 생성');
+      newValues = [value];
+    } else {
+      // 현재 필터에서 해당 값 토글
+      newValues = [...currentFilter.values];
+      const valueIndex = newValues.indexOf(value);
+      
+      console.log('[Filter] 값 토글:', { value, valueIndex, newValues });
+      
+      if (valueIndex > -1) {
+        // 값이 있으면 제거
+        newValues.splice(valueIndex, 1);
+        console.log('[Filter] 값 제거됨:', newValues);
+      } else {
+        // 값이 없으면 추가
+        newValues.push(value);
+        console.log('[Filter] 값 추가됨:', newValues);
+      }
+    }
+    
+    // 빈 값 필터는 항상 유지 가능
+    if (newValues.length === 0) {
+      // 모두 해제하려고 하면 필터 제거
+      console.log('[Filter] 모든 값 제거됨 - 필터 제거');
+      this.removeFilter(colIndex);
+      return;
+    }
+    
+    console.log('[Filter] 최종 필터 적용:', { colIndex, newValues });
+    this.applyFilter(colIndex, {
+      type: 'text',
+      values: newValues,
+      columnType: 'isConfirmedCase'
+    });
+  }
+
+  /**
+   * 필터 적용
+   * @param {number} colIndex - 컬럼 인덱스
+   * @param {Object} filterConfig - 필터 설정
+   */
+  applyFilter(colIndex, filterConfig) {
+    console.log('[Filter] applyFilter 호출:', { 
+      colIndex, 
+      filterConfig: JSON.stringify(filterConfig),
+      filterConfigValues: filterConfig.values,
+      filterConfigValuesString: JSON.stringify(filterConfig.values)
+    });
+    
+    this.filterState.activeFilters.set(colIndex, {
+      ...filterConfig,
+      appliedAt: Date.now()
+    });
+    
+    console.log('[Filter] 필터 저장 후 상태:', {
+      activeFiltersSize: this.filterState.activeFilters.size,
+      savedFilter: JSON.stringify(this.filterState.activeFilters.get(colIndex))
+    });
+    
+    this._updateFilteredRows();
+    this._saveFilterState();
+  }
+
+  /**
+   * 모든 필터 해제
+   */
+  clearAllFilters() {
+    this.filterState.activeFilters.clear();
+    this.filterState.isFiltered = false;
+    this.filterState.filteredRowCount = 0;
+    this.filterState.originalRowCount = 0;
+    this._filteredRowMapping.clear();
+    this._originalToFilteredMapping.clear();
+    
+    this._saveFilterState();
+    console.log('[Filter] 모든 필터 해제됨');
+  }
+
+  /**
+   * 개별 필터 제거
+   * @param {number} colIndex - 컬럼 인덱스
+   */
+  removeFilter(colIndex) {
+    this.filterState.activeFilters.delete(colIndex);
+    
+    if (this.filterState.activeFilters.size === 0) {
+      this.clearAllFilters();
+    } else {
+      this._updateFilteredRows();
+      this._saveFilterState();
+    }
+  }
+
+  /**
+   * 필터된 행 업데이트
+   */
+  _updateFilteredRows() {
+    console.log('[Filter] _updateFilteredRows 호출됨');
+    
+    if (!this.legacyStore) {
+      console.log('[Filter] legacyStore 없음 - 종료');
+      return;
+    }
+    
+    const rows = this.legacyStore.state.rows;
+    this.filterState.originalRowCount = rows.length;
+    
+    console.log('[Filter] 필터 상태 확인:', {
+      activeFiltersSize: this.filterState.activeFilters.size,
+      isFiltered: this.filterState.isFiltered,
+      rowsLength: rows.length
+    });
+    
+    if (this.filterState.activeFilters.size === 0) {
+      this.filterState.isFiltered = false;
+      this.filterState.filteredRowCount = rows.length;
+      this._filteredRowMapping.clear();
+      this._originalToFilteredMapping.clear();
+      console.log('[Filter] 필터 없음 - 모든 행 표시');
+      return;
+    }
+    
+    // 필터링된 행들의 원본 인덱스를 찾아서 저장
+    const filteredIndices = [];
+    rows.forEach((row, originalIndex) => {
+      if (this._applyFilters(row)) {
+        filteredIndices.push(originalIndex);
+      }
+    });
+    
+    this.filterState.filteredRowCount = filteredIndices.length;
+    this.filterState.isFiltered = true;
+    
+    console.log('[Filter] 필터링 완료:', {
+      originalCount: rows.length,
+      filteredCount: filteredIndices.length,
+      filteredIndices,
+      isFiltered: this.filterState.isFiltered
+    });
+    
+    // 매핑 업데이트
+    this._filteredRowMapping.clear();
+    this._originalToFilteredMapping.clear();
+    
+    filteredIndices.forEach((originalIndex, filteredIndex) => {
+      this._filteredRowMapping.set(filteredIndex, originalIndex);
+      this._originalToFilteredMapping.set(originalIndex, filteredIndex);
+    });
+    
+    const filteredRowMappingSize = this._filteredRowMapping.size;
+    const originalToFilteredMappingSize = this._originalToFilteredMapping.size;
+    console.log('[Filter] 매핑 완료:', {
+      filteredRowMappingSize,
+      originalToFilteredMappingSize
+    });
+  }
+
+  /**
+   * 필터 적용 로직 (환자여부만)
+   * @param {Object} row - 행 데이터
+   * @returns {boolean} 필터 통과 여부
+   */
+  _applyFilters(row) {
+    for (const [colIndex, filterConfig] of this.filterState.activeFilters) {
+      if (!this._matchesFilter(row, colIndex, filterConfig)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * 개별 필터 매칭 (환자여부, 임상증상, 식단)
+   * @param {Object} row - 행 데이터
+   * @param {number} colIndex - 컬럼 인덱스
+   * @param {Object} filterConfig - 필터 설정
+   * @returns {boolean} 매칭 여부
+   */
+  _matchesFilter(row, colIndex, filterConfig) {
+    console.log('[Filter] _matchesFilter 호출:', { 
+      colIndex, 
+      filterConfig: JSON.stringify(filterConfig), 
+      row: JSON.stringify(row) 
+    });
+    
+    // 환자여부 컬럼 처리
+    if (colIndex === 1 && filterConfig.columnType === 'isPatient') {
+      const cellValue = String(row.isPatient ?? '');
+      console.log('[Filter] 환자여부 필터링:', { 
+        cellValue, 
+        filterValues: filterConfig.values,
+        filterValuesType: typeof filterConfig.values,
+        filterValuesLength: filterConfig.values?.length,
+        filterValuesString: JSON.stringify(filterConfig.values)
+      });
+      
+      // 'empty'가 포함된 경우 빈 값도 허용
+      const allowEmpty = filterConfig.values.includes('empty');
+      if (allowEmpty && (cellValue === '' || cellValue === 'null' || cellValue === 'undefined')) {
+        console.log('[Filter] 빈 값 허용됨');
+        return true;
+      }
+      
+      const matches = filterConfig.values.includes(cellValue);
+      console.log('[Filter] 값 매칭 결과:', { 
+        cellValue, 
+        matches,
+        includesCheck: filterConfig.values.includes(cellValue),
+        valuesCheck: filterConfig.values
+      });
+      return matches;
+    }
+    
+    // 확진여부 컬럼 처리
+    if (filterConfig.columnType === 'isConfirmedCase') {
+      const cellValue = String(row.isConfirmedCase ?? '');
+      console.log('[Filter] 확진여부 필터링:', { 
+        colIndex,
+        cellValue, 
+        filterValues: filterConfig.values,
+        filterValuesType: typeof filterConfig.values,
+        filterValuesLength: filterConfig.values?.length,
+        filterValuesString: JSON.stringify(filterConfig.values)
+      });
+      
+      // 'empty'가 포함된 경우 빈 값도 허용
+      const allowEmpty = filterConfig.values.includes('empty');
+      if (allowEmpty && (cellValue === '' || cellValue === 'null' || cellValue === 'undefined')) {
+        console.log('[Filter] 빈 값 허용됨');
+        return true;
+      }
+      
+      const matches = filterConfig.values.includes(cellValue);
+      console.log('[Filter] 확진여부 값 매칭 결과:', { 
+        cellValue, 
+        matches,
+        includesCheck: filterConfig.values.includes(cellValue),
+        valuesCheck: filterConfig.values
+      });
+      return matches;
+    }
+    
+    // 임상증상 컬럼 처리
+    if (filterConfig.columnType === 'clinicalSymptoms') {
+      // 컬럼 메타데이터에서 해당 컬럼의 cellIndex 찾기
+      const columnMeta = this.columnMetas?.find(c => c.colIndex === colIndex);
+      console.log('[Filter] 임상증상 컬럼 메타데이터 검색:', { 
+        colIndex, 
+        columnMeta,
+        allColumnMetas: this.columnMetas?.map(c => ({ colIndex: c.colIndex, type: c.type, cellIndex: c.cellIndex }))
+      });
+      
+      if (!columnMeta) {
+        console.log('[Filter] 임상증상 컬럼 메타데이터 없음:', { colIndex, columnMeta });
+        return true;
+      }
+      
+      // cellIndex가 없으면 임시로 계산 (colIndex에서 기본정보 컬럼 수를 빼서 계산)
+      let cellIndex = columnMeta.cellIndex;
+      if (cellIndex === null || cellIndex === undefined) {
+        // 기본정보 컬럼 수 계산 (연번: 0, 환자여부: 1, 확진여부: 2(있을 경우))
+        const basicInfoCount = this.columnMetas?.filter(c => c.type === 'basic').length || 0;
+        const confirmedCaseOffset = this.columnMetas?.some(c => c.type === 'isConfirmedCase') ? 1 : 0;
+        cellIndex = colIndex - 2 - confirmedCaseOffset - basicInfoCount;
+        console.log('[Filter] cellIndex 계산됨:', { colIndex, basicInfoCount, confirmedCaseOffset, calculatedCellIndex: cellIndex });
+      }
+      
+      if (cellIndex < 0) {
+        console.log('[Filter] cellIndex가 음수:', { colIndex, cellIndex });
+        return true;
+      }
+      
+      const cellValue = String(row.clinicalSymptoms?.[cellIndex] ?? '');
+      console.log('[Filter] 임상증상 필터링:', { 
+        colIndex,
+        cellIndex,
+        cellValue, 
+        filterValues: filterConfig.values,
+        clinicalSymptomsArray: row.clinicalSymptoms,
+        clinicalSymptomsLength: row.clinicalSymptoms?.length
+      });
+      
+      // 'empty'가 포함된 경우 빈 값도 허용
+      const allowEmpty = filterConfig.values.includes('empty');
+      if (allowEmpty && (cellValue === '' || cellValue === 'null' || cellValue === 'undefined')) {
+        console.log('[Filter] 빈 값 허용됨');
+        return true;
+      }
+      
+      const matches = filterConfig.values.includes(cellValue);
+      console.log('[Filter] 임상증상 값 매칭 결과:', { 
+        cellValue, 
+        matches,
+        includesCheck: filterConfig.values.includes(cellValue)
+      });
+      return matches;
+    }
+    
+    // 식단 컬럼 처리
+    if (filterConfig.columnType === 'dietInfo') {
+      // 컬럼 메타데이터에서 해당 컬럼의 cellIndex 찾기
+      const columnMeta = this.columnMetas?.find(c => c.colIndex === colIndex);
+      console.log('[Filter] 식단 컬럼 메타데이터 검색:', { 
+        colIndex, 
+        columnMeta,
+        allColumnMetas: this.columnMetas?.map(c => ({ colIndex: c.colIndex, type: c.type, cellIndex: c.cellIndex }))
+      });
+      
+      if (!columnMeta) {
+        console.log('[Filter] 식단 컬럼 메타데이터 없음:', { colIndex, columnMeta });
+        return true;
+      }
+      
+      // cellIndex가 없으면 임시로 계산
+      let cellIndex = columnMeta.cellIndex;
+      if (cellIndex === null || cellIndex === undefined) {
+        // 기본정보, 임상증상, 개별노출시간, 증상발현시간 컬럼 수 계산
+        const basicInfoCount = this.columnMetas?.filter(c => c.type === 'basic').length || 0;
+        const clinicalCount = this.columnMetas?.filter(c => c.type === 'clinicalSymptoms').length || 0;
+        const confirmedCaseOffset = this.columnMetas?.some(c => c.type === 'isConfirmedCase') ? 1 : 0;
+        const individualExposureOffset = this.columnMetas?.some(c => c.type === 'individualExposureTime') ? 1 : 0;
+        cellIndex = colIndex - 2 - confirmedCaseOffset - basicInfoCount - clinicalCount - individualExposureOffset - 1; // 증상발현시간 1개
+        console.log('[Filter] 식단 cellIndex 계산됨:', { colIndex, basicInfoCount, clinicalCount, confirmedCaseOffset, individualExposureOffset, calculatedCellIndex: cellIndex });
+      }
+      
+      if (cellIndex < 0) {
+        console.log('[Filter] 식단 cellIndex가 음수:', { colIndex, cellIndex });
+        return true;
+      }
+      
+      const cellValue = String(row.dietInfo?.[cellIndex] ?? '');
+      console.log('[Filter] 식단 필터링:', { 
+        colIndex,
+        cellIndex,
+        cellValue, 
+        filterValues: filterConfig.values,
+        dietInfoArray: row.dietInfo,
+        dietInfoLength: row.dietInfo?.length
+      });
+      
+      // 'empty'가 포함된 경우 빈 값도 허용
+      const allowEmpty = filterConfig.values.includes('empty');
+      if (allowEmpty && (cellValue === '' || cellValue === 'null' || cellValue === 'undefined')) {
+        console.log('[Filter] 빈 값 허용됨');
+        return true;
+      }
+      
+      const matches = filterConfig.values.includes(cellValue);
+      console.log('[Filter] 식단 값 매칭 결과:', { 
+        cellValue, 
+        matches,
+        includesCheck: filterConfig.values.includes(cellValue)
+      });
+      return matches;
+    }
+    
+    // 기본정보 컬럼 처리
+    if (filterConfig.columnType === 'basicInfo') {
+      // 컬럼 메타데이터에서 해당 컬럼의 cellIndex 찾기
+      const columnMeta = this.columnMetas?.find(c => c.colIndex === colIndex);
+      console.log('[Filter] 기본정보 컬럼 메타데이터 검색:', { 
+        colIndex, 
+        columnMeta,
+        allColumnMetas: this.columnMetas?.map(c => ({ colIndex: c.colIndex, type: c.type, cellIndex: c.cellIndex }))
+      });
+      
+      if (!columnMeta || columnMeta.cellIndex === null || columnMeta.cellIndex === undefined) {
+        console.log('[Filter] 기본정보 컬럼 메타데이터 없음:', { colIndex, columnMeta });
+        return true;
+      }
+      
+      const cellValue = String(row.basicInfo?.[columnMeta.cellIndex] ?? '');
+      console.log('[Filter] 기본정보 필터링:', { 
+        colIndex,
+        cellIndex: columnMeta.cellIndex,
+        cellValue, 
+        filterValues: filterConfig.values,
+        basicInfoArray: row.basicInfo,
+        basicInfoLength: row.basicInfo?.length
+      });
+      
+      // 'empty'가 포함된 경우 빈 값도 허용
+      const allowEmpty = filterConfig.values.includes('empty');
+      if (allowEmpty && (cellValue === '' || cellValue === 'null' || cellValue === 'undefined')) {
+        console.log('[Filter] 빈 값 허용됨');
+        return true;
+      }
+      
+      // 정확한 값 매칭 (대소문자 구분 없이)
+      const hasExactMatch = filterConfig.values.some(filterValue => {
+        if (filterValue === 'empty') return false; // empty는 이미 처리됨
+        return cellValue.toLowerCase() === filterValue.toLowerCase();
+      });
+      
+      console.log('[Filter] 기본정보 값 매칭 결과:', { 
+        cellValue, 
+        hasExactMatch, 
+        filterValues: filterConfig.values.filter(v => v !== 'empty')
+      });
+      
+      return hasExactMatch;
+    }
+    
+    console.log('[Filter] 지원하지 않는 컬럼 타입 - 필터링하지 않음');
+    return true; // 지원하지 않는 컬럼은 필터링하지 않음
+  }
+
+  /**
+   * Public 필터 매칭 메서드
+   * @param {Object} row - 행 데이터
+   * @param {number} colIndex - 컬럼 인덱스
+   * @param {Object} filterConfig - 필터 설정
+   * @returns {boolean} 매칭 여부
+   */
+  matchesFilter(row, colIndex, filterConfig) {
+    return this._matchesFilter(row, colIndex, filterConfig);
+  }
+
+  /**
+   * 필터된 인덱스를 원본 인덱스로 변환
+   * @param {number} filteredIndex - 필터된 인덱스
+   * @returns {number} 원본 인덱스
+   */
+  getOriginalIndexFromFiltered(filteredIndex) {
+    if (!this.filterState.isFiltered) {
+      return filteredIndex;
+    }
+    
+    const originalIndex = this._filteredRowMapping.get(filteredIndex);
+    return originalIndex !== undefined ? originalIndex : filteredIndex;
+  }
+
+  /**
+   * 원본 인덱스를 필터된 인덱스로 변환
+   * @param {number} originalIndex - 원본 인덱스
+   * @returns {number} 필터된 인덱스
+   */
+  getFilteredIndexFromOriginal(originalIndex) {
+    if (!this.filterState.isFiltered) {
+      return originalIndex;
+    }
+    
+    const filteredIndex = this._originalToFilteredMapping.get(originalIndex);
+    return filteredIndex !== undefined ? filteredIndex : -1; // -1은 숨겨진 행
+  }
+
+  /**
+   * 필터 상태 저장 (localStorage)
+   */
+  _saveFilterState() {
+    try {
+      const filterData = {
+        activeFilters: Array.from(this.filterState.activeFilters.entries()),
+        isFiltered: this.filterState.isFiltered,
+        lastAppliedAt: this.filterState.lastAppliedAt
+      };
+      
+      localStorage.setItem('dataInputFilters', JSON.stringify(filterData));
+      console.log('[Filter] 필터 상태 저장 완료');
+    } catch (error) {
+      console.error('[Filter] 필터 상태 저장 실패:', error);
+    }
+  }
+
+  /**
+   * 필터 상태 복원 (페이지 새로고침 후에도 유지)
+   */
+  loadFilterState() {
+    try {
+      const savedData = localStorage.getItem('dataInputFilters');
+      if (!savedData) return;
+      
+      const filterData = JSON.parse(savedData);
+      
+      // 활성 필터 복원
+      this.filterState.activeFilters = new Map(filterData.activeFilters || []);
+      this.filterState.isFiltered = filterData.isFiltered || false;
+      this.filterState.lastAppliedAt = filterData.lastAppliedAt || null;
+      
+      // 필터된 행 재계산
+      if (this.filterState.isFiltered) {
+        this._updateFilteredRows();
+      }
+      
+      console.log('[Filter] 필터 상태 복원 완료');
+    } catch (error) {
+      console.error('[Filter] 필터 상태 복원 실패:', error);
+      // 오류 시 필터 초기화
+      this.clearAllFilters();
+    }
+  }
 }
 
 // Vue Composition API용 훅
@@ -2075,6 +2813,26 @@ export function useStoreBridge(legacyStore = null, validationManager = null, opt
     clearMultipleRowsData: (payload) => bridge.clearMultipleRowsData(payload),
     clearIndividualRowsData: (payload) => bridge.clearIndividualRowsData(payload),
     loadInitialData: () => bridge.loadInitialData(),
-    updateSingleHeader: (payload) => bridge.updateSingleHeader(payload)
+    updateSingleHeader: (payload) => bridge.updateSingleHeader(payload),
+    
+    // 필터 관련 메서드들
+    togglePatientFilter: (value) => bridge.togglePatientFilter(value),
+    toggleClinicalFilter: (colIndex, value) => bridge.toggleClinicalFilter(colIndex, value),
+    toggleDietFilter: (colIndex, value) => bridge.toggleDietFilter(colIndex, value),
+    toggleBasicFilter: (colIndex, value) => bridge.toggleBasicFilter(colIndex, value),
+    toggleConfirmedFilter: (colIndex, value) => bridge.toggleConfirmedFilter(colIndex, value),
+    applyFilter: (colIndex, filterConfig) => bridge.applyFilter(colIndex, filterConfig),
+    clearAllFilters: () => bridge.clearAllFilters(),
+    removeFilter: (colIndex) => bridge.removeFilter(colIndex),
+    getOriginalIndexFromFiltered: (filteredIndex) => bridge.getOriginalIndexFromFiltered(filteredIndex),
+    getFilteredIndexFromOriginal: (originalIndex) => bridge.getFilteredIndexFromOriginal(originalIndex),
+    matchesFilter: (row, colIndex, filterConfig) => bridge.matchesFilter(row, colIndex, filterConfig),
+    
+    // 필터 상태 접근
+    filterState: bridge.filterState,
+    
+    // 내부 매핑 접근 (필터링용)
+    _filteredRowMapping: bridge._filteredRowMapping,
+    _originalToFilteredMapping: bridge._originalToFilteredMapping
   };
-} 
+}

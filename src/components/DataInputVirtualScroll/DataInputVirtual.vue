@@ -6,7 +6,7 @@
     ref="dataContainerRef"
   >
     <VirtualAppHeader 
-      :errorCount="validationErrors.size"
+      :errorCount="visibleValidationErrors.size"
       @focusFirstError="handleFocusFirstError"
     />
     <VirtualFunctionBar 
@@ -16,6 +16,9 @@
       :upload-progress="excelUploadProgress"
       :can-undo="canUndo"
       :can-redo="canRedo"
+      :is-filtered="storeBridge.filterState.isFiltered"
+      :filtered-row-count="storeBridge.filterState.filteredRowCount"
+      :original-row-count="storeBridge.filterState.originalRowCount"
       @update-cell-value="onUpdateCellValueFromBar"
       @enter-pressed="onEnterPressedFromBar"
       @excel-file-selected="onExcelFileSelected"
@@ -28,6 +31,7 @@
       @toggle-confirmed-case-col="onToggleConfirmedCaseColumn"
       @undo="onUndo"
       @redo="onRedo"
+      @clear-all-filters="onClearAllFilters"
     />
     <div class="grid-container" ref="gridContainerRef">
       <VirtualGridHeader 
@@ -41,6 +45,7 @@
         :isEditing="selectionSystem.state.isEditing"
         :editingCell="selectionSystem.state.editingCell"
         :scrollbarWidth="scrollbarWidth"
+        :is-filtered="storeBridge.filterState.isFiltered"
         @cell-mousedown="onCellMouseDown"
         @cell-dblclick="onCellDoubleClick"
         @cell-input="onCellInput"
@@ -63,8 +68,9 @@
         :isEditing="selectionSystem.state.isEditing"
         :editingCell="selectionSystem.state.editingCell"
         :individualSelectedRows="selectionSystem.state.selectedRowsIndividual"
-        :validation-errors="validationErrors"
+        :validation-errors="visibleValidationErrors"
         :column-metas="allColumnsMeta"
+        :is-filtered="storeBridge.filterState.isFiltered"
         @scroll="handleGridScroll"
         @cell-mousedown="onCellMouseDown"
         @cell-dblclick="onCellDoubleClick"
@@ -85,6 +91,7 @@
     <DragOverlay :visible="isDragOver" :progress="excelUploadProgress" />
     <ToastContainer />
     <AddRowsControls 
+      :is-filtered="storeBridge.filterState.isFiltered"
       @add-rows="onAddRows" 
       @delete-empty-rows="onDeleteEmptyRows" 
       @clear-selection="onClearSelection"
@@ -179,6 +186,41 @@ const validationManager = new ValidationManager(store, validationOptions);
 const storeBridge = useStoreBridge(store, validationManager, { 
   debug: import.meta.env?.MODE === 'development' || false
 });
+
+// 필터 상태를 reactive하게 만들기
+const filterState = ref(storeBridge.filterState);
+
+// 필터 상태 변화 감지
+watch(() => storeBridge.filterState, (newState) => {
+  console.log('[Filter] 필터 상태 변화 감지:', newState);
+  filterState.value = newState;
+}, { deep: true, immediate: true });
+
+// 필터 상태 변경 시 강제로 filteredRows 재계산
+watch(() => storeBridge.filterState.isFiltered, (isFiltered) => {
+  console.log('[Filter] isFiltered 변경 감지:', isFiltered);
+  // filterState.value를 강제로 업데이트하여 filteredRows computed가 재실행되도록 함
+  filterState.value = { ...storeBridge.filterState };
+}, { immediate: true });
+
+// activeFilters 변경 감지 - 더 세밀하게 감지
+watch(() => storeBridge.filterState.activeFilters, (activeFilters) => {
+  console.log('[Filter] activeFilters 변경 감지:', activeFilters);
+  // filterState.value를 강제로 업데이트하여 filteredRows computed가 재실행되도록 함
+  filterState.value = { ...storeBridge.filterState };
+}, { deep: true, immediate: true });
+
+// 추가: activeFilters의 크기 변경도 감지
+watch(() => storeBridge.filterState.activeFilters?.size, (size) => {
+  console.log('[Filter] activeFilters 크기 변경 감지:', size);
+  filterState.value = { ...storeBridge.filterState };
+}, { immediate: true });
+
+// 필터 상태 변경 시 유효성 에러 표시 업데이트
+watch(() => storeBridge.filterState.isFiltered, (isFiltered) => {
+  console.log('[Filter] 필터 상태 변경으로 유효성 에러 표시 업데이트:', isFiltered);
+  // visibleValidationErrors computed가 자동으로 재계산됨
+}, { immediate: true });
 
 // StoreBridge에 ValidationManager 설정 (이미 생성자에서 전달했으므로 제거)
 // storeBridge.validationManager = validationManager;
@@ -378,6 +420,8 @@ watch(allColumnsMeta, (newColumnMetas) => {
     validationManager.updateColumnMetas(newColumnMetas);
   }
 }, { deep: true });
+
+// 필터 상태 변경 시 필터된 행 재계산 (위의 watch로 대체됨)
 
 // 컬럼 메타데이터를 StoreBridge에 설정
 watch(allColumnsMeta, (newColumnMetas) => {
@@ -597,14 +641,73 @@ const selectedCellInfo = computed(() => {
   return { address, value };
 });
 
+// --- 필터된 행 계산 ---
+const filteredRows = computed(() => {
+  console.log('[Filter] ===== filteredRows computed 실행 시작 =====');
+  
+  // filterState ref 사용
+  const currentFilterState = filterState.value;
+  const isFiltered = currentFilterState.isFiltered;
+  const activeFiltersSize = currentFilterState.activeFilters?.size || 0;
+  const filteredRowCount = currentFilterState.filteredRowCount;
+  const originalRowCount = currentFilterState.originalRowCount;
+  
+  console.log('[Filter] filterState.value:', {
+    isFiltered,
+    activeFiltersSize,
+    filteredRowCount,
+    originalRowCount
+  });
+  console.log('[Filter] rows.value.length:', rows.value.length);
+  
+  if (!isFiltered) {
+    console.log('[Filter] 필터링 없음 - 전체 행 반환');
+    return rows.value;
+  }
+  
+  console.log('[Filter] 필터링 시작 - 직접 필터링 로직 사용');
+  
+  // 직접 필터링 로직 사용 - 원본 인덱스 정보 포함
+  const filteredWithOriginalIndex = [];
+  rows.value.forEach((row, originalIndex) => {
+    // activeFilters를 배열로 변환하여 반응성 보장
+    const activeFiltersArray = Array.from(currentFilterState.activeFilters || []);
+    
+    let shouldInclude = true;
+    for (const [colIndex, filterConfig] of activeFiltersArray) {
+      // StoreBridge의 public 메서드 사용
+      if (!storeBridge.matchesFilter(row, colIndex, filterConfig)) {
+        shouldInclude = false;
+        break;
+      }
+    }
+    
+    if (shouldInclude) {
+      // 원본 인덱스 정보를 포함하여 반환
+      filteredWithOriginalIndex.push({
+        ...row,
+        _originalIndex: originalIndex, // 원본 인덱스 저장
+        _filteredOriginalIndex: originalIndex // 필터링된 상태에서의 원본 인덱스
+      });
+    }
+  });
+  
+  console.log('[Filter] 필터링 결과:', {
+    originalCount: rows.value.length,
+    filteredCount: filteredWithOriginalIndex.length,
+    filteredRows: filteredWithOriginalIndex
+  });
+  
+  return filteredWithOriginalIndex;
+});
+
 // --- 가상 스크롤 시스템 ---
 const {
   visibleRows,
   totalHeight,
   paddingTop,
-  onScroll,
-  getOriginalIndex
-} = useVirtualScroll(rows, {
+  onScroll
+} = useVirtualScroll(filteredRows, {
   rowHeight: 35, // 기존 행 높이
   bufferSize: 1,
   viewportHeight
@@ -622,11 +725,44 @@ const { downloadXLSXSmart, downloadTemplate } = useDataExport();
 const { isDragOver, setupDragDropListeners } = useDragDrop();
 let cleanupDragDrop = null;
 
+// === 새로운 필터 유효성 검사 통합 시스템 ===
+import { FilterRowValidationManager } from './utils/FilterRowValidationManager.js';
+
+// 필터 + 행 변경 통합 매니저 인스턴스
+const filterRowValidationManager = new FilterRowValidationManager();
+
 // === Validation Errors Computed ===
 const validationErrors = computed(() => {
   const errors = store.state.validationState?.errors;
   return errors instanceof Map ? errors : new Map();
 });
+
+// 필터된 상태에서 보이는 유효성 에러만 계산 (새로운 시스템 사용)
+const visibleValidationErrors = computed(() => {
+  const errors = validationErrors.value;
+  const isFiltered = storeBridge.filterState.isFiltered;
+  const filteredRowsData = filteredRows.value;
+  
+  // FilterRowValidationManager 업데이트
+  filterRowValidationManager.updateFilterState(isFiltered, filteredRowsData, errors);
+  
+  // 보이는 에러만 반환
+  return filterRowValidationManager.getVisibleErrors();
+});
+
+// 필터 상태 변경 감지 및 CSS 업데이트 (새로운 시스템 사용)
+watch(() => storeBridge.filterState.isFiltered, (newIsFiltered, oldIsFiltered) => {
+  if (newIsFiltered !== oldIsFiltered) {
+    // 새로운 매니저로 CSS 업데이트
+    nextTick(() => {
+      // 강제로 CSS 재계산
+      const gridBody = gridBodyRef.value;
+      if (gridBody) {
+        gridBody.$forceUpdate();
+      }
+    });
+  }
+}, { immediate: false });
 
 async function onExcelFileSelected(file) {
   if (isUploadingExcel.value) return;
@@ -812,6 +948,9 @@ async function onResetSheet() {
       try {
         // 유효성 검사 오류 초기화
         validationManager.clearAllErrors();
+        
+        // 필터 초기화
+        storeBridge.clearAllFilters();
         
         storeBridge.dispatch('resetSheet');
         // selection / scroll reset
@@ -1439,6 +1578,174 @@ function onContextMenuSelect(action) {
     });
     break;
   }
+  case 'filter-patient-1':
+  case 'filter-patient-0':
+  case 'filter-patient-empty': {
+    let value;
+    if (action === 'filter-patient-1') value = '1';
+    else if (action === 'filter-patient-0') value = '0';
+    else value = 'empty';
+    
+    console.log('[Filter] 필터 토글 전 상태:', {
+      action,
+      value,
+      currentFilterState: storeBridge.filterState,
+      activeFilters: Array.from(storeBridge.filterState.activeFilters.entries())
+    });
+    
+    storeBridge.togglePatientFilter(value);
+    
+    console.log('[Filter] 필터 토글 후 상태:', {
+      action,
+      value,
+      currentFilterState: storeBridge.filterState,
+      activeFilters: Array.from(storeBridge.filterState.activeFilters.entries())
+    });
+    
+    // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+    filterState.value = { ...storeBridge.filterState };
+    
+    console.log('[Filter] filterState.value 강제 업데이트 완료');
+    console.log(`[Filter] 환자여부 필터 토글: ${value}`);
+    break;
+  }
+  case 'filter-confirmed-1':
+  case 'filter-confirmed-0':
+  case 'filter-confirmed-empty': {
+    let value;
+    if (action === 'filter-confirmed-1') value = '1';
+    else if (action === 'filter-confirmed-0') value = '0';
+    else value = 'empty';
+    
+    console.log('[Filter] 확진여부 필터 토글 전 상태:', {
+      action,
+      value,
+      colIndex: target.colIndex,
+      currentFilterState: storeBridge.filterState
+    });
+    
+    storeBridge.toggleConfirmedFilter(target.colIndex, value);
+    
+    console.log('[Filter] 확진여부 필터 토글 후 상태:', {
+      action,
+      value,
+      colIndex: target.colIndex,
+      currentFilterState: storeBridge.filterState
+    });
+    
+    // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+    filterState.value = { ...storeBridge.filterState };
+    
+    console.log('[Filter] filterState.value 강제 업데이트 완료');
+    console.log(`[Filter] 확진여부 필터 토글: ${value}`);
+    break;
+  }
+  case 'filter-clinical-1':
+  case 'filter-clinical-0':
+  case 'filter-clinical-empty': {
+    let value;
+    if (action === 'filter-clinical-1') value = '1';
+    else if (action === 'filter-clinical-0') value = '0';
+    else value = 'empty';
+    
+    console.log('[Filter] 임상증상 필터 토글 전 상태:', {
+      action,
+      value,
+      colIndex: target.colIndex,
+      currentFilterState: storeBridge.filterState
+    });
+    
+    storeBridge.toggleClinicalFilter(target.colIndex, value);
+    
+    console.log('[Filter] 임상증상 필터 토글 후 상태:', {
+      action,
+      value,
+      colIndex: target.colIndex,
+      currentFilterState: storeBridge.filterState
+    });
+    
+    // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+    filterState.value = { ...storeBridge.filterState };
+    
+    console.log('[Filter] filterState.value 강제 업데이트 완료');
+    console.log(`[Filter] 임상증상 필터 토글: ${value}`);
+    break;
+  }
+  case 'filter-diet-1':
+  case 'filter-diet-0':
+  case 'filter-diet-empty': {
+    let value;
+    if (action === 'filter-diet-1') value = '1';
+    else if (action === 'filter-diet-0') value = '0';
+    else value = 'empty';
+    
+    console.log('[Filter] 식단 필터 토글 전 상태:', {
+      action,
+      value,
+      colIndex: target.colIndex,
+      currentFilterState: storeBridge.filterState
+    });
+    
+    storeBridge.toggleDietFilter(target.colIndex, value);
+    
+    console.log('[Filter] 식단 필터 토글 후 상태:', {
+      action,
+      value,
+      colIndex: target.colIndex,
+      currentFilterState: storeBridge.filterState
+    });
+    
+    // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+    filterState.value = { ...storeBridge.filterState };
+    
+    console.log('[Filter] filterState.value 강제 업데이트 완료');
+    console.log(`[Filter] 식단 필터 토글: ${value}`);
+    break;
+  }
+  case 'filter-basic-empty': {
+    console.log('[Filter] 기본정보 빈 셀 필터:', {
+      action,
+      colIndex: target.colIndex,
+      currentFilterState: storeBridge.filterState
+    });
+    
+    storeBridge.toggleBasicFilter(target.colIndex, 'empty');
+    
+    // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+    filterState.value = { ...storeBridge.filterState };
+    
+    console.log('[Filter] 기본정보 빈 셀 필터 적용');
+    break;
+  }
+  default: {
+    // 기본정보 값 필터 (동적 액션 처리)
+    if (action.startsWith('filter-basic-')) {
+      const value = action.replace('filter-basic-', '');
+      console.log('[Filter] 기본정보 값 필터:', {
+        action,
+        value,
+        colIndex: target.colIndex,
+        currentFilterState: storeBridge.filterState
+      });
+      
+      storeBridge.toggleBasicFilter(target.colIndex, value);
+      
+      // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+      filterState.value = { ...storeBridge.filterState };
+      
+      console.log('[Filter] 기본정보 값 필터 적용:', value);
+    }
+    break;
+  }
+  case 'clear-all-filters': {
+    storeBridge.clearAllFilters();
+    
+    // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+    filterState.value = { ...storeBridge.filterState };
+    
+    console.log('[Filter] 모든 필터 해제');
+    break;
+  }
   }
   
   // 작업 완료 후 개별 선택 상태 초기화
@@ -1506,11 +1813,14 @@ async function ensureCellIsVisible(rowIndex, colIndex) {
   }
 }
 
+
+
 function createHandlerContext() {
   return {
-    getOriginalIndex,
+    getOriginalIndex: (index) => index, // 이미 원본 인덱스로 전달되므로 그대로 반환
     selectionSystem,
     rows,
+    filteredRows, // 필터된 행도 전달
     allColumnsMeta: allColumnsMeta.value,
     gridBodyContainer: gridBodyRef.value?.bodyContainer,
     ensureCellIsVisible,
@@ -1539,7 +1849,8 @@ function createHandlerContext() {
 }
 
 function onCellMouseDown(virtualRowIndex, colIndex, event) {
-  const originalRowIndex = getOriginalIndex(virtualRowIndex);
+  // virtualRowIndex는 이미 원본 인덱스로 전달됨 (VirtualGridBody에서 변환됨)
+  const originalRowIndex = virtualRowIndex;
 
   // 데이트피커가 열려있고 다른 셀을 클릭한 경우 데이트피커 닫기
   if (dateTimePickerState.visible) {
@@ -1661,6 +1972,7 @@ function onKeyDown(event) {
 }
 
 async function onCellDoubleClick(virtualRowIndex, colIndex, event) {
+  // virtualRowIndex는 이미 원본 인덱스로 전달됨 (VirtualGridBody에서 변환됨)
   const context = createHandlerContext();
   await handleVirtualCellDoubleClick(virtualRowIndex, colIndex, event, context);
 }
@@ -1672,6 +1984,14 @@ function onCellInput(event, rowIndex, colIndex) {
   if (!columnMeta || !columnMeta.isEditable) return;
 
   const newValue = event.target.textContent;
+
+  // rowIndex는 이미 원본 인덱스로 전달됨 (VirtualGridBody에서 변환됨)
+  console.log(`[CellInput] 셀 입력: 원본 행 ${rowIndex}, 열 ${colIndex}, 값 "${newValue}"`);
+  console.log('[CellInput] 필터 상태:', {
+    isFiltered: storeBridge.filterState.isFiltered,
+    filteredRowsCount: filteredRows.value.length,
+    originalRowsCount: rows.value.length
+  });
 
   // 헤더 셀과 바디 셀 모두 동일한 방식으로 처리
   // 새로운 시스템: 임시 값 업데이트 (즉시 저장하지 않음)
@@ -1741,6 +2061,10 @@ function getCellValue(row, columnMeta, rowIndex = null) {
   }
   
   if (columnMeta.type === COL_TYPE_SERIAL) {
+    // 필터링된 행의 경우 원본 인덱스를 사용하여 연번 표시
+    if (row && row._originalIndex !== undefined) {
+      return row._originalIndex + 1;
+    }
     return rowIndex + 1;
   }
   
@@ -1760,6 +2084,10 @@ function getCellValue(row, columnMeta, rowIndex = null) {
 onMounted(() => {
   // storeBridge를 전역으로 설정하여 유효성 검사 오류 자동 저장
   window.storeBridge = storeBridge;
+  
+  // 필터 상태 초기화 (임시)
+  console.log('[Filter] 컴포넌트 마운트 시 필터 초기화');
+  storeBridge.clearAllFilters();
   
   if (gridContainerRef.value) {
     // We only need the body's height for viewport calculation.
@@ -1996,14 +2324,58 @@ function onRedo() {
   }
 }
 
+function onClearAllFilters() {
+  storeBridge.clearAllFilters();
+  
+  // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+  filterState.value = { ...storeBridge.filterState };
+  
+  console.log('[Filter] 모든 필터 해제됨');
+}
+
 function handleFocusFirstError() {
-  const errors = Array.from(validationErrors.value.entries());
+  // 필터된 상태에서는 보이는 에러만 고려
+  const errors = Array.from(visibleValidationErrors.value.entries());
   if (errors.length === 0) return;
+  
   const [key] = errors[0];
-  const [rowIndex, colIndex] = key.split('_').map(Number);
+  const [rowIndex, uniqueKey] = key.split('_');
+  const originalRowIndex = parseInt(rowIndex, 10);
+  
+  // 고유 키를 사용하여 열 인덱스 찾기
+  const columnMeta = allColumnsMeta.value.find(col => {
+    const colUniqueKey = validationManager.getColumnUniqueKey(col);
+    return colUniqueKey === uniqueKey;
+  });
+  
+  if (!columnMeta) {
+    console.warn('[FocusFirstError] Column meta not found for unique key:', uniqueKey);
+    return;
+  }
+  
+  const colIndex = columnMeta.colIndex;
+  
+  // 필터된 상태에서는 필터된 인덱스로 변환
+  let targetRowIndex = originalRowIndex;
+  if (storeBridge.filterState.isFiltered) {
+    const filteredIndex = filteredRows.value.findIndex(row => 
+      row._originalIndex === originalRowIndex
+    );
+    if (filteredIndex !== -1) {
+      targetRowIndex = filteredIndex;
+    }
+  }
+  
+  console.log('[FocusFirstError] Focusing error cell:', {
+    originalRowIndex,
+    targetRowIndex,
+    colIndex,
+    uniqueKey
+  });
+  
   // 가상 스크롤/그리드에 셀 이동 및 포커스
-  ensureCellIsVisible(rowIndex, colIndex);
-  selectionSystem.selectCell(rowIndex, colIndex);
+  ensureCellIsVisible(targetRowIndex, colIndex);
+  selectionSystem.selectCell(targetRowIndex, colIndex);
   focusGrid();
 }
 
