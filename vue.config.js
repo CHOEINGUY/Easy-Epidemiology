@@ -2,7 +2,7 @@ const { defineConfig } = require('@vue/cli-service');
 module.exports = defineConfig({
   transpileDependencies: true,
   
-  // GitHub Pages 배포를 위한 설정
+  // 프로덕션 배포를 위한 설정
   publicPath: process.env.NODE_ENV === 'production' ? '/webpage_office/' : '/',
   
   // 빌드 최적화 설정
@@ -38,6 +38,8 @@ module.exports = defineConfig({
         };
         return args;
       });
+
+
 
     // 외부 리소스 처리
     config.module
