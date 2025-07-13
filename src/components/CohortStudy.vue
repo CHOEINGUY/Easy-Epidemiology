@@ -20,6 +20,12 @@
               {{ tableFontSize }}px
             </button>
           </div>
+          <div class="ui-group">
+            <label class="ui-label">P-value 계산 방식:</label>
+            <button class="control-button" @click="toggleYatesCorrection">
+              {{ useYatesCorrection ? 'Yates 보정 사용' : 'Yates 보정 미사용' }}
+            </button>
+          </div>
         </div>
         <div class="summary-info-area">
           <p>총 {{ rows.length }}명의 데이터 분석</p>
@@ -114,7 +120,7 @@
                       significant:
                         result.pValue !== null && result.pValue < 0.05,
                     }"
-                    :title="result.adj_chi === null && result.pValue !== null ? 'Fisher의 정확검정 (기대빈도 < 5)' : 'Yates 보정 카이제곱 검정 (기대빈도 ≥ 5)'"
+                    :title="result.adj_chi === null && result.pValue !== null ? 'Fisher의 정확검정 (기대빈도 < 5)' : (useYatesCorrection ? 'Yates 보정 카이제곱 검정 (기대빈도 ≥ 5)' : '일반 카이제곱 검정 (기대빈도 ≥ 5)')"
                   >
                     <span v-if="result.pValue !== null">
                       {{ (result.pValue < 0.001 ? "<0.001" : result.pValue.toFixed(3)) }}
@@ -122,9 +128,9 @@
                     </span>
                     <span v-else>N/A</span>
                   </td>
-                  <td class="cell-stat">{{ result.relativeRisk }}</td>
-                  <td class="cell-stat">{{ result.rr_ci_lower }}</td>
-                  <td class="cell-stat">{{ result.rr_ci_upper }}</td>
+                  <td class="cell-stat">{{ result.relativeRisk }}{{ result.hasCorrection ? '†' : '' }}</td>
+                  <td class="cell-stat">{{ result.rr_ci_lower }}{{ result.hasCorrection ? '†' : '' }}</td>
+                  <td class="cell-stat">{{ result.rr_ci_upper }}{{ result.hasCorrection ? '†' : '' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -134,8 +140,12 @@
               </div>
               <div class="legend-content legend-content--plain">
                 <div class="legend-item-plain">* : Fisher's Exact Test (기대빈도&nbsp;&lt;&nbsp;5인 셀이 있을 때)</div>
-                <div class="legend-item-plain">- : Yates' Corrected Chi-square Test (모든 셀 기대빈도&nbsp;≥&nbsp;5)</div>
+                <div class="legend-item-plain">- : {{ useYatesCorrection ? 'Yates\' Corrected Chi-square Test' : 'Chi-square Test' }} (모든 셀 기대빈도&nbsp;≥&nbsp;5)</div>
                 <div class="legend-item-plain">N/A : 계산 불가(셀 값이 0인 경우)</div>
+                <div class="legend-item-plain correction-note">
+                  0인 셀이 있는 행에만 모든 셀에 0.5를 더하여 상대위험비 계산 (Haldane-Anscombe 보정)
+                </div>
+                <div class="legend-item-plain">† : 0.5 보정 적용</div>
               </div>
             </div>
           </div>
@@ -155,6 +165,9 @@ const store = useStore();
 const fontSizes = [12, 14, 16];
 const tableFontSize = ref(14);
 
+// Yates 보정 토글 변수 (기대값 5이상일 때 사용)
+const useYatesCorrection = ref(true); // 기대값 5이상일 때 사용
+
 const getNextValue = (currentValue, valueArray) => {
   const currentIndex = valueArray.indexOf(currentValue);
   const nextIndex = (currentIndex + 1) % valueArray.length;
@@ -163,6 +176,11 @@ const getNextValue = (currentValue, valueArray) => {
 
 const cycleFontSize = () => {
   tableFontSize.value = getNextValue(tableFontSize.value, fontSizes);
+};
+
+// Yates 보정 토글 함수
+const toggleYatesCorrection = () => {
+  useYatesCorrection.value = !useYatesCorrection.value;
 };
 
 const headers = computed(() => store.getters.headers || { diet: [] });
@@ -355,6 +373,7 @@ const cohortAnalysisResults = computed(() => {
     let relativeRisk = 'N/A';
     let rr_ci_lower = 'N/A';
     let rr_ci_upper = 'N/A';
+    let hasCorrection = false; // 0.5 보정 적용 여부
 
     // --- 발병률 계산 및 포맷팅 ---
     let incidence_exposed_formatted = 'N/A';
@@ -401,12 +420,22 @@ const cohortAnalysisResults = computed(() => {
             adj_chi = null;
           }
         } else {
-          // 기대빈도 5이상: Yates' 보정 카이제곱 검정 사용
-          const term1 = calculateChiTerm(a_obs, a_exp);
-          const term2 = calculateChiTerm(b_obs, b_exp);
-          const term3 = calculateChiTerm(c_obs, c_exp);
-          const term4 = calculateChiTerm(d_obs, d_exp);
-          adj_chi = term1 + term2 + term3 + term4;
+          // 기대빈도 5이상: 일반 카이제곱 또는 Yates' 보정 카이제곱 검정 사용
+          if (useYatesCorrection.value) {
+            // Yates' 보정 카이제곱 검정 사용
+            const term1 = calculateChiTerm(a_obs, a_exp);
+            const term2 = calculateChiTerm(b_obs, b_exp);
+            const term3 = calculateChiTerm(c_obs, c_exp);
+            const term4 = calculateChiTerm(d_obs, d_exp);
+            adj_chi = term1 + term2 + term3 + term4;
+          } else {
+            // 일반 카이제곱 검정 사용 (보정 없음)
+            const term1 = ((a_obs - a_exp) * (a_obs - a_exp)) / a_exp;
+            const term2 = ((b_obs - b_exp) * (b_obs - b_exp)) / b_exp;
+            const term3 = ((c_obs - c_exp) * (c_obs - c_exp)) / c_exp;
+            const term4 = ((d_obs - d_exp) * (d_obs - d_exp)) / d_exp;
+            adj_chi = term1 + term2 + term3 + term4;
+          }
 
           // P-value 계산 (자유도=1)
           if (isFinite(adj_chi) && adj_chi >= 0) {
@@ -435,14 +464,71 @@ const cohortAnalysisResults = computed(() => {
       const hasZeroCell =
       a_obs === 0 || b_obs === 0 || c_obs === 0 || d_obs === 0;
       
-      // 0인 셀이 있으면 RR 계산 불가 (N/A 처리)
+      // 0인 셀이 있으면 모든 셀에 0.5 보정 적용
       if (hasZeroCell) {
-        relativeRisk = 'N/A';
-        rr_ci_lower = 'N/A';
-        rr_ci_upper = 'N/A';
-        console.log(`RR 계산 불가 - ${factorName}: 0인 셀이 존재하여 계산 불가능`);
+        // 0이 있는 행에만 모든 셀에 0.5 보정 적용
+        hasCorrection = true;
+        const a_corrected = a_obs + 0.5;
+        const b_corrected = b_obs + 0.5;
+        const c_corrected = c_obs + 0.5;
+        const d_corrected = d_obs + 0.5;
+        
+        const total_exposed = a_corrected + b_corrected;
+        const total_unexposed = c_corrected + d_corrected;
+
+        try {
+          const risk_exposed = total_exposed > 0 ? a_corrected / total_exposed : 0;
+          const risk_unexposed = total_unexposed > 0 ? c_corrected / total_unexposed : 0;
+
+          let rr_calc = NaN;
+          if (risk_unexposed > 0) {
+            rr_calc = risk_exposed / risk_unexposed;
+          } else if (risk_exposed > 0 && risk_unexposed === 0) {
+            rr_calc = Infinity;
+          } else {
+            rr_calc = NaN;
+          }
+
+          if (isFinite(rr_calc) && rr_calc >= 0) {
+            relativeRisk = rr_calc.toFixed(3);
+            const logRR = Math.log(rr_calc <= 0 ? Number.EPSILON : rr_calc);
+            let se_logRR = NaN;
+            const term_se1 = a_corrected * total_exposed;
+            const term_se2 = c_corrected * total_unexposed;
+
+            if (term_se1 > 0 && term_se2 > 0) {
+              se_logRR = Math.sqrt(b_corrected / term_se1 + d_corrected / term_se2);
+            }
+
+            if (isFinite(se_logRR)) {
+              const logCI_lower = logRR - z_crit * se_logRR;
+              const logCI_upper = logRR + z_crit * se_logRR;
+              rr_ci_lower = Math.exp(logCI_lower).toFixed(3);
+              rr_ci_upper = Math.exp(logCI_upper).toFixed(3);
+              if (rr_calc === 0) rr_ci_lower = '0.000';
+              if (parseFloat(rr_ci_upper) === 0) rr_ci_upper = '0.000';
+            } else {
+              rr_ci_lower = 'N/A';
+              rr_ci_upper = 'N/A';
+            }
+          } else if (rr_calc === Infinity) {
+            relativeRisk = 'Inf';
+            // 무한대인 경우 신뢰구간 계산은 의미가 없음
+            rr_ci_lower = 'Inf';
+            rr_ci_upper = 'Inf';
+          } else {
+            relativeRisk = 'N/A';
+            rr_ci_lower = 'N/A';
+            rr_ci_upper = 'N/A';
+          }
+        } catch (e) {
+          console.error(`RR/CI calculation error for item ${factorName}:`, e);
+          relativeRisk = 'Error';
+          rr_ci_lower = 'Error';
+          rr_ci_upper = 'Error';
+        }
       } else {
-        // 0인 셀이 없을 때만 RR 계산
+        // 0인 셀이 없을 때는 그냥 계산
         const total_exposed = a_obs + b_obs;
         const total_unexposed = c_obs + d_obs;
 
@@ -519,7 +605,8 @@ const cohortAnalysisResults = computed(() => {
       pValue,
       relativeRisk,
       rr_ci_lower,
-      rr_ci_upper
+      rr_ci_upper,
+      hasCorrection // 0.5 보정 적용 여부
     };
     
     // 통계 검증 실행
@@ -1044,5 +1131,11 @@ const factorial = (n) => {
 }
 .legend-item-plain:last-child {
   margin-bottom: 0;
+}
+
+.correction-note {
+  font-weight: 500;
+  font-style: italic;
+  color: #1a73e8;
 }
 </style>

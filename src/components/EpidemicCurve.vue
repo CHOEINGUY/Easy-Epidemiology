@@ -1516,6 +1516,46 @@ const confirmedCaseOnsetTableData = computed(() => {
 });
 
 /**
+ * 일시 모드일 때만 적용되는 동적 왼쪽 여백 계산
+ * @returns {string} 계산된 왼쪽 여백 값
+ */
+const getDynamicLeftMargin = () => {
+  if (chartDisplayMode.value !== 'datetime') {
+    return '3%'; // 시간 모드는 기존 값 유지
+  }
+  
+  // 폰트 크기에 따른 기본 여백 (더 큰 기본값)
+  const baseMargin = 80; // 기본 80px로 증가
+  const fontSize = epiChartFontSize.value || 15;
+  
+  // 폰트 크기가 클수록 여백 증가 (폰트 크기당 더 큰 값으로 증가)
+  let fontSizeAdjustment;
+  if (fontSize <= 15) {
+    fontSizeAdjustment = 0;
+  } else if (fontSize <= 18) {
+    fontSizeAdjustment = (fontSize - 15) * 8;
+  } else if (fontSize <= 21) {
+    fontSizeAdjustment = (fontSize - 15) * 9;
+  } else {
+    fontSizeAdjustment = (fontSize - 15) * 15;
+  }
+  
+  // 최소 여백 보장 (더 큰 최소값)
+  const minMargin = 80;
+  const calculatedMargin = Math.max(minMargin, baseMargin + fontSizeAdjustment);
+  
+  console.log('동적 왼쪽 여백 계산:', {
+    mode: chartDisplayMode.value,
+    fontSize,
+    baseMargin,
+    fontSizeAdjustment,
+    calculatedMargin
+  });
+  
+  return `${calculatedMargin}px`;
+};
+
+/**
  * 유행곡선 차트 옵션 생성
  * @returns {Object} ECharts 옵션 객체
  */
@@ -1638,7 +1678,7 @@ const generateEpiCurveChartOptions = () => {
         }
       },
       grid: {
-        left: chartDisplayMode.value === 'datetime' ? 60 : '3%',
+        left: getDynamicLeftMargin(), // 동적 여백 적용
         right: chartDisplayMode.value === 'datetime' ? 60 : '4%',
         bottom: '7%',
         top: 80, // 제목과 그래프 사이 간격 확보
@@ -2478,11 +2518,41 @@ const exportIncubationChart = async () => {
 }
 
 .control-select {
-  padding: 5px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
-  min-width: 80px;
+  padding: 6px 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  min-width: 85px;
+  background-color: #fff;
+  color: #333;
+  font-family: "Noto Sans KR", sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  padding-right: 28px;
+}
+
+.control-select:hover {
+  border-color: #1a73e8;
+  box-shadow: 0 2px 6px rgba(26, 115, 232, 0.15);
+}
+
+.control-select:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.control-select option {
+  padding: 8px 12px;
+  font-size: 13px;
+  background-color: #fff;
+  color: #333;
 }
 
 .control-button {

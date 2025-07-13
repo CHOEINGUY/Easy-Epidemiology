@@ -45,7 +45,30 @@
       </div>
     </div>
     <div class="action-buttons">
-      <!-- 그룹 1: 열 토글 -->
+      <!-- 그룹 1: 필터 상태 + 디바이더 (왼쪽 디바이더 없음) -->
+      <template v-if="isFiltered">
+        <div class="button-group filter-status">
+          <div class="control-button-wrapper">
+            <button 
+              class="function-button filter-button" 
+              :class="{ active: isFiltered }"
+              aria-label="필터 관리"
+              tabindex="-1"
+              @click="onFilterButtonClick"
+              @mouseenter="showTooltip('filter', `필터 적용됨 (${filteredRowCount}/${originalRowCount} 행 표시)`, $event)"
+              @mouseleave="hideTooltip"
+            >
+              <span class="material-icons-outlined function-button-icon">
+                filter_list
+              </span>
+              필터
+              <span class="filter-badge">적용됨</span>
+            </button>
+          </div>
+        </div>
+        <div class="button-group-divider"></div>
+      </template>
+      <!-- 그룹 2: 열 토글 -->
       <div class="button-group column-toggles">
         <div class="control-button-wrapper">
           <button
@@ -82,7 +105,7 @@
       <!-- 구분선 -->
       <div class="button-group-divider"></div>
 
-      <!-- 그룹 2: 데이터 입출력 -->
+      <!-- 그룹 3: 데이터 입출력 -->
       <div class="button-group data-io">
         <div class="control-button-wrapper">
           <!-- Excel Upload Button -->
@@ -135,7 +158,7 @@
       <!-- 구분선 -->
       <div class="button-group-divider"></div>
       
-      <!-- 그룹 3: 시트 편집 -->
+      <!-- 그룹 4: 시트 편집 -->
       <div class="button-group sheet-editing">
         <div class="control-button-wrapper">
           <button 
@@ -180,30 +203,6 @@
               refresh
             </span>
             전체 초기화
-          </button>
-        </div>
-      </div>
-      
-      <!-- 구분선 -->
-      <div class="button-group-divider"></div>
-      
-      <!-- 그룹 4: 필터 상태 -->
-      <div class="button-group filter-status" v-if="isFiltered">
-        <div class="control-button-wrapper">
-          <button 
-            class="function-button filter-button" 
-            :class="{ active: isFiltered }"
-            aria-label="필터 관리"
-            tabindex="-1"
-            @click="onFilterButtonClick"
-            @mouseenter="showTooltip('filter', `필터 적용됨 (${filteredRowCount}/${originalRowCount} 행 표시)`, $event)"
-            @mouseleave="hideTooltip"
-          >
-            <span class="material-icons-outlined function-button-icon">
-              filter_list
-            </span>
-            필터
-            <span class="filter-badge">적용됨</span>
           </button>
         </div>
       </div>
@@ -439,7 +438,7 @@ function onFilterButtonClick() {
 
 .button-group-divider {
   width: 1px;
-  height: 24px;
+  height: 32px; /* function-bar의 min-height와 맞춤 */
   background: #e0e0e0;
   margin: 0 2px;
 }

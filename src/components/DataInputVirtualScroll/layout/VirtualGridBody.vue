@@ -110,7 +110,7 @@ const bodyContainer = ref(null);
 const filterRowValidationManager = new FilterRowValidationManager();
 
 // AddRowsControls 위치 및 컨테이너 높이 계산
-const ADD_ROWS_HEIGHT = 35; // px (controls 자체 높이)
+const ADD_ROWS_HEIGHT = 20; // px (controls 자체 높이)
 const ROW_HEIGHT = 5;      // Must match useVirtualScroll rowHeight
 
 // 테이블이 렌더링하는 버퍼 행까지 고려하여 AddRowsControls를 충분히 아래로 내려 배치

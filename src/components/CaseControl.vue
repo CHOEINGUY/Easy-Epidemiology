@@ -47,15 +47,14 @@
                   <span class="button-text">OR ≥ </span>
                   <button @click.stop="cycleOrThreshold" class="threshold-button">{{ currentOrThreshold }}.0</button>
                 </div>
-                <button @click="cycleCorrection" class="filter-button" :class="{ active: correctionValue > 0 }">
+                <button @click="toggleYatesCorrection" class="filter-button" :class="{ active: !useYatesCorrection }">
                   <span class="button-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="3"></circle>
                       <path d="M12 1v6m0 6v6"></path>
                       <path d="M17.5 12h-11"></path>
                     </svg>
                   </span>
-                  <span class="button-text">{{ correctionValue === 0 ? '보정 없음' : correctionValue + ' 보정' }}</span>
+                  <span class="button-text">{{ useYatesCorrection ? 'Yates 보정 적용' : 'Yates 보정 미적용' }}</span>
                 </button>
                 <div style="position: relative;">
                   <button @click="copyTableToClipboard" class="copy-chart-button">
@@ -125,16 +124,16 @@
                       significant:
                         result.pValue !== null && result.pValue < 0.05,
                     }"
-                    :title="result.adj_chi === null && result.pValue !== null ? 'Fisher의 정확검정 (기대빈도 < 5)' : 'Yates 보정 카이제곱 검정 (기대빈도 ≥ 5)'"
+                    :title="result.adj_chi === null && result.pValue !== null ? 'Fisher의 정확검정 (기대빈도 < 5)' : (useYatesCorrection ? 'Yates 보정 카이제곱 검정 (기대빈도 ≥ 5)' : '일반 카이제곱 검정 (기대빈도 ≥ 5)')"
                   >
                     <span v-if="result.pValue !== null">
                       {{ (result.pValue < 0.001 ? "<0.001" : result.pValue.toFixed(3)) }}<sup v-if="result.adj_chi === null" class="test-method fisher">*</sup>
                     </span>
                     <span v-else>N/A</span>
                   </td>
-                  <td class="cell-stat">{{ result.oddsRatio }}</td>
-                  <td class="cell-stat">{{ result.ci_lower }}</td>
-                  <td class="cell-stat">{{ result.ci_upper }}</td>
+                  <td class="cell-stat">{{ result.oddsRatio }}{{ result.hasCorrection ? '†' : '' }}</td>
+                  <td class="cell-stat">{{ result.ci_lower }}{{ result.hasCorrection ? '†' : '' }}</td>
+                  <td class="cell-stat">{{ result.ci_upper }}{{ result.hasCorrection ? '†' : '' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -144,11 +143,12 @@
               </div>
               <div class="legend-content legend-content--plain">
                 <div class="legend-item-plain">* : Fisher's Exact Test (기대빈도&nbsp;&lt;&nbsp;5인 셀이 있을 때)</div>
-                <div class="legend-item-plain">- : Yates' Corrected Chi-square Test (모든 셀 기대빈도&nbsp;≥&nbsp;5)</div>
+                <div class="legend-item-plain">- : {{ useYatesCorrection ? 'Yates\' Corrected Chi-square Test' : 'Chi-square Test' }} (모든 셀 기대빈도&nbsp;≥&nbsp;5)</div>
                 <div class="legend-item-plain">N/A : 계산 불가(셀 값이 0인 경우)</div>
-                <div v-if="correctionValue > 0" class="legend-item-plain correction-note">
-                  0인 셀에 {{ correctionValue }}를 더하여 오즈비 계산 (Haldane-Anscombe 보정)
+                <div class="legend-item-plain correction-note">
+                  0인 셀이 있는 행에만 모든 셀에 0.5를 더하여 오즈비 계산 (Haldane-Anscombe 보정)
                 </div>
+                <div class="legend-item-plain">† : 0.5 보정 적용</div>
               </div>
             </div>
           </div>
@@ -169,9 +169,8 @@ const store = useStore();
 const fontSizes = [12, 14, 16];
 const tableFontSize = ref(14);
 
-// 0셀 보정 관련 변수
-const correctionValues = [0.5, 1, 0]; // 0.5: Haldane-Anscombe, 1: 다른 방법, 0: 보정 없음
-const correctionValue = ref(0.5); // 기본값 0.5
+// Yates 보정 토글 변수 (기대값 5이상일 때 사용)
+const useYatesCorrection = ref(true); // 기본값: Yates 보정 사용
 
 const getNextValue = (currentValue, valueArray) => {
   const currentIndex = valueArray.indexOf(currentValue);
@@ -183,8 +182,9 @@ const cycleFontSize = () => {
   tableFontSize.value = getNextValue(tableFontSize.value, fontSizes);
 };
 
-const cycleCorrection = () => {
-  correctionValue.value = getNextValue(correctionValue.value, correctionValues);
+// Yates 보정 토글 함수
+const toggleYatesCorrection = () => {
+  useYatesCorrection.value = !useYatesCorrection.value;
 };
 
 // Vuex 스토어에서 headers와 rows 데이터 가져오기
@@ -277,6 +277,7 @@ const analysisResults = computed(() => {
     let oddsRatio = 'N/A'; // Odds Ratio 추정치
     let ci_lower = 'N/A'; // 95% CI 하한
     let ci_upper = 'N/A'; // 95% CI 상한
+    let hasCorrection = false; // 0.5 보정 적용 여부
 
     // --- 카이제곱 및 P-value 계산 ---
     if (grandTotal > 0) {
@@ -309,12 +310,22 @@ const analysisResults = computed(() => {
             adj_chi = null;
           }
         } else {
-          // 기대빈도 5이상: Yates' 보정 카이제곱 검정 사용
-          const term1 = calculateChiTerm(b_obs, b_exp);
-          const term2 = calculateChiTerm(c_obs, c_exp);
-          const term3 = calculateChiTerm(e_obs, e_exp);
-          const term4 = calculateChiTerm(f_obs, f_exp);
-          adj_chi = term1 + term2 + term3 + term4;
+          // 기대빈도 5이상: 일반 카이제곱 또는 Yates' 보정 카이제곱 검정 사용
+          if (useYatesCorrection.value) {
+            // Yates' 보정 카이제곱 검정 사용
+            const term1 = calculateChiTerm(b_obs, b_exp);
+            const term2 = calculateChiTerm(c_obs, c_exp);
+            const term3 = calculateChiTerm(e_obs, e_exp);
+            const term4 = calculateChiTerm(f_obs, f_exp);
+            adj_chi = term1 + term2 + term3 + term4;
+          } else {
+            // 일반 카이제곱 검정 사용 (보정 없음)
+            const term1 = ((b_obs - b_exp) * (b_obs - b_exp)) / b_exp;
+            const term2 = ((c_obs - c_exp) * (c_obs - c_exp)) / c_exp;
+            const term3 = ((e_obs - e_exp) * (e_obs - e_exp)) / e_exp;
+            const term4 = ((f_obs - f_exp) * (f_obs - f_exp)) / f_exp;
+            adj_chi = term1 + term2 + term3 + term4;
+          }
 
           // P-value 계산 (자유도=1)
           if (isFinite(adj_chi) && adj_chi >= 0) {
@@ -344,73 +355,112 @@ const analysisResults = computed(() => {
       // 0인 셀이 있는지 확인
       const hasZeroCell = b_obs === 0 || c_obs === 0 || e_obs === 0 || f_obs === 0;
 
-      if (hasZeroCell && correctionValue.value === 0) {
-        // 보정 없음 모드: 0인 셀이 있으면 N/A 처리
-        oddsRatio = 'N/A';
-        ci_lower = 'N/A';
-        ci_upper = 'N/A';
-        console.log(`OR 계산 불가 - ${factorName}: 0인 셀이 존재하여 계산 불가능 (보정 없음)`);
-      } else {
-        // 보정 적용 모드 또는 0인 셀이 없는 경우
-        try {
-          // 보정값 적용 (0인 셀에만 적용)
-          const b_corrected = b_obs === 0 ? correctionValue.value : b_obs;
-          const c_corrected = c_obs === 0 ? correctionValue.value : c_obs;
-          const e_corrected = e_obs === 0 ? correctionValue.value : e_obs;
-          const f_corrected = f_obs === 0 ? correctionValue.value : f_obs;
+      if (hasZeroCell) {
+        // 0이 있는 행에만 모든 셀에 0.5 보정 적용
+        hasCorrection = true;
+        const b_corrected = b_obs + 0.5;
+        const c_corrected = c_obs + 0.5;
+        const e_corrected = e_obs + 0.5;
+        const f_corrected = f_obs + 0.5;
 
-          // Odds Ratio 계산: OR = (b*f)/(c*e)
-          const or_calc = (b_corrected * f_corrected) / (c_corrected * e_corrected);
+        // Odds Ratio 계산: OR = (b*f)/(c*e)
+        const or_calc = (b_corrected * f_corrected) / (c_corrected * e_corrected);
 
-          if (isFinite(or_calc) && or_calc > 0) {
-            // OR 값 포맷팅
-            oddsRatio = or_calc.toFixed(3);
+        if (isFinite(or_calc) && or_calc > 0) {
+          // OR 값 포맷팅
+          oddsRatio = or_calc.toFixed(3);
 
-            // Log Odds Ratio 계산
-            const logOR = Math.log(or_calc);
+          // Log Odds Ratio 계산
+          const logOR = Math.log(or_calc);
 
-            // Standard Error of Log Odds Ratio 계산: sqrt(1/b + 1/c + 1/e + 1/f)
-            const se_logOR = Math.sqrt(
-              1 / b_corrected + 1 / c_corrected + 1 / e_corrected + 1 / f_corrected
-            );
+          // Standard Error of Log Odds Ratio 계산: sqrt(1/b + 1/c + 1/e + 1/f)
+          const se_logOR = Math.sqrt(
+            1 / b_corrected + 1 / c_corrected + 1 / e_corrected + 1 / f_corrected
+          );
 
-            // 신뢰구간 계산 가능 여부 확인
-            if (isFinite(se_logOR)) {
-              // Log Scale에서 CI 계산
-              const logCI_lower = logOR - z_crit * se_logOR;
-              const logCI_upper = logOR + z_crit * se_logOR;
+          // 신뢰구간 계산 가능 여부 확인
+          if (isFinite(se_logOR)) {
+            // Log Scale에서 CI 계산
+            const logCI_lower = logOR - z_crit * se_logOR;
+            const logCI_upper = logOR + z_crit * se_logOR;
 
-              // 원래 스케일(OR)로 변환 (지수 함수 적용) 및 포맷팅
-              ci_lower = Math.exp(logCI_lower).toFixed(3);
-              ci_upper = Math.exp(logCI_upper).toFixed(3);
-              
+            // 원래 스케일(OR)로 변환 (지수 함수 적용) 및 포맷팅
+            ci_lower = Math.exp(logCI_lower).toFixed(3);
+            ci_upper = Math.exp(logCI_upper).toFixed(3);
+            
 
-            }
-          } else if (or_calc === 0) {
-            // OR이 0인 경우: 분모가 0이 아닌데 분자가 0인 경우
-            oddsRatio = '0.000';
-            ci_lower = '0.000';
-            ci_upper = '0.000';
+          }
+        } else if (or_calc === 0) {
+          // OR이 0인 경우: 분모가 0이 아닌데 분자가 0인 경우
+          oddsRatio = '0.000';
+          ci_lower = '0.000';
+          ci_upper = '0.000';
+
+        } else {
+          // OR이 무한대(Inf) 또는 계산 불가(NaN)인 경우
+          if (c_corrected * e_corrected === 0 && b_corrected * f_corrected > 0) {
+            oddsRatio = 'Inf';
+            ci_lower = 'Inf';
+            ci_upper = 'Inf';
 
           } else {
-            // OR이 무한대(Inf) 또는 계산 불가(NaN)인 경우
-            if (c_corrected * e_corrected === 0 && b_corrected * f_corrected > 0) {
-              oddsRatio = 'Inf';
-              ci_lower = 'Inf';
-              ci_upper = 'Inf';
-
-            } else {
-              oddsRatio = 'N/A';
-              ci_lower = 'N/A';
-              ci_upper = 'N/A';
-            }
+            oddsRatio = 'N/A';
+            ci_lower = 'N/A';
+            ci_upper = 'N/A';
           }
-        } catch (e) {
-          // 계산 중 예외 발생 시
-          console.error(`OR/CI calculation error for item ${factorName}:`, e);
-          oddsRatio = 'Error';
-          ci_lower = 'Error';
-          ci_upper = 'Error';
+        }
+      } else {
+        // 0인 셀이 없는 경우 그냥 계산
+        const b_corrected = b_obs;
+        const c_corrected = c_obs;
+        const e_corrected = e_obs;
+        const f_corrected = f_obs;
+
+        // Odds Ratio 계산: OR = (b*f)/(c*e)
+        const or_calc = (b_corrected * f_corrected) / (c_corrected * e_corrected);
+
+        if (isFinite(or_calc) && or_calc > 0) {
+          // OR 값 포맷팅
+          oddsRatio = or_calc.toFixed(3);
+
+          // Log Odds Ratio 계산
+          const logOR = Math.log(or_calc);
+
+          // Standard Error of Log Odds Ratio 계산: sqrt(1/b + 1/c + 1/e + 1/f)
+          const se_logOR = Math.sqrt(
+            1 / b_corrected + 1 / c_corrected + 1 / e_corrected + 1 / f_corrected
+          );
+
+          // 신뢰구간 계산 가능 여부 확인
+          if (isFinite(se_logOR)) {
+            // Log Scale에서 CI 계산
+            const logCI_lower = logOR - z_crit * se_logOR;
+            const logCI_upper = logOR + z_crit * se_logOR;
+
+            // 원래 스케일(OR)로 변환 (지수 함수 적용) 및 포맷팅
+            ci_lower = Math.exp(logCI_lower).toFixed(3);
+            ci_upper = Math.exp(logCI_upper).toFixed(3);
+            
+
+          }
+        } else if (or_calc === 0) {
+          // OR이 0인 경우: 분모가 0이 아닌데 분자가 0인 경우
+          oddsRatio = '0.000';
+          ci_lower = '0.000';
+          ci_upper = '0.000';
+
+        } else {
+          // OR이 무한대(Inf) 또는 계산 불가(NaN)인 경우
+          if (c_corrected * e_corrected === 0 && b_corrected * f_corrected > 0) {
+            oddsRatio = 'Inf';
+            ci_lower = 'Inf';
+            ci_upper = 'Inf';
+
+          } else {
+            oddsRatio = 'N/A';
+            ci_lower = 'N/A';
+            ci_upper = 'N/A';
+          }
         }
       }
     } else {
@@ -434,7 +484,8 @@ const analysisResults = computed(() => {
       pValue,
       oddsRatio, // 계산된 OR 값
       ci_lower, // 계산된 CI 하한
-      ci_upper // 계산된 CI 상한
+      ci_upper, // 계산된 CI 상한
+      hasCorrection // 0.5 보정 적용 여부
     };
     
     // 통계 검증 실행
@@ -1141,6 +1192,7 @@ const factorial = (n) => {
 .correction-note {
   font-weight: 500;
   font-style: italic;
+  color: #1a73e8;
 }
 
 .threshold-button {

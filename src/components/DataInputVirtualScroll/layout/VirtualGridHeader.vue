@@ -28,6 +28,15 @@
               @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, group.startColIndex)"
             >
               <span v-html="getHeaderText(group)"></span>
+              <span v-if="isColumnFiltered(group.startColIndex)" class="filter-icon" aria-hidden="true"
+                    @mouseenter="showFilterTooltip(group.startColIndex, $event)"
+                    @mouseleave="hideFilterTooltip"
+                    @click.stop="removeFilter(group.startColIndex)"
+                    :title="getFilterTooltipText(group.startColIndex)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
+                </svg>
+              </span>
             </th>
             <th
               v-else
@@ -42,7 +51,6 @@
                   @click.stop="$emit('add-column', group.type)"
                   @mouseenter="showTooltip('add', '열을 추가합니다', $event)"
                   @mouseleave="hideTooltip"
-                  :title="'열 추가'"
                   class="add-column-button"
                   aria-label="`${group.text} 열 추가`"
                 >
@@ -52,7 +60,6 @@
                   v-if="group.deletable"
                   @click.stop="$emit('delete-column', group.type)"
                   :disabled="group.columnCount <= 1"
-                  :title="group.columnCount <= 1 ? '최소 1개 열이 필요합니다' : '열 삭제'"
                   @mouseenter="showTooltip('delete', group.columnCount <= 1 ? '최소 1개 열이 필요합니다' : '열을 삭제합니다', $event)"
                   @mouseleave="hideTooltip"
                   class="delete-column-button"
@@ -81,7 +88,16 @@
               @mousemove="$emit('cell-mousemove', -1, column.colIndex, $event)"
               @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, column.colIndex)"
             >
-              {{ column.headerText }}
+              <span class="header-text">{{ column.headerText }}</span>
+              <span v-if="isColumnFiltered(column.colIndex)" class="filter-icon" aria-hidden="true"
+                    @mouseenter="showFilterTooltip(column.colIndex, $event)"
+                    @mouseleave="hideFilterTooltip"
+                    @click.stop="removeFilter(column.colIndex)"
+                    :title="getFilterTooltipText(column.colIndex)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
+                </svg>
+              </span>
             </th>
           </template>
         </tr>
@@ -103,6 +119,9 @@
 
 <script setup>
 import { ref, defineProps, defineExpose, defineEmits, reactive, computed } from 'vue';
+import { useStore } from 'vuex';
+
+const store = useStore();
 
 const props = defineProps({
   headerGroups: {
@@ -131,10 +150,15 @@ const props = defineProps({
   isEditing: { type: Boolean, default: false },
   editingCell: { type: Object, default: () => ({ rowIndex: null, colIndex: null }) },
   individualSelectedCells: { type: Object, default: null },
-  scrollbarWidth: { type: Number, default: 0 }
+  scrollbarWidth: { type: Number, default: 0 },
+  // 필터 상태 props 추가
+  activeFilters: {
+    type: Map,
+    default: () => new Map()
+  }
 });
 
-defineEmits(['cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-column', 'delete-column']);
+const emit = defineEmits(['cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-column', 'delete-column', 'update:activeFilters']);
 
 const headerContainer = ref(null);
 
@@ -232,6 +256,64 @@ function hideTooltip() {
   activeTooltip.value = null;
 }
 
+// 필터 툴팁 표시 함수
+function showFilterTooltip(colIndex, event) {
+  const filterConfig = getFilterConfig(colIndex);
+  if (!filterConfig) return;
+  
+  const rect = event.currentTarget.getBoundingClientRect();
+  const tooltipText = formatFilterTooltip(colIndex, filterConfig);
+  
+  tooltipText.value = tooltipText;
+  tooltipStyle.left = `${rect.left + rect.width / 2}px`;
+  tooltipStyle.top = `${rect.bottom + 5}px`;
+  tooltipStyle.transform = 'translateX(-50%)';
+  activeTooltip.value = 'filter';
+}
+
+// 필터 툴팁 숨김 함수
+function hideFilterTooltip() {
+  if (activeTooltip.value === 'filter') {
+    activeTooltip.value = null;
+  }
+}
+
+// 필터 설정 가져오기
+function getFilterConfig(colIndex) {
+  if (props.activeFilters && props.activeFilters.has(colIndex)) {
+    return props.activeFilters.get(colIndex);
+  }
+  if (typeof window !== 'undefined' && window.storeBridge) {
+    return window.storeBridge.filterState.activeFilters?.get(colIndex);
+  }
+  if (store.state && store.state.filterState && store.state.filterState.activeFilters) {
+    return store.state.filterState.activeFilters.get(colIndex);
+  }
+  return null;
+}
+
+// 필터 툴팁 텍스트 포맷팅
+function formatFilterTooltip(colIndex, filterConfig) {
+  const columnName = getColumnName(colIndex);
+  const values = filterConfig.values;
+  
+  if (filterConfig.type === 'binary') {
+    const displayValues = values.map(v => v === 'empty' ? '빈 셀' : v).join(', ');
+    return `${columnName}: ${displayValues} 표시`;
+  } else if (filterConfig.type === 'text') {
+    const displayValues = values.map(v => v === 'empty' ? '빈 셀' : `"${v}"`).join(', ');
+    return `${columnName}: ${displayValues} 포함`;
+  }
+  
+  return `${columnName}: 필터 적용됨`;
+}
+
+// 컬럼 이름 가져오기
+function getColumnName(colIndex) {
+  const column = props.allColumnsMeta?.find(col => col.colIndex === colIndex);
+  return column?.headerText || `컬럼 ${colIndex}`;
+}
+
 // Expose the container for parent access
 defineExpose({ headerContainer });
 
@@ -241,6 +323,42 @@ const headerContainerStyle = computed(() => {
     paddingRight: props.scrollbarWidth > 0 ? `${props.scrollbarWidth}px` : '0px'
   };
 });
+
+// 필터 적용 여부 확인 함수 - 간단하고 확실한 방법
+function isColumnFiltered(colIndex) {
+  // props로 받은 activeFilters를 우선 사용
+  if (props.activeFilters && props.activeFilters.has(colIndex)) {
+    return true;
+  }
+  
+  // fallback: window.storeBridge 사용
+  if (typeof window !== 'undefined' && window.storeBridge) {
+    return window.storeBridge.filterState.activeFilters?.has(colIndex);
+  }
+  
+  // fallback: Vuex store 사용
+  if (store.state && store.state.filterState && store.state.filterState.activeFilters) {
+    return store.state.filterState.activeFilters.has(colIndex);
+  }
+  
+  return false;
+}
+
+// 필터 제거 함수
+function removeFilter(colIndex) {
+  if (props.activeFilters) {
+    props.activeFilters.delete(colIndex);
+    emit('update:activeFilters', props.activeFilters); // 부모 컴포넌트에 필터 상태 업데이트 알림
+  }
+}
+
+// 필터 툴팁 텍스트 가져오기
+function getFilterTooltipText(colIndex) {
+  if (props.activeFilters && props.activeFilters.has(colIndex)) {
+    return '필터 해제';
+  }
+  return '필터 적용';
+}
 </script>
 
 <style scoped>
@@ -494,5 +612,45 @@ th.allow-wrap {
 
 .validation-error:hover::before {
   opacity: 1;
+}
+
+.filter-icon {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: auto; /* 툴팁을 위해 포인터 이벤트 활성화 */
+  background-color: rgba(25, 118, 210, 0.1);
+  border-radius: 2px;
+  padding: 1px;
+  cursor: pointer; /* 클릭 가능함을 나타내는 커서 */
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.filter-icon:hover {
+  background-color: rgba(25, 118, 210, 0.2);
+  border-color: rgba(25, 118, 210, 0.3);
+  transform: scale(1.1);
+}
+
+.filter-icon:active {
+  background-color: rgba(25, 118, 210, 0.3);
+  transform: scale(0.95);
+}
+
+.filter-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.header-text {
+  display: inline;
+  vertical-align: middle;
 }
 </style> 

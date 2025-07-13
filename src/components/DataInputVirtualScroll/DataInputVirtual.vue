@@ -46,12 +46,14 @@
         :editingCell="selectionSystem.state.editingCell"
         :scrollbarWidth="scrollbarWidth"
         :is-filtered="storeBridge.filterState.isFiltered"
+        :activeFilters="computedActiveFilters"
         @cell-mousedown="onCellMouseDown"
         @cell-dblclick="onCellDoubleClick"
         @cell-input="onCellInput"
         @cell-contextmenu="onContextMenu"
         @add-column="onAddColumn"
         @delete-column="onDeleteColumn"
+        @update:activeFilters="onUpdateActiveFilters"
       />
       <VirtualGridBody 
         ref="gridBodyRef"
@@ -190,37 +192,11 @@ const storeBridge = useStoreBridge(store, validationManager, {
 // 필터 상태를 reactive하게 만들기
 const filterState = ref(storeBridge.filterState);
 
-// 필터 상태 변화 감지
+// 필터 상태 변화 감지 - 단일 watch로 통합
 watch(() => storeBridge.filterState, (newState) => {
   console.log('[Filter] 필터 상태 변화 감지:', newState);
   filterState.value = newState;
 }, { deep: true, immediate: true });
-
-// 필터 상태 변경 시 강제로 filteredRows 재계산
-watch(() => storeBridge.filterState.isFiltered, (isFiltered) => {
-  console.log('[Filter] isFiltered 변경 감지:', isFiltered);
-  // filterState.value를 강제로 업데이트하여 filteredRows computed가 재실행되도록 함
-  filterState.value = { ...storeBridge.filterState };
-}, { immediate: true });
-
-// activeFilters 변경 감지 - 더 세밀하게 감지
-watch(() => storeBridge.filterState.activeFilters, (activeFilters) => {
-  console.log('[Filter] activeFilters 변경 감지:', activeFilters);
-  // filterState.value를 강제로 업데이트하여 filteredRows computed가 재실행되도록 함
-  filterState.value = { ...storeBridge.filterState };
-}, { deep: true, immediate: true });
-
-// 추가: activeFilters의 크기 변경도 감지
-watch(() => storeBridge.filterState.activeFilters?.size, (size) => {
-  console.log('[Filter] activeFilters 크기 변경 감지:', size);
-  filterState.value = { ...storeBridge.filterState };
-}, { immediate: true });
-
-// 필터 상태 변경 시 유효성 에러 표시 업데이트
-watch(() => storeBridge.filterState.isFiltered, (isFiltered) => {
-  console.log('[Filter] 필터 상태 변경으로 유효성 에러 표시 업데이트:', isFiltered);
-  // visibleValidationErrors computed가 자동으로 재계산됨
-}, { immediate: true });
 
 // StoreBridge에 ValidationManager 설정 (이미 생성자에서 전달했으므로 제거)
 // storeBridge.validationManager = validationManager;
@@ -247,6 +223,12 @@ if (typeof window !== 'undefined') {
 // --- Undo/Redo 상태 ---
 const canUndo = computed(() => storeBridge.canUndo);
 const canRedo = computed(() => storeBridge.canRedo);
+
+// 필터 상태를 반응성 있게 전달하기 위한 computed
+const computedActiveFilters = computed(() => {
+  const currentFilterState = filterState.value;
+  return new Map(currentFilterState.activeFilters || []);
+});
 
 // 개별 노출시간 열 토글 시 백업 데이터 저장용
 const individualExposureBackupData = ref([]);
@@ -772,6 +754,16 @@ async function onExcelFileSelected(file) {
     // 기존 유효성 검사 오류 초기화
     validationManager.clearAllErrors();
     
+    // 필터 초기화 (새로운 데이터 가져오기 시 필터 상태 리셋)
+    console.log('[ExcelImport] 필터 초기화 시작');
+    const wasFiltered = storeBridge.filterState.isFiltered;
+    storeBridge.clearAllFilters();
+    
+    // 필터가 활성화되어 있었다면 사용자에게 알림
+    if (wasFiltered) {
+      showToast('새로운 데이터 가져오기로 필터가 초기화되었습니다.', 'info');
+    }
+    
     // 1단계: 엑셀 파일 파싱 (0% ~ 60%)
     const parsed = await processExcelFile(file, (p) => {
       excelUploadProgress.value = Math.round(p * 0.6); // 파싱은 전체의 60%
@@ -827,6 +819,10 @@ async function onExcelFileSelected(file) {
     
     // 완료
     excelUploadProgress.value = 100;
+    
+    // 필터 상태 강제 업데이트 (UI 동기화)
+    filterState.value = { ...storeBridge.filterState };
+    console.log('[ExcelImport] 필터 초기화 완료 및 UI 동기화');
     
     // focus first cell
     selectionSystem.selectCell(0, 1);
@@ -950,7 +946,13 @@ async function onResetSheet() {
         validationManager.clearAllErrors();
         
         // 필터 초기화
+        const wasFiltered = storeBridge.filterState.isFiltered;
         storeBridge.clearAllFilters();
+        
+        // 필터가 활성화되어 있었다면 사용자에게 알림
+        if (wasFiltered) {
+          showToast('시트 초기화로 필터가 해제되었습니다.', 'info');
+        }
         
         storeBridge.dispatch('resetSheet');
         // selection / scroll reset
@@ -2331,6 +2333,16 @@ function onClearAllFilters() {
   filterState.value = { ...storeBridge.filterState };
   
   console.log('[Filter] 모든 필터 해제됨');
+}
+
+function onUpdateActiveFilters(activeFilters) {
+  // 개별 필터 제거 처리
+  console.log('[Filter] 개별 필터 제거:', activeFilters);
+  
+  // StoreBridge의 필터 상태와 동기화
+  storeBridge.filterState.activeFilters = new Map(activeFilters);
+  
+  // watch가 자동으로 감지하여 업데이트하므로 별도 호출 불필요
 }
 
 function handleFocusFirstError() {
