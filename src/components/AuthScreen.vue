@@ -454,6 +454,7 @@ export default {
       
       try {
         await authApi.register({
+          name: this.registerData.name,
           username: this.registerData.username,
           password: this.registerData.password,
           email: this.registerData.email,
@@ -466,6 +467,7 @@ export default {
         
         // 회원가입 성공 시 폼 초기화
         this.registerData = { 
+          name: '',
           username: '', 
           password: '', 
           confirmPassword: '', 
@@ -911,6 +913,6 @@ export default {
 
 /* 스타일 추가 */
 .password-toggle .material-icons {
-  font-size: 20px;
+  font-size: 24px;
 }
 </style> 

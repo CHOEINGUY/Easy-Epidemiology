@@ -45,85 +45,57 @@
       <!-- Filter Section -->
       <div class="filter-section">
         <div class="filter-row custom-filter-row">
-          <!-- 왼쪽: 필터 3개 -->
-          <div class="filter-group">
-            <label>소속 유형</label>
-            <select v-model="filters.organizationType" class="filter-select">
-              <option value="">전체</option>
-              <option value="보건소">보건소</option>
-              <option value="지원단">지원단</option>
-              <option value="기타">기타</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>시/도</label>
-            <select v-model="filters.province" class="filter-select" @change="filters.district = ''">
-              <option value="">전체</option>
-              <option v-for="province in availableProvinces" :key="province" :value="province">
-                {{ province }}
-              </option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>시/군/구</label>
-            <select v-model="filters.district" class="filter-select">
-              <option value="">전체</option>
-              <option v-for="district in availableDistrictsForFilter" :key="district" :value="district">
-                {{ district }}
-              </option>
-            </select>
-          </div>
-
-          <!-- 오른쪽: 오늘+검색+일괄버튼 -->
-          <div class="filter-actions">
-            <button @click="filterToday" class="today-btn tab-btn" :class="{ active: filters.todayOnly }" title="오늘 가입자만 보기">
-              오늘
+          <!-- 왼쪽: 오늘 버튼 -->
+          <button @click="filterToday" class="today-btn tab-btn" :class="{ active: filters.todayOnly }" title="오늘 가입자만 보기">
+            오늘
+          </button>
+          <!-- 검색란 (너비 300px 제한) -->
+          <div class="search-box" style="width: 300px;">
+            <span class="material-icons search-icon">search</span>
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="이름, 소속, 전화번호 등 검색" 
+              class="search-input"
+              @input="onSearchInput"
+              style="width: 100%; max-width: 300px;"
+            />
+            <button 
+              v-if="searchQuery" 
+              @click="clearSearch" 
+              class="clear-search-btn"
+              title="검색어 지우기"
+            >
+              <span class="material-icons">close</span>
             </button>
-            <div class="search-box">
-              <span class="material-icons search-icon">search</span>
+          </div>
+          <!-- 오른쪽: 일괄 승인/거부 버튼 (오른쪽 정렬) -->
+          <div v-if="activeTab === 'pending' && filteredPendingUsers.length > 0" class="bulk-actions-inline" style="margin-left:auto;">
+            <label class="select-all-label">
               <input 
-                v-model="searchQuery" 
-                type="text" 
-                placeholder="검색" 
-                class="search-input"
-                @input="onSearchInput"
+                type="checkbox" 
+                :checked="isAllSelected"
+                @change="toggleSelectAll"
+                class="select-all-checkbox"
               />
-              <button 
-                v-if="searchQuery" 
-                @click="clearSearch" 
-                class="clear-search-btn"
-                title="검색어 지우기"
-              >
-                <span class="material-icons">close</span>
-              </button>
-            </div>
-            <div v-if="activeTab === 'pending' && filteredPendingUsers.length > 0" class="bulk-actions-inline">
-              <label class="select-all-label">
-                <input 
-                  type="checkbox" 
-                  :checked="isAllSelected"
-                  @change="toggleSelectAll"
-                  class="select-all-checkbox"
-                />
-                전체 선택 ({{ selectedCount }}/{{ filteredPendingUsers.length }})
-              </label>
-              <button 
-                @click="bulkApprove" 
-                :disabled="selectedCount === 0"
-                class="bulk-btn approve"
-              >
-                <span class="material-icons">check_circle</span>
-                일괄 승인 ({{ selectedCount }})
-              </button>
-              <button 
-                @click="bulkReject" 
-                :disabled="selectedCount === 0"
-                class="bulk-btn reject"
-              >
-                <span class="material-icons">cancel</span>
-                일괄 거부 ({{ selectedCount }})
-              </button>
-            </div>
+              전체 선택 ({{ selectedCount }}/{{ filteredPendingUsers.length }})
+            </label>
+            <button 
+              @click="bulkApprove" 
+              :disabled="selectedCount === 0"
+              class="bulk-btn approve"
+            >
+              <span class="material-icons">check_circle</span>
+              일괄 승인 ({{ selectedCount }})
+            </button>
+            <button 
+              @click="bulkReject" 
+              :disabled="selectedCount === 0"
+              class="bulk-btn reject"
+            >
+              <span class="material-icons">cancel</span>
+              일괄 거부 ({{ selectedCount }})
+            </button>
           </div>
         </div>
       </div>
@@ -441,6 +413,12 @@ export default {
       });
       
       return Array.from(districts).sort();
+    }
+  },
+  watch: {
+    activeTab() {
+      // 탭이 변경될 때마다 데이터 새로고침
+      this.loadData();
     }
   },
   async mounted() {
@@ -1544,6 +1522,56 @@ export default {
 }
 .bulk-actions-inline {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 검색란 너비 제한 */
+.search-box {
+  width: 300px !important;
+  min-width: 120px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.search-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 12px 40px 12px 40px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+/* 오늘 버튼 tab-btn 스타일 */
+.today-btn.tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  min-width: 60px;
+  padding: 0 20px;
+  border: none;
+  background: transparent;
+  color: #1a73e8;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+  white-space: nowrap;
+}
+.today-btn.tab-btn.active,
+.today-btn.tab-btn:hover {
+  background: #e8f0fe;
+}
+
+/* bulk-actions 오른쪽 정렬 */
+.bulk-actions-inline {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
