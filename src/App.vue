@@ -1,20 +1,37 @@
 <template>
   <div id="app">
-    <div :class="contentClass">
-      <keep-alive>
-        <component :is="currentView"></component>
-      </keep-alive>
-      <ToastContainer></ToastContainer>
-    </div>
-    <div class="tabs">
-      <div
-        v-for="tab in tabs"
-        :key="tab.name"
-        :class="['tab', currentView === tab.component ? 'active' : '']"
-        @click="handleTabClick(tab.component)"
-      >
-        {{ tab.label }}
+    <!-- 인증 화면 (비인증 상태) -->
+    <AuthScreen 
+      v-if="!isAuthenticated" 
+      @login-success="handleLoginSuccess"
+    />
+    
+    <!-- 메인 앱 (모든 사용자) -->
+    <div v-if="isAuthenticated" class="main-app">
+      <!-- 메인 앱 컨텐츠 -->
+      <div :class="contentClass">
+        <keep-alive>
+          <component 
+            :is="currentView" 
+            @logout="handleLogout"
+          ></component>
+        </keep-alive>
+        <ToastContainer></ToastContainer>
       </div>
+      
+      <!-- 탭 네비게이션 -->
+      <div class="tabs">
+        <div
+          v-for="tab in tabs"
+          :key="tab.name"
+          :class="['tab', currentView === tab.component ? 'active' : '']"
+          @click="handleTabClick(tab.component)"
+        >
+          {{ tab.label }}
+        </div>
+      </div>
+      
+
     </div>
   </div>
 </template>
@@ -26,10 +43,13 @@ import PatientCharacteristics from './components/PatientCharacteristics.vue';
 import EpidemicCurve from './components/EpidemicCurve.vue';
 import CaseControl from './components/CaseControl.vue';
 import CohortStudy from './components/CohortStudy.vue';
-import HomePage from './components/HomePage.vue'; // HomePage import 유지
+import HomePage from './components/HomePage.vue';
 import ClinicalSymptoms from './components/ClinicalSymptoms.vue';
 import ToastContainer from './components/DataInputVirtualScroll/parts/ToastContainer.vue';
+import AuthScreen from './components/AuthScreen.vue';
+import AdminPanel from './components/AdminPanel.vue';
 import { showConfirmToast } from './components/DataInputVirtualScroll/logic/toast.js';
+import { userManager, tokenManager } from './services/authApi.js';
 
 export default {
   name: 'App', // 컴포넌트 이름 명시 권장
@@ -39,16 +59,21 @@ export default {
     EpidemicCurve,
     CaseControl,
     CohortStudy,
-    HomePage, // HomePage 컴포넌트 등록 유지
+    HomePage,
     ClinicalSymptoms,
-    ToastContainer
+    ToastContainer,
+    AuthScreen,
+    AdminPanel
   },
   data() {
     return {
       // --- ↓↓↓ 시작 탭을 DataInputVirtual으로 설정 ---
       currentView: 'DataInputVirtual',
       // --- ↑↑↑ 시작 탭을 DataInputVirtual으로 설정 ---
-      tabs: [
+      isAuthenticated: false,
+      currentUser: null,
+      isAdmin: false,
+      baseTabs: [
         // --- ↓↓↓ 탭 순서는 그대로 유지하거나 원하는 대로 변경 ---
         { name: 'DataInputVirtual', label: '데이터 입력', component: 'DataInputVirtual' },
         {
@@ -82,6 +107,21 @@ export default {
     };
   },
   computed: {
+    tabs() {
+      const tabs = [...this.baseTabs];
+      
+      // 관리자인 경우 관리자 패널 탭 추가
+      if (this.isAdmin) {
+        tabs.push({
+          name: 'AdminPanel',
+          label: '관리자 패널',
+          component: 'AdminPanel'
+        });
+      }
+      
+      return tabs;
+    },
+    
     contentClass() {
       if (this.currentView === 'DataInputVirtual') {
         return 'content no-scroll';
@@ -89,20 +129,87 @@ export default {
       return 'content scrollable';
     }
   },
-  // --- ↓↓↓ 다시 추가된 부분 ↓↓↓ ---
   created() {
-    // App 컴포넌트가 생성될 때 (앱 시작 시 한 번) StoreBridge를 통해 초기 데이터 로딩
-    if (window.storeBridge) {
-      window.storeBridge.loadInitialData();
-      console.log('App.vue created: StoreBridge를 통해 초기 데이터 로드 완료');
-    } else {
-      // StoreBridge가 없으면 기존 방식 사용
-      this.$store.dispatch('loadInitialData');
-      console.log('App.vue created: 기존 방식으로 초기 데이터 로드 완료');
-    }
+    // 초기 상태 설정
+    this.updateAuthState();
+    
+    // 인증 상태 체크 및 자동 로그인
+    this.checkAuthAndLoadData();
   },
-  // --- ↑↑↑ 다시 추가된 부분 ↑↑↑ ---
+  
   methods: {
+    async checkAuthAndLoadData() {
+      try {
+        // 토큰 유효성 확인
+        const isValid = await tokenManager.validateToken();
+        
+        if (isValid) {
+          // 로그인된 경우 기존 데이터 로드
+          this.loadInitialData();
+        } else {
+          // 로그인되지 않은 경우 기존 데이터 마이그레이션 시도
+          this.loadInitialData();
+        }
+      } catch (error) {
+        console.error('인증 체크 실패:', error);
+        // 에러가 발생해도 기본 데이터 로드
+        this.loadInitialData();
+      }
+    },
+    
+    loadInitialData() {
+      // App 컴포넌트가 생성될 때 (앱 시작 시 한 번) StoreBridge를 통해 초기 데이터 로딩
+      if (window.storeBridge) {
+        window.storeBridge.loadInitialData();
+        console.log('App.vue created: StoreBridge를 통해 초기 데이터 로드 완료');
+      } else {
+        // StoreBridge가 없으면 기존 방식 사용
+        this.$store.dispatch('loadInitialData');
+        console.log('App.vue created: 기존 방식으로 초기 데이터 로드 완료');
+      }
+    },
+    
+    updateAuthState() {
+      this.isAuthenticated = userManager.isLoggedIn();
+      this.currentUser = userManager.getUser();
+      this.isAdmin = userManager.isAdmin();
+      
+      console.log('updateAuthState 호출됨:', {
+        isAuthenticated: this.isAuthenticated,
+        currentUser: this.currentUser,
+        isAdmin: this.isAdmin
+      });
+    },
+    
+    async handleLoginSuccess() {
+      console.log('handleLoginSuccess 호출됨');
+      
+      // 로그인 성공 시 데이터 로드
+      this.loadInitialData();
+      
+      // 상태 업데이트
+      this.updateAuthState();
+      
+      // Vue의 반응성 업데이트를 기다림
+      await this.$nextTick();
+      
+      // 모든 사용자는 DataInputVirtual 탭으로 이동
+      this.currentView = 'DataInputVirtual';
+      
+      console.log('로그인 후 상태:', {
+        isAuthenticated: this.isAuthenticated,
+        currentUser: this.currentUser,
+        isAdmin: this.isAdmin
+      });
+    },
+    
+
+    
+    handleLogout() {
+      // 인증 상태 업데이트하여 로그인 화면으로 전환
+      this.updateAuthState();
+    },
+    
     handleTabClick(component) {
       // 현재 탭이 DataInputVirtual이고, 다른 탭으로 이동하려는 경우
       if (this.currentView === 'DataInputVirtual' && component !== 'DataInputVirtual') {
@@ -143,6 +250,15 @@ body {
   margin: 0;
   font-family: Arial, sans-serif;
 }
+
+/* 메인 앱 컨테이너 */
+.main-app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+
 
 #app {
   height: 100vh; /* 화면 높이에 꽉 차게 */

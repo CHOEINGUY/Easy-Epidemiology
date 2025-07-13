@@ -1,4 +1,5 @@
 import { createStore } from 'vuex';
+import auth from '../store/auth.js';
 
 // 빈 열인지 확인하는 함수
 function isColumnEmpty(headers, rows, headerType, columnIndex) {
@@ -77,6 +78,9 @@ function createInitialState() {
 }
 
 const store = createStore({
+  modules: {
+    auth
+  },
   state: {
     // --- 기존 상태 ---
     headers: { basic: [], clinical: [], diet: [] },

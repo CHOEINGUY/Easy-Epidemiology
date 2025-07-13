@@ -1,0 +1,22 @@
+name = "epidemiology-auth-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# KV 네임스페이스 바인딩
+[[kv_namespaces]]
+binding = "USERS"
+id = "a33a46b7fe72421488dbc4fbfce21588"  # 4단계에서 생성된 ID로 교체
+
+[[kv_namespaces]]
+binding = "ADMINS"
+id = "30f0876065f6462894eb06e7f5e71000"  # 4단계에서 생성된 ID로 교체
+
+# 환경 변수
+[vars]
+JWT_SECRET = "your-super-secret-jwt-key-change-this-in-production" 
+
+[env.production]
+kv_namespaces = [
+  { binding = "USERS", id = "a33a46b7fe72421488dbc4fbfce21588" },
+  { binding = "ADMINS", id = "30f0876065f6462894eb06e7f5e71000" }
+] 

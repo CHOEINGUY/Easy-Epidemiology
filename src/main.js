@@ -5,6 +5,7 @@ import store from './components/store.js'; // 경로 수정: components 폴더
 
 // StoreBridge import
 import { StoreBridge } from './store/storeBridge.js';
+import { UserManager } from './auth/UserManager.js';
 
 // 마이그레이션 유틸리티 import
 import { logMigrationStatus, executeMigration, getMigrationStatus } from './store/utils/migration.js';
@@ -19,10 +20,14 @@ const isDevelopment = import.meta.env?.MODE === 'development' || false;
 const storeBridge = new StoreBridge(store, null, { 
   debug: isDevelopment 
 });
+
+// 사용자 관리자 초기화
+const userManager = new UserManager();
 storeBridge.setLegacyStore(store);
 
 // 전역 StoreBridge 설정
 window.storeBridge = storeBridge;
+window.userManager = userManager;
 
 // 개발 환경에서만 전역 디버깅 객체 노출
 if (isDevelopment) {

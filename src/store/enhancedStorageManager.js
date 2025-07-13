@@ -6,9 +6,11 @@ import { getMigrationStatus, executeMigration } from './utils/migration.js';
  * 셀 단위 저장과 디바운싱을 통해 성능을 최적화합니다.
  */
 export class EnhancedStorageManager {
-  constructor(legacyStore = null) {
+  constructor(legacyStore = null, userManager = null) {
     this.cellInputState = new CellInputState();
     this.legacyStore = legacyStore; // 기존 store.js 인스턴스
+    this.userManager = userManager; // 사용자 관리자
+    this.currentUser = null; // 현재 사용자
     this.saveTimeout = null;
     this.SAVE_DELAY = 300; // 셀 이동 후 300ms 디바운싱
     this.pendingSaves = new Map(); // 대기 중인 저장 작업들
@@ -23,6 +25,35 @@ export class EnhancedStorageManager {
   setLegacyStore(legacyStore) {
     this.legacyStore = legacyStore;
     console.log('[EnhancedStorageManager] 기존 store.js 인스턴스가 설정되었습니다.');
+  }
+  
+  /**
+   * 사용자 관리자를 설정합니다.
+   * @param {Object} userManager - 사용자 관리자 인스턴스
+   */
+  setUserManager(userManager) {
+    this.userManager = userManager;
+    console.log('[EnhancedStorageManager] 사용자 관리자가 설정되었습니다.');
+  }
+  
+  /**
+   * 현재 사용자를 설정합니다.
+   * @param {Object} user - 현재 사용자 정보
+   */
+  setCurrentUser(user) {
+    this.currentUser = user;
+    console.log('[EnhancedStorageManager] 현재 사용자가 설정되었습니다:', user?.username);
+  }
+  
+  /**
+   * 사용자별 데이터 키를 생성합니다.
+   * @returns {string} 데이터 키
+   */
+  getUserDataKey() {
+    if (!this.currentUser) {
+      return 'epidemiology_data'; // 기존 호환성
+    }
+    return this.userManager?.getUserDataKey(this.currentUser.username) || 'epidemiology_data';
   }
   
   /**
@@ -259,8 +290,9 @@ export class EnhancedStorageManager {
         }
       }
       
-      // 새로운 형식의 데이터 로드
-      const newData = localStorage.getItem('epidemiology_data');
+      // 사용자별 데이터 키 사용
+      const dataKey = this.getUserDataKey();
+      const newData = localStorage.getItem(dataKey);
       
       if (newData) {
         const parsedData = JSON.parse(newData);
@@ -286,10 +318,14 @@ export class EnhancedStorageManager {
       const saveData = {
         version: '1.0',
         timestamp: Date.now(),
+        userId: this.currentUser?.username,
         ...data
       };
       
-      localStorage.setItem('epidemiology_data', JSON.stringify(saveData));
+      // 사용자별 데이터 키 사용
+      const dataKey = this.getUserDataKey();
+      localStorage.setItem(dataKey, JSON.stringify(saveData));
+      console.log('[EnhancedStorageManager] 데이터가 저장되었습니다:', dataKey);
       return true;
       
     } catch (error) {

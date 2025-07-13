@@ -1,5 +1,6 @@
 import { EnhancedStorageManager } from './enhancedStorageManager.js';
 import { HistoryManager } from './historyManager.js';
+import { UserManager } from '../auth/UserManager.js';
 import { ref } from 'vue';
 
 /**
@@ -9,7 +10,8 @@ import { ref } from 'vue';
 export class StoreBridge {
   constructor(legacyStore = null, validationManager = null, options = {}) {
     this.legacyStore = legacyStore;
-    this.enhancedManager = new EnhancedStorageManager(legacyStore);
+    this.userManager = new UserManager();
+    this.enhancedManager = new EnhancedStorageManager(legacyStore, this.userManager);
     this.history = new HistoryManager();
     this.validationManager = validationManager;
     this.isInitialized = false;
@@ -72,6 +74,15 @@ export class StoreBridge {
     if (!this.isInitialized) {
       this.initialize();
     }
+  }
+  
+  /**
+   * 현재 사용자를 설정합니다.
+   * @param {Object} user - 현재 사용자 정보
+   */
+  setCurrentUser(user) {
+    this.enhancedManager.setCurrentUser(user);
+    console.log('[StoreBridge] 현재 사용자가 설정되었습니다:', user?.username);
   }
   
   /**

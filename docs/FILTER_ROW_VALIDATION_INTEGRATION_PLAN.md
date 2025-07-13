@@ -1,4 +1,4 @@
-# Filter + Row Validation Integration Plan
+npm# Filter + Row Validation Integration Plan
 
 ## 1. 목표 및 핵심 원칙
 
