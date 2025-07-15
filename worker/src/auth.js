@@ -11,253 +11,365 @@ import {
   corsHeaders
 } from './utils.js';
 
-// 사용자명 중복 확인 (실시간 체크)
-export async function handleCheckUsername(request, env) {
-  if (request.method !== 'POST') {
-    return errorResponse('Method not allowed', 405);
+// src/auth.js
+async function handleCheckEmail(request, env) {
+  if (request.method !== "POST") {
+    return errorResponse("Method not allowed", 405);
   }
-
   const body = await parseRequestBody(request);
-  if (!body || !body.username) {
-    return errorResponse('사용자명이 필요합니다.');
+  if (!body || !body.email) {
+    return errorResponse("이메일이 필요합니다.");
   }
-
-  const { username } = body;
-
-  // 사용자명 형식 검증
-  if (username.length < 3 || username.length > 20) {
-    return errorResponse('사용자명은 3-20자 사이여야 합니다.');
+  const { email } = body;
+  // 이메일 형식 검증 개선 (@와 . 포함, 도메인 형식 확인)
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const cleanEmail = email.trim().toLowerCase();
+  if (!emailRegex.test(cleanEmail)) {
+    return errorResponse("올바른 이메일 형식이 아닙니다. (@와 도메인이 포함된 형식으로 입력해주세요)");
   }
-
   try {
-    // 사용자명 중복 확인
-    const existingUser = await env.AUTH_KV.get(`user:${username}`);
-    
-    if (existingUser) {
+    const existingUserId = await env.USERS.get(`email:${email}`);
+    if (existingUserId) {
       return successResponse(
-        { available: false, message: '이미 사용 중인 사용자명입니다.' },
-        '사용자명 중복'
+        { available: false, message: "이미 사용 중인 이메일입니다." },
+        "이메일 중복"
       );
     } else {
       return successResponse(
-        { available: true, message: '사용 가능한 사용자명입니다.' },
-        '사용자명 사용 가능'
+        { available: true, message: "사용 가능한 이메일입니다." },
+        "이메일 사용 가능"
       );
     }
-
   } catch (error) {
-    console.error('Username check error:', error);
-    return errorResponse('사용자명 확인 중 오류가 발생했습니다.', 500);
+    console.error("Email check error:", error);
+    return errorResponse("이메일 확인 중 오류가 발생했습니다.", 500);
   }
 }
 
-// 사용자 등록
-export async function handleRegister(request, env) {
-  if (request.method !== 'POST') {
-    return errorResponse('Method not allowed', 405);
+async function handleCheckPhone(request, env) {
+  if (request.method !== "POST") {
+    return errorResponse("Method not allowed", 405);
   }
-
   const body = await parseRequestBody(request);
-  if (!body) {
-    return errorResponse('Invalid request body');
+  if (!body || !body.phone) {
+    return errorResponse("전화번호가 필요합니다.");
   }
-
-  // 입력 데이터 검증
-  const validation = validateRegistrationData(body);
-  if (!validation.valid) {
-    return errorResponse(validation.message);
+  const { phone } = body;
+  // 전화번호 형식 검증을 더 관대하게 수정
+  const phoneRegex = /^(\+82|0)[0-9]{9,10}$/;
+  const cleanPhone = phone.replace(/\s/g, "");
+  if (!phoneRegex.test(cleanPhone)) {
+    return errorResponse("올바른 전화번호 형식이 아닙니다.");
   }
-
-  const { username, password, email, organization, phone, name } = body;
-
   try {
-    // 사용자명 중복 확인
-    const existingUser = await env.USERS.get(`user:${username}`);
-    if (existingUser) {
-      return errorResponse('이미 존재하는 사용자명입니다.');
+    const existingUserId = await env.USERS.get(`phone:${cleanPhone}`);
+    if (existingUserId) {
+      return successResponse(
+        { available: false, message: "이미 사용 중인 전화번호입니다." },
+        "전화번호 중복"
+      );
+    } else {
+      return successResponse(
+        { available: true, message: "사용 가능한 전화번호입니다." },
+        "전화번호 사용 가능"
+      );
     }
+  } catch (error) {
+    console.error("Phone check error:", error);
+    return errorResponse("전화번호 확인 중 오류가 발생했습니다.", 500);
+  }
+}
 
+async function handleRegister(request, env) {
+  console.log('🚀 [handleRegister] 회원가입 요청 시작');
+  
+  if (request.method !== "POST") {
+    console.log('❌ [handleRegister] 잘못된 HTTP 메서드:', request.method);
+    return errorResponse("Method not allowed", 405);
+  }
+  
+  const body = await parseRequestBody(request);
+  console.log('📄 [handleRegister] 요청 본문:', body);
+  
+  if (!body) {
+    console.log('❌ [handleRegister] 요청 본문 없음');
+    return errorResponse("Invalid request body");
+  }
+  
+  // 새로운 유효성 검사
+  const { name, email, phone, password, affiliation, affiliationType } = body;
+  console.log('🔍 [handleRegister] 데이터 추출:', { name, email, phone, affiliation, affiliationType });
+  
+  if (!name || name.trim().length === 0) {
+    console.log('❌ [handleRegister] 이름 누락');
+    return errorResponse("사용자 이름을 입력해주세요.");
+  }
+  
+  if (!email || !email.includes("@")) {
+    console.log('❌ [handleRegister] 이메일 형식 오류');
+    return errorResponse("유효한 이메일 주소를 입력해주세요.");
+  }
+  
+  if (!phone) {
+    console.log('❌ [handleRegister] 전화번호 누락');
+    return errorResponse("전화번호를 입력해주세요.");
+  }
+  
+  if (!password || password.length < 6) {
+    console.log('❌ [handleRegister] 비밀번호 길이 부족');
+    return errorResponse("비밀번호는 최소 6자 이상이어야 합니다.");
+  }
+  
+  if (!affiliation || affiliation.trim().length === 0) {
+    console.log('❌ [handleRegister] 소속 누락');
+    return errorResponse("소속을 입력해주세요.");
+  }
+  
+  if (!affiliationType || affiliationType.trim().length === 0) {
+    console.log('❌ [handleRegister] 소속 유형 누락');
+    return errorResponse("소속 유형을 선택해주세요.");
+  }
+  
+  try {
+    console.log('🔍 [handleRegister] 중복 검사 시작');
+    
     // 이메일 중복 확인
     const existingEmail = await env.USERS.get(`email:${email}`);
     if (existingEmail) {
-      return errorResponse('이미 등록된 이메일 주소입니다.');
+      console.log('❌ [handleRegister] 이메일 중복:', email);
+      return errorResponse("이미 등록된 이메일 주소입니다.");
     }
-
-    // 비밀번호 해싱
-    const hashedPassword = await hashPassword(password);
     
-    // 사용자 ID 생성
+    // 전화번호 중복 확인
+    const cleanPhone = phone.replace(/\s/g, "");
+    const existingPhone = await env.USERS.get(`phone:${cleanPhone}`);
+    if (existingPhone) {
+      console.log('❌ [handleRegister] 전화번호 중복:', cleanPhone);
+      return errorResponse("이미 등록된 전화번호입니다.");
+    }
+    
+    console.log('✅ [handleRegister] 중복 검사 통과');
+    
+    const hashedPassword = await hashPassword(password);
     const userId = generateUserId();
     
-    // 사용자 데이터 생성
     const userData = {
       id: userId,
-      username,
-      name: name || '', // 사용자 이름
-      email,
-      organization,
-      phone: phone || null, // 전화번호는 선택사항
+      name: name.trim(),
+      email: email.toLowerCase(),
+      phone: cleanPhone,
+      affiliation: affiliation.trim(),
+      affiliationType: affiliationType,
       password: hashedPassword,
-      role: 'pending', // 승인 대기 상태
+      role: "pending",
       createdAt: new Date().toISOString(),
       approved: false
     };
-
-    // KV에 저장
-    await env.USERS.put(`user:${username}`, JSON.stringify(userData));
+    
+    console.log('💾 [handleRegister] 사용자 데이터 저장 시작:', { userId, email: userData.email, phone: userData.phone });
+    
+    // 사용자 데이터 저장
     await env.USERS.put(`email:${email}`, userId);
+    await env.USERS.put(`phone:${cleanPhone}`, userId);
+    await env.USERS.put(`user:${userId}`, JSON.stringify(userData));
     await env.USERS.put(`pending:${userId}`, JSON.stringify(userData));
-
-    return successResponse(
-      { userId, username, email, organization },
-      '회원가입이 완료되었습니다. 관리자 승인을 기다려주세요.'
+    
+    console.log('✅ [handleRegister] 사용자 데이터 저장 완료');
+    
+    const response = successResponse(
+      { userId, email, affiliation },
+      "회원가입이 완료되었습니다. 관리자 승인을 기다려주세요."
     );
-
+    
+    console.log('🎉 [handleRegister] 성공 응답 반환:', response);
+    return response;
   } catch (error) {
-    console.error('Registration error:', error);
-    return errorResponse('회원가입 중 오류가 발생했습니다.', 500);
+    console.error("❌ [handleRegister] 회원가입 오류:", error);
+    return errorResponse("회원가입 중 오류가 발생했습니다.", 500);
   }
 }
 
-// 사용자 로그인
-export async function handleLogin(request, env) {
-  if (request.method !== 'POST') {
-    return errorResponse('Method not allowed', 405);
+async function handleLogin(request, env) {
+  if (request.method !== "POST") {
+    return errorResponse("Method not allowed", 405);
   }
-
   const body = await parseRequestBody(request);
+  console.log("[handleLogin] body:", body);
   if (!body) {
-    return errorResponse('Invalid request body');
+    return errorResponse("Invalid request body");
   }
-
-  const { username, password } = body;
-
-  if (!username || !password) {
-    return errorResponse('사용자명과 비밀번호를 입력해주세요.');
+  
+  const { identifier, password, identifierType } = body;
+  if (!identifier || !password) {
+    return errorResponse("로그인 정보를 입력해주세요.");
   }
-
+  
+  let userDataStr = null;
+  let userId = null;
+  let userData = null;
+  
   try {
-    // 사용자 정보 조회
-    const userDataStr = await env.USERS.get(`user:${username}`);
-    console.log('User data string:', userDataStr);
+    // 식별자 타입에 따른 사용자 검색
+    if (identifierType === "email") {
+      userId = await env.USERS.get(`email:${identifier}`);
+      console.log("[handleLogin] userId by email:", userId);
+      if (userId) {
+        userDataStr = await env.USERS.get(`user:${userId}`);
+        console.log("[handleLogin] userDataStr by email:", userDataStr);
+      }
+    } else if (identifierType === "phone") {
+      const cleanPhone = identifier.replace(/\s/g, "");
+      userId = await env.USERS.get(`phone:${cleanPhone}`);
+      console.log("[handleLogin] userId by phone:", userId);
+      if (userId) {
+        userDataStr = await env.USERS.get(`user:${userId}`);
+        console.log("[handleLogin] userDataStr by phone:", userDataStr);
+      }
+    } else {
+      // ambiguous 타입: 이메일과 전화번호 모두 시도
+      userId = await env.USERS.get(`email:${identifier}`);
+      console.log("[handleLogin] userId by email (ambiguous):", userId);
+      if (userId) {
+        userDataStr = await env.USERS.get(`user:${userId}`);
+        console.log("[handleLogin] userDataStr by email (ambiguous):", userDataStr);
+      }
+      
+      if (!userDataStr) {
+        const cleanPhone = identifier.replace(/\s/g, "");
+        userId = await env.USERS.get(`phone:${cleanPhone}`);
+        console.log("[handleLogin] userId by phone (ambiguous):", userId);
+        if (userId) {
+          userDataStr = await env.USERS.get(`user:${userId}`);
+          console.log("[handleLogin] userDataStr by phone (ambiguous):", userDataStr);
+        }
+      }
+    }
     
     if (!userDataStr) {
-      return errorResponse('사용자명 또는 비밀번호가 올바르지 않습니다.');
+      return errorResponse("User not found: 등록되지 않은 사용자입니다. 회원가입을 먼저 진행해주세요.");
     }
-
-    let userData;
+    
+    // JSON 파싱 시도
     try {
       userData = JSON.parse(userDataStr);
+      console.log("[handleLogin] userData parsed:", userData);
     } catch (parseError) {
-      // JSON 파싱 실패 시, 문자열을 직접 파싱
-      console.log('JSON parse failed, trying manual parse...');
-      const cleanDataStr = userDataStr.replace(/^'|'$/g, ''); // 앞뒤 따옴표 제거
-      const matches = cleanDataStr.match(/(\w+):([^,}]+)/g);
-      userData = {};
-      matches.forEach(match => {
-        const [key, value] = match.split(':');
-        userData[key.trim()] = value.trim().replace(/^"|"$/g, ''); // 따옴표 제거
-      });
+      console.error("[handleLogin] JSON parse error:", parseError);
+      console.error("[handleLogin] userDataStr:", userDataStr);
+      return errorResponse("사용자 데이터 오류가 발생했습니다. 관리자에게 문의해주세요.", 500);
     }
-    console.log('Parsed user data:', JSON.stringify(userData, null, 2));
-
-    // 승인 상태 확인
-    console.log('isApproved:', userData.isApproved, 'approved:', userData.approved);
-    if (!userData.isApproved && !userData.approved) {
-      return errorResponse('아직 승인되지 않은 계정입니다. 관리자 승인을 기다려주세요.');
-    }
-
-    // 비밀번호 검증
-    const storedPassword = userData.hashedPassword || userData.password;
-    console.log('Stored password field:', userData.hashedPassword ? 'hashedPassword' : 'password');
-    const isValidPassword = await verifyPassword(password, storedPassword);
-    console.log('Password validation result:', isValidPassword);
     
-    if (!isValidPassword) {
-      return errorResponse('사용자명 또는 비밀번호가 올바르지 않습니다.');
+    // 승인 상태 확인
+    console.log("[handleLogin] approved:", userData.approved);
+    if (!userData.approved) {
+      return errorResponse("Account not approved: 아직 승인되지 않은 계정입니다. 관리자 승인을 기다려주세요.");
     }
-
-    // JWT 토큰 생성
+    
+    // 비밀번호 검증
+    const storedPassword = userData.password;
+    console.log("[handleLogin] storedPassword exists:", !!storedPassword);
+    if (!storedPassword) {
+      return errorResponse("Invalid credentials: 이메일/전화번호 또는 비밀번호가 올바르지 않습니다. 다시 확인해주세요.");
+    }
+    
+    const isValidPassword = await verifyPassword(password, storedPassword);
+    console.log("[handleLogin] isValidPassword:", isValidPassword);
+    if (!isValidPassword) {
+      return errorResponse("Invalid credentials: 이메일/전화번호 또는 비밀번호가 올바르지 않습니다. 다시 확인해주세요.");
+    }
+    
+    // 토큰 생성
     const token = await generateToken(userData.id, userData.role);
-
+    console.log("[handleLogin] token generated:", !!token);
+    if (!token) {
+      return errorResponse("토큰 생성 중 오류가 발생했습니다.", 500);
+    }
+    
     return successResponse({
       token,
       user: {
         id: userData.id,
-        username: userData.username,
+        name: userData.name,
         email: userData.email,
+        phone: userData.phone,
+        affiliation: userData.affiliation,
+        affiliationType: userData.affiliationType,
         role: userData.role
       }
-    }, '로그인 성공');
-
+    }, "로그인 성공");
+    
   } catch (error) {
-    console.error('Login error:', error);
-    return errorResponse('로그인 중 오류가 발생했습니다.', 500);
+    console.error("[handleLogin] Login error:", error, {
+      body,
+      userId,
+      userDataStr,
+      userData
+    });
+    return errorResponse("Network error: 로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", 500);
   }
 }
 
-// 토큰 검증
-export async function handleVerifyToken(request, env) {
-  if (request.method !== 'POST') {
-    return errorResponse('Method not allowed', 405);
+async function handleVerifyToken(request, env) {
+  if (request.method !== "POST") {
+    return errorResponse("Method not allowed", 405);
   }
-
   const body = await parseRequestBody(request);
   if (!body || !body.token) {
-    return errorResponse('토큰이 필요합니다.');
+    return errorResponse("토큰이 필요합니다.");
   }
-
+  
   try {
     const decoded = await verifyToken(body.token);
     if (!decoded) {
-      return errorResponse('유효하지 않은 토큰입니다.', 401);
+      return errorResponse("유효하지 않은 토큰입니다.", 401);
     }
-
+    
     // 사용자 정보 조회
-    const pendingUsers = await env.USERS.list({ prefix: 'pending:' });
-    let userData = null;
-
-    for (const key of pendingUsers.keys) {
-      const userStr = await env.USERS.get(key.name);
-      const user = JSON.parse(userStr);
-      if (user.id === decoded.userId) {
-        userData = user;
-        break;
-      }
+    const userDataStr = await env.USERS.get(`user:${decoded.userId}`);
+    if (!userDataStr) {
+      return errorResponse("사용자를 찾을 수 없습니다.", 404);
     }
-
-    if (!userData) {
-      // 승인된 사용자에서 찾기
-      const allUsers = await env.USERS.list({ prefix: 'user:' });
-      for (const key of allUsers.keys) {
-        const userStr = await env.USERS.get(key.name);
-        const user = JSON.parse(userStr);
-        if (user.id === decoded.userId) {
-          userData = user;
-          break;
-        }
-      }
+    
+    let userData;
+    try {
+      userData = JSON.parse(userDataStr);
+    } catch (parseError) {
+      console.log("JSON parse failed for token verification, trying manual parse...");
+      const cleanDataStr = userDataStr.replace(/^'|'$/g, "");
+      const matches = cleanDataStr.match(/(\w+):([^,}]+)/g);
+      userData = {};
+      matches.forEach((match) => {
+        const [key, value] = match.split(":");
+        userData[key.trim()] = value.trim().replace(/^"|"$/g, "");
+      });
     }
-
-    if (!userData) {
-      return errorResponse('사용자를 찾을 수 없습니다.', 404);
-    }
-
+    
     return successResponse({
       user: {
         id: userData.id,
-        username: userData.username,
+        name: userData.name,
         email: userData.email,
+        phone: userData.phone,
+        affiliation: userData.affiliation,
+        affiliationType: userData.affiliationType,
         role: userData.role,
         approved: userData.approved
       }
-    }, '토큰 검증 성공');
-
+    }, "토큰 검증 성공");
   } catch (error) {
-    console.error('Token verification error:', error);
-    return errorResponse('토큰 검증 중 오류가 발생했습니다.', 500);
+    console.error("Token verification error:", error);
+    return errorResponse("토큰 검증 중 오류가 발생했습니다.", 500);
   }
 }
+
+// Export all functions
+export {
+  handleRegister,
+  handleLogin,
+  handleVerifyToken,
+  handleCheckEmail,
+  handleCheckPhone
+};
 
 // CORS 처리
 export function handleCORS() {

@@ -20,12 +20,6 @@
               {{ tableFontSize }}px
             </button>
           </div>
-          <div class="ui-group">
-            <label class="ui-label">P-value 계산 방식:</label>
-            <button class="control-button" @click="toggleYatesCorrection">
-              {{ useYatesCorrection ? 'Yates 보정 사용' : 'Yates 보정 미사용' }}
-            </button>
-          </div>
         </div>
         <div class="summary-info-area">
           <p>총 {{ rows.length }}명의 데이터 분석</p>
@@ -39,21 +33,32 @@
               <span>
                 <span class="selected-variable-details__title-dot"></span>&nbsp;요인별 표 분석 결과(코호트)
               </span>
-              <div style="position: relative;">
-                <button @click="copyTableToClipboard" class="copy-chart-button">
+              <div class="button-group">
+                <button @click="toggleYatesCorrection" class="filter-button" :class="{ active: useYatesCorrection }">
                   <span class="button-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      <path d="M12 1v6m0 6v6"></path>
+                      <path d="M17.5 12h-11"></path>
                     </svg>
                   </span>
-                  <span class="button-text">테이블 복사</span>
+                  <span class="button-text">{{ useYatesCorrection ? 'Yates 보정 적용' : 'Yates 보정 미적용' }}</span>
                 </button>
-                <div v-if="isTableCopied" class="copy-tooltip check-tooltip">
-                  <svg width="32" height="32" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="12" fill="#1a73e8"/>
-                    <polyline points="7,13 11,17 17,9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                <div style="position: relative;">
+                  <button @click="copyTableToClipboard" class="copy-chart-button">
+                    <span class="button-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                    </span>
+                    <span class="button-text">테이블 복사</span>
+                  </button>
+                  <div v-if="isTableCopied" class="copy-tooltip check-tooltip">
+                    <svg width="32" height="32" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="12" fill="#1a73e8"/>
+                      <polyline points="7,13 11,17 17,9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
@@ -657,16 +662,19 @@ const validateCohortStatistics = (result, factorName) => {
   return issues.length === 0;
 };
 
-// --- Fisher의 정확검정 계산 함수 ---
+// --- Fisher의 정확검정 계산 함수 (양측 검정) ---
 const calculateFisherExactTest = (a, b, c, d) => {
-  // 2x2 분할표에서 Fisher의 정확검정 계산
+  // 2x2 분할표에서 Fisher의 정확검정 계산 (양측 검정)
   const n = a + b + c + d;
   const row1 = a + b;
   const row2 = c + d;
   const col1 = a + c;
   const col2 = b + d;
   
-  // 초기 확률 계산
+  // 관측된 분할표의 확률 계산
+  const observedProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
+                      (factorial(n) * factorial(a) * factorial(b) * factorial(c) * factorial(d));
+  
   let pValue = 0;
   
   // 모든 가능한 분할표에 대해 확률 계산
@@ -680,8 +688,8 @@ const calculateFisherExactTest = (a, b, c, d) => {
       const currentProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
                          (factorial(n) * factorial(x) * factorial(y) * factorial(z) * factorial(w));
       
-      // 관측된 분할표보다 극단적인 경우의 확률만 합산
-      if (x <= a) {
+      // 관측된 분할표보다 극단적인 경우의 확률만 합산 (양측 검정)
+      if (currentProb <= observedProb) {
         pValue += currentProb;
       }
     }
@@ -1042,6 +1050,44 @@ const factorial = (n) => {
 .button-text {
   font-family: "Noto Sans KR", sans-serif;
   font-weight: 400;
+}
+
+/* --- 필터 버튼 스타일 --- */
+.filter-button {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  background-color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.filter-button:hover {
+  background-color: rgba(26, 115, 232, 0.1);
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.filter-button.active {
+  background-color: #1a73e8;
+  border-color: #1a73e8;
+  color: white;
+}
+
+.filter-button.active:hover {
+  background-color: #1557b8;
+}
+
+/* --- 버튼 그룹 스타일 --- */
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* --- 테이블 범례 스타일 --- */

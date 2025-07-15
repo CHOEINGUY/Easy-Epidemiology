@@ -1,37 +1,90 @@
 <template>
   <div id="app">
-    <!-- 인증 화면 (비인증 상태) -->
+    <!-- 로그인 화면 (로그인 모드에서만 표시) -->
     <AuthScreen 
-      v-if="!isAuthenticated" 
+      v-if="requiresAuth && !isAuthenticated" 
       @login-success="handleLoginSuccess"
     />
     
-    <!-- 메인 앱 (모든 사용자) -->
-    <div v-if="isAuthenticated" class="main-app">
-      <!-- 메인 앱 컨텐츠 -->
-      <div :class="contentClass">
-        <keep-alive>
-          <component 
-            :is="currentView" 
-            @logout="handleLogout"
-          ></component>
-        </keep-alive>
-        <ToastContainer></ToastContainer>
-      </div>
+    <!-- 메인 앱 -->
+    <div v-else class="main-app">
+      <!-- 메인 콘텐츠 영역 -->
+      <main :class="contentClass">
+        <component :is="currentView" @logout="handleLogout" />
+      </main>
       
       <!-- 탭 네비게이션 -->
       <div class="tabs">
-        <div
-          v-for="tab in tabs"
-          :key="tab.name"
-          :class="['tab', currentView === tab.component ? 'active' : '']"
-          @click="handleTabClick(tab.component)"
-        >
-          {{ tab.label }}
+        <div class="tabs-left">
+          <div
+            v-for="tab in tabs"
+            :key="tab.name"
+            :class="['tab', currentView === tab.name ? 'active' : '']"
+            @click="handleTabClick(tab.name)"
+          >
+            {{ tab.label }}
+          </div>
+        </div>
+        
+        <!-- 로그아웃 버튼 (로그인 모드에서만 표시) -->
+        <div v-if="requiresAuth" class="logout-section">
+          <button 
+            class="logout-btn" 
+            @click="handleLogoutClick"
+            title="로그아웃"
+          >
+            <span class="material-icons">logout</span>
+            로그아웃
+          </button>
         </div>
       </div>
-      
-
+    </div>
+    
+    <!-- 로그아웃 모달 (로그인 모드에서만 표시) -->
+    <div v-if="requiresAuth && showLogoutConfirmModal" class="modal-overlay" @click="closeLogoutConfirmModal">
+      <div class="modal-content" @click.stop>
+        <!-- 1단계: 로그아웃 확인 -->
+        <div v-if="!isLogoutProcessing" class="logout-confirm-step">
+          <div class="warning-icon-large">
+            <span class="material-icons">logout</span>
+          </div>
+          <h3 class="modal-title">로그아웃</h3>
+          <p class="modal-message">
+            로그아웃하시겠습니까?<br>
+            모든 데이터는 안전하게 저장됩니다.
+          </p>
+          <div class="modal-actions">
+            <button class="secondary-btn" @click="closeLogoutConfirmModal">
+              취소
+            </button>
+            <button class="primary-btn" @click="confirmLogout">
+              로그아웃
+            </button>
+          </div>
+        </div>
+        
+        <!-- 2단계: 데이터 저장 완료 -->
+        <div v-else class="logout-success-step">
+          <div class="success-icon-large">
+            <span class="material-icons">check_circle</span>
+          </div>
+          <h3 class="modal-title">데이터가 안전하게 저장되었습니다!</h3>
+          <p class="modal-message">
+            모든 데이터가 안전하게 저장되었습니다.<br>
+            잠시 후 로그인 화면으로 이동합니다.
+          </p>
+          <div class="modal-timer">
+            <div class="timer-bar">
+              <div class="timer-progress" :style="{ width: timerProgress + '%' }"></div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="secondary-btn" @click="closeLogoutConfirmModal">
+              지금 이동
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -49,7 +102,8 @@ import ToastContainer from './components/DataInputVirtualScroll/parts/ToastConta
 import AuthScreen from './components/AuthScreen.vue';
 import AdminPanel from './components/AdminPanel.vue';
 import { showConfirmToast } from './components/DataInputVirtualScroll/logic/toast.js';
-import { userManager, tokenManager } from './services/authApi.js';
+import { tokenManager } from './services/authApi.js';
+import { isAuthRequired, logEnvironmentInfo } from './utils/environmentUtils.js';
 
 export default {
   name: 'App', // 컴포넌트 이름 명시 권장
@@ -67,15 +121,22 @@ export default {
   },
   data() {
     return {
-      // --- ↓↓↓ 시작 탭을 DataInputVirtual으로 설정 ---
-      currentView: 'DataInputVirtual',
-      // --- ↑↑↑ 시작 탭을 DataInputVirtual으로 설정 ---
+      currentView: 'AuthScreen',
       isAuthenticated: false,
       currentUser: null,
       isAdmin: false,
+      showLogoutConfirmModal: false, // 로그아웃 모달 표시 여부
+      isLogoutProcessing: false, // 로그아웃 처리 중 여부 (모달 단계 제어)
+      logoutModalTimer: null, // 자동 전환 타이머
+      remainingSeconds: 1.5, // 남은 시간 (초)
+      
+      // 기본 탭 구성
       baseTabs: [
-        // --- ↓↓↓ 탭 순서는 그대로 유지하거나 원하는 대로 변경 ---
-        { name: 'DataInputVirtual', label: '데이터 입력', component: 'DataInputVirtual' },
+        {
+          name: 'DataInputVirtual',
+          label: '데이터 입력',
+          component: 'DataInputVirtual'
+        },
         {
           name: 'PatientCharacteristics',
           label: '환자특성',
@@ -101,17 +162,25 @@ export default {
           label: '코호트(RR)',
           component: 'CohortStudy'
         },
-        { name: 'HomePage', label: '웹페이지 정보', component: 'HomePage' }
-        // --- ↑↑↑ 탭 순서는 그대로 유지하거나 원하는 대로 변경 ---
+        {
+          name: 'HomePage',
+          label: '웹페이지 정보',
+          component: 'HomePage'
+        }
       ]
     };
   },
   computed: {
+    // 로그인이 필요한지 확인
+    requiresAuth() {
+      return isAuthRequired();
+    },
+    
     tabs() {
       const tabs = [...this.baseTabs];
       
-      // 관리자인 경우 관리자 패널 탭 추가
-      if (this.isAdmin) {
+      // 관리자 패널 탭 추가 (로그인 모드에서만)
+      if (this.requiresAuth && this.isAdmin) {
         tabs.push({
           name: 'AdminPanel',
           label: '관리자 패널',
@@ -127,11 +196,35 @@ export default {
         return 'content no-scroll';
       }
       return 'content scrollable';
+    },
+    
+    // 타이머 진행률 계산
+    timerProgress() {
+      const totalTime = 1500; // 1.5초
+      const elapsed = totalTime - (this.remainingSeconds * 1000);
+      return Math.max(0, Math.min(100, (elapsed / totalTime) * 100));
     }
   },
   created() {
-    // 초기 상태 설정
+    // 환경 정보 로깅
+    logEnvironmentInfo();
+    
+    // 비로그인 모드인 경우
+    if (!this.requiresAuth) {
+      this.isAuthenticated = true;
+      this.currentView = 'DataInputVirtual';
+      console.log('🚀 비로그인 모드로 실행됨');
+      this.loadInitialData();
+      return;
+    }
+    
+    // 로그인 모드인 경우
     this.updateAuthState();
+    
+    if (this.isAuthenticated) {
+      // 로그인된 상태라면 바로 DataInputVirtual로 설정
+      this.currentView = 'DataInputVirtual';
+    }
     
     // 인증 상태 체크 및 자동 로그인
     this.checkAuthAndLoadData();
@@ -144,15 +237,25 @@ export default {
         const isValid = await tokenManager.validateToken();
         
         if (isValid) {
-          // 로그인된 경우 기존 데이터 로드
+          // 로그인된 경우 인증 상태 업데이트
+          this.updateAuthState();
+          console.log('✅ 토큰 유효 - 로그인 상태 복원됨');
+          
+          // 기존 데이터 로드
           this.loadInitialData();
         } else {
-          // 로그인되지 않은 경우 기존 데이터 마이그레이션 시도
+          // 로그인되지 않은 경우 인증 상태 초기화
+          this.updateAuthState();
+          console.log('❌ 토큰 무효 - 로그인 상태 아님');
+          
+          // 기존 데이터 마이그레이션 시도
           this.loadInitialData();
         }
       } catch (error) {
         console.error('인증 체크 실패:', error);
-        // 에러가 발생해도 기본 데이터 로드
+        // 에러가 발생해도 인증 상태 업데이트
+        this.updateAuthState();
+        // 기본 데이터 로드
         this.loadInitialData();
       }
     },
@@ -170,28 +273,31 @@ export default {
     },
     
     updateAuthState() {
-      this.isAuthenticated = userManager.isLoggedIn();
-      this.currentUser = userManager.getUser();
-      this.isAdmin = userManager.isAdmin();
+      // 비로그인 모드에서는 인증 상태 확인 불필요
+      if (!this.requiresAuth) {
+        return;
+      }
       
-      console.log('updateAuthState 호출됨:', {
-        isAuthenticated: this.isAuthenticated,
-        currentUser: this.currentUser,
-        isAdmin: this.isAdmin
-      });
+      // 직접 localStorage에서 확인
+      const token = localStorage.getItem('authToken');
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      
+      this.isAuthenticated = !!(token && user && (user.isApproved || user.approved));
+      this.currentUser = user;
+      this.isAdmin = user && (user.role === 'admin' || user.role === 'support');
     },
     
     async handleLoginSuccess() {
-      console.log('handleLoginSuccess 호출됨');
+      console.log('🎉 handleLoginSuccess 호출됨');
       
       // 로그인 성공 시 데이터 로드
       this.loadInitialData();
       
-      // 상태 업데이트
-      this.updateAuthState();
-      
-      // Vue의 반응성 업데이트를 기다림
-      await this.$nextTick();
+      // 로그인 성공이므로 바로 상태 설정
+      this.isAuthenticated = true;
+      this.currentUser = JSON.parse(localStorage.getItem('user'));
+      this.isAdmin = this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.role === 'support');
       
       // 모든 사용자는 DataInputVirtual 탭으로 이동
       this.currentView = 'DataInputVirtual';
@@ -203,11 +309,97 @@ export default {
       });
     },
     
-
+    // 비동기 상태 업데이트 함수 추가
+    async updateAuthStateAsync() {
+      console.log('🔄 updateAuthStateAsync 시작');
+      
+      // localStorage 데이터가 반영될 때까지 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // 직접 localStorage에서 확인
+      const token = localStorage.getItem('authToken');
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      
+      this.isAuthenticated = !!(token && user && (user.isApproved || user.approved));
+      this.currentUser = user;
+      this.isAdmin = user && (user.role === 'admin' || user.role === 'support');
+      
+      console.log('✅ updateAuthStateAsync 완료:', {
+        isAuthenticated: this.isAuthenticated,
+        currentUser: this.currentUser,
+        isAdmin: this.isAdmin,
+        token: !!token,
+        user: !!user
+      });
+    },
     
     handleLogout() {
-      // 인증 상태 업데이트하여 로그인 화면으로 전환
-      this.updateAuthState();
+      // 로그인 모드에서만 로그아웃 처리
+      if (this.requiresAuth) {
+        this.updateAuthState();
+      }
+    },
+    
+    handleLogoutClick() {
+      // 로그인 모드에서만 로그아웃 모달 표시
+      if (this.requiresAuth) {
+        this.showLogoutConfirmModal = true;
+      }
+    },
+    
+    // 로그아웃 모달 닫기
+    closeLogoutConfirmModal() {
+      this.showLogoutConfirmModal = false;
+      this.isLogoutProcessing = false;
+      
+      if (this.logoutModalTimer) {
+        clearInterval(this.logoutModalTimer);
+        this.logoutModalTimer = null;
+      }
+      
+      this.remainingSeconds = 1.5;
+    },
+    
+    // 로그아웃 실행
+    async confirmLogout() {
+      try {
+        console.log('🚪 로그아웃 시작');
+        
+        // 모달을 2단계로 전환
+        this.isLogoutProcessing = true;
+        
+        // Store의 logout 액션을 통해 로그아웃 처리
+        await this.$store.dispatch('auth/logout');
+        
+        // 상태 업데이트를 더 안정적으로 처리
+        await this.updateAuthStateAsync();
+        
+        // Vue의 반응성 업데이트를 기다림
+        await this.$nextTick();
+        
+        console.log('✅ 로그아웃 완료');
+        
+        // 타이머 시작
+        this.remainingSeconds = 1.5;
+        this.startLogoutTimer();
+      } catch (error) {
+        console.error('❌ 로그아웃 실패:', error);
+        showConfirmToast('로그아웃 중 오류가 발생했습니다.', null, null);
+        // 오류 시 모달 닫기
+        this.closeLogoutConfirmModal();
+      }
+    },
+    
+    // 로그아웃 타이머 시작
+    startLogoutTimer() {
+      this.logoutModalTimer = setInterval(() => {
+        this.remainingSeconds--;
+        
+        if (this.remainingSeconds <= 0) {
+          this.closeLogoutConfirmModal();
+        }
+      }, 1000);
     },
     
     handleTabClick(component) {
@@ -260,6 +452,7 @@ body {
 
 
 
+
 #app {
   height: 100vh; /* 화면 높이에 꽉 차게 */
   display: flex; /* Flexbox 레이아웃 사용 */
@@ -285,6 +478,8 @@ body {
 /* tabs 영역 스타일 */
 .tabs {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   position: fixed; /* 하단 고정 */
   z-index: 1;
   bottom: 0;
@@ -292,8 +487,50 @@ body {
   width: 100%;
   background-color: #f8f8f8; /* Google Sheets와 유사한 배경색 */
   border-top: 1px solid #ddd; /* Google Sheets와 유사한 테두리 */
-  padding-left: 50px;
+  padding: 0 20px;
 }
+
+.tabs-left {
+  display: flex;
+  align-items: center;
+}
+
+.logout-section {
+  display: flex;
+  align-items: center;
+  margin-right: 32px;
+}
+
+/* 관리자 패널 스타일과 동일하게 적용 */
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid #dadce0;
+  background: white;
+  color: #5f6368;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+  white-space: nowrap;
+}
+.logout-btn:hover {
+  background: #e8f0fe;
+  border-color: #c4c7c5;
+}
+.logout-btn .material-icons {
+  font-size: 16px;
+  line-height: 1;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 
 /* 각 tab 스타일 */
 .tab {
@@ -312,5 +549,169 @@ body {
   background-color: #dce5f8;
   color: #2657eb;
   font-weight: bold;
+}
+
+/* 모달 스타일 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+.success-icon-large {
+  margin-bottom: 24px;
+}
+
+.success-icon-large .material-icons {
+  font-size: 64px;
+  color: #4caf50;
+}
+
+.warning-icon-large {
+  margin-bottom: 24px;
+}
+
+.warning-icon-large .material-icons {
+  font-size: 64px;
+  color: #ff9800;
+}
+
+.modal-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.modal-message {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.modal-timer {
+  margin-bottom: 32px;
+}
+
+.timer-bar {
+  width: 100%;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.timer-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #45a049);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  box-shadow: 0 1px 3px rgba(76, 175, 80, 0.3);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.modal-actions .secondary-btn,
+.modal-actions .primary-btn {
+  min-width: 120px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.modal-actions .secondary-btn {
+  background: #f8f9fa;
+  color: #5f6368;
+  border: 1px solid #dadce0;
+}
+
+.modal-actions .secondary-btn:hover {
+  background: #f1f3f4;
+  border-color: #c4c7c5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-actions .primary-btn {
+  background: linear-gradient(135deg, #4285f4 0%, #3367d6 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+}
+
+.modal-actions .primary-btn:hover {
+  background: linear-gradient(135deg, #3367d6 0%, #2a56c6 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+}
+
+.modal-actions .secondary-btn:active,
+.modal-actions .primary-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(-20px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+
+
+
+
+/* 로그아웃 모달 단계 전환 애니메이션 */
+.logout-confirm-step,
+.logout-success-step {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>

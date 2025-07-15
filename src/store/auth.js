@@ -2,12 +2,7 @@
  * Vuex 인증 상태 관리 모듈
  * 사용자 인증 상태와 관련 액션을 관리합니다.
  */
-import { AuthManager } from '../auth/AuthManager.js';
-import { UserManager } from '../auth/UserManager.js';
-
-// 인증 매니저 인스턴스
-const authManager = new AuthManager();
-const userManager = new UserManager();
+import { authApi, tokenManager, userManager } from '../services/authApi.js';
 
 export default {
   namespaced: true,
@@ -36,34 +31,39 @@ export default {
     CLEAR_ERROR(state) {
       state.error = null;
     }
-    
-
   },
 
   actions: {
     /**
      * 사용자 등록
      */
-    async register({ commit }, { username, password }) {
+    async register({ commit }, userData) {
+      console.log('🏪 Store register 액션 시작:', userData);
       commit('SET_LOADING', true);
       commit('CLEAR_ERROR');
       
       try {
-        const result = await authManager.register(username, password);
+        console.log('📞 authApi.register 호출');
+        const result = await authApi.register(userData);
+        console.log('✅ authApi.register 성공:', result);
         
-        // 사용자별 데이터 초기화
-        userManager.initializeUserData(username);
-        
-        // StoreBridge에 현재 사용자 설정
-        if (window.storeBridge) {
-          window.storeBridge.setCurrentUser(result.user);
+        // 성공 시 StoreBridge에 현재 사용자 설정 (선택사항)
+        if (window.storeBridge && typeof window.storeBridge.setCurrentUser === 'function' && result.data) {
+          console.log('🔗 StoreBridge에 사용자 설정');
+          try {
+            window.storeBridge.setCurrentUser(result.data);
+          } catch (bridgeError) {
+            console.warn('⚠️ StoreBridge 사용자 설정 실패:', bridgeError);
+          }
+        } else {
+          console.log('ℹ️ StoreBridge가 없거나 setCurrentUser 함수가 없습니다.');
         }
         
-        commit('SET_USER', result.user);
-        commit('CLOSE_FORMS');
-        
+        // 성공 시 오류를 throw하지 않고 결과 반환
+        console.log('🎯 register 액션 완료 - 결과 반환');
         return result;
       } catch (error) {
+        console.error('❌ register 액션 실패:', error);
         commit('SET_ERROR', error.message);
         throw error;
       } finally {
@@ -72,28 +72,46 @@ export default {
     },
 
     /**
-     * 사용자 로그인
+     * 사용자 로그인 (이메일/전화번호/아이디 지원)
      */
-    async login({ commit }, { username, password }) {
+    async login({ commit }, { identifier, password, identifierType }) {
+      console.log('🏪 Store login 액션 시작:', { identifier, identifierType });
       commit('SET_LOADING', true);
       commit('CLEAR_ERROR');
       
       try {
-        const result = await authManager.login(username, password);
+        console.log('📞 authApi.login 호출');
+        const result = await authApi.login({ identifier, password, identifierType });
+        console.log('✅ authApi.login 성공:', result);
         
-        // 사용자별 데이터 초기화
-        userManager.initializeUserData(username);
+        // 토큰과 사용자 정보 저장
+        console.log('💾 토큰 및 사용자 정보 저장 시작');
+        tokenManager.saveToken(result.data.token);
+        userManager.saveUser(result.data.user);
+        console.log('✅ 토큰 및 사용자 정보 저장 완료');
         
-        // StoreBridge에 현재 사용자 설정
-        if (window.storeBridge) {
-          window.storeBridge.setCurrentUser(result.user);
+        // localStorage 저장이 완료될 때까지 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // StoreBridge에 현재 사용자 설정 (안전한 호출)
+        if (window.storeBridge && typeof window.storeBridge.setCurrentUser === 'function') {
+          console.log('🔗 StoreBridge에 사용자 설정');
+          try {
+            window.storeBridge.setCurrentUser(result.data.user);
+          } catch (bridgeError) {
+            console.warn('⚠️ StoreBridge 사용자 설정 실패:', bridgeError);
+          }
+        } else {
+          console.log('ℹ️ StoreBridge가 없거나 setCurrentUser 함수가 없습니다.');
         }
         
-        commit('SET_USER', result.user);
-        commit('CLOSE_FORMS');
+        console.log('👤 Store에 사용자 설정:', result.data.user);
+        commit('SET_USER', result.data.user);
         
+        console.log('🎯 login 액션 완료 - 결과 반환');
         return result;
       } catch (error) {
+        console.error('❌ login 액션 실패:', error);
         commit('SET_ERROR', error.message);
         throw error;
       } finally {
@@ -104,10 +122,45 @@ export default {
     /**
      * 로그아웃
      */
-    logout({ commit }) {
-      authManager.logout();
-      commit('SET_USER', null);
-      commit('CLEAR_ERROR');
+    async logout({ commit }) {
+      console.log('🏪 Store logout 액션 시작');
+      
+      try {
+        // 토큰과 사용자 정보 삭제
+        console.log('🗑️ 토큰 및 사용자 정보 삭제 시작');
+        tokenManager.removeToken();
+        userManager.removeUser();
+        console.log('✅ 토큰 및 사용자 정보 삭제 완료');
+        
+        // StoreBridge에서 사용자 정보 제거 (안전한 호출)
+        if (window.storeBridge && typeof window.storeBridge.setCurrentUser === 'function') {
+          console.log('🔗 StoreBridge에서 사용자 정보 제거');
+          try {
+            window.storeBridge.setCurrentUser(null);
+          } catch (bridgeError) {
+            console.warn('⚠️ StoreBridge 사용자 제거 실패:', bridgeError);
+          }
+        } else {
+          console.log('ℹ️ StoreBridge가 없거나 setCurrentUser 함수가 없습니다.');
+        }
+        
+        // Store 상태 초기화
+        console.log('🔄 Store 상태 초기화');
+        commit('SET_USER', null);
+        commit('CLEAR_ERROR');
+        
+        // localStorage 변경사항이 반영될 때까지 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        console.log('🎯 logout 액션 완료');
+      } catch (error) {
+        console.error('❌ logout 액션 실패:', error);
+        // 에러가 발생해도 기본적인 로그아웃은 수행
+        tokenManager.removeToken();
+        userManager.removeUser();
+        commit('SET_USER', null);
+        commit('CLEAR_ERROR');
+      }
     },
 
     /**
@@ -117,24 +170,21 @@ export default {
       commit('SET_LOADING', true);
       
       try {
-        const isLoggedIn = authManager.checkAutoLogin();
+        const isLoggedIn = userManager.isLoggedIn();
         
         if (isLoggedIn) {
-          const currentUser = authManager.getCurrentUser();
-          const userInfo = {
-            username: currentUser.username,
-            dataKey: currentUser.dataKey
-          };
+          const currentUser = userManager.getUser();
           
-          // StoreBridge에 현재 사용자 설정
-          if (window.storeBridge) {
-            window.storeBridge.setCurrentUser(userInfo);
+          // StoreBridge에 현재 사용자 설정 (안전한 호출)
+          if (window.storeBridge && typeof window.storeBridge.setCurrentUser === 'function') {
+            try {
+              window.storeBridge.setCurrentUser(currentUser);
+            } catch (bridgeError) {
+              console.warn('⚠️ StoreBridge 사용자 설정 실패:', bridgeError);
+            }
           }
           
-          commit('SET_USER', userInfo);
-          
-          // 사용자별 데이터 초기화
-          userManager.initializeUserData(currentUser.username);
+          commit('SET_USER', currentUser);
         }
         
         return isLoggedIn;
@@ -144,62 +194,6 @@ export default {
       } finally {
         commit('SET_LOADING', false);
       }
-    },
-
-    /**
-     * 기존 데이터 마이그레이션
-     */
-    async migrateExistingData({ commit }, defaultUsername = 'default') {
-      commit('SET_LOADING', true);
-      
-      try {
-        userManager.migrateExistingData(defaultUsername);
-        
-        // 마이그레이션 후 자동 로그인
-        const isLoggedIn = authManager.checkAutoLogin();
-        if (isLoggedIn) {
-          const currentUser = authManager.getCurrentUser();
-          const userInfo = {
-            username: currentUser.username,
-            dataKey: currentUser.dataKey
-          };
-          
-          // StoreBridge에 현재 사용자 설정
-          if (window.storeBridge) {
-            window.storeBridge.setCurrentUser(userInfo);
-          }
-          
-          commit('SET_USER', userInfo);
-        }
-        
-        return true;
-      } catch (error) {
-        commit('SET_ERROR', `마이그레이션 실패: ${error.message}`);
-        throw error;
-      } finally {
-        commit('SET_LOADING', false);
-      }
-    },
-
-    /**
-     * 로그인 폼 표시/숨김
-     */
-    showLoginForm({ commit }) {
-      commit('SET_LOGIN_FORM', true);
-    },
-
-    /**
-     * 회원가입 폼 표시/숨김
-     */
-    showRegisterForm({ commit }) {
-      commit('SET_REGISTER_FORM', true);
-    },
-
-    /**
-     * 폼 닫기
-     */
-    closeForms({ commit }) {
-      commit('CLOSE_FORMS');
     },
 
     /**
@@ -232,23 +226,11 @@ export default {
     error: state => state.error,
     
     /**
-     * 로그인 폼 표시 여부
+     * 관리자 권한 확인
      */
-    showLoginForm: state => state.showLoginForm,
-    
-    /**
-     * 회원가입 폼 표시 여부
-     */
-    showRegisterForm: state => state.showRegisterForm,
-    
-    /**
-     * 폼 표시 여부 (로그인 또는 회원가입)
-     */
-    showAnyForm: state => state.showLoginForm || state.showRegisterForm,
-    
-    /**
-     * 사용자별 데이터 키
-     */
-    userDataKey: state => state.currentUser?.dataKey || 'epidemiology_data'
+    isAdmin: state => {
+      const user = state.currentUser;
+      return user && (user.role === 'admin' || user.role === 'support');
+    }
   }
 }; 

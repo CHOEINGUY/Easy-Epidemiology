@@ -1,9 +1,9 @@
-import {
-  handleRegister,
-  handleLogin,
-  handleVerifyToken,
-  handleCheckUsername,
-  handleCORS as handleAuthCORS
+import { 
+  handleRegister, 
+  handleLogin, 
+  handleVerifyToken, 
+  handleCheckEmail, 
+  handleCheckPhone 
 } from './auth.js';
 
 import {
@@ -14,16 +14,13 @@ import {
   handleBulkRejectUsers,
   handleGetAllUsers,
   handleDeleteUser,
-  handleCORS as handleAdminCORS,
   handleUpdateUserRole,
   handleUpdateUserInfo
 } from './admin.js';
 
-import { errorResponse } from './utils.js';
-
 export default {
   async fetch(request, env, ctx) {
-    // CORS preflight 요청 처리
+    // CORS 처리
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 200,
@@ -39,56 +36,60 @@ export default {
     const path = url.pathname;
 
     try {
-      // 인증 관련 API
+      // 인증 관련 엔드포인트
       if (path === '/api/auth/register') {
         return await handleRegister(request, env);
       }
-
+      
       if (path === '/api/auth/login') {
         return await handleLogin(request, env);
       }
-
+      
       if (path === '/api/auth/verify') {
         return await handleVerifyToken(request, env);
       }
-
-      if (path === '/api/auth/check-username') {
-        return await handleCheckUsername(request, env);
+      
+      if (path === '/api/auth/check-email') {
+        return await handleCheckEmail(request, env);
+      }
+      
+      if (path === '/api/auth/check-phone') {
+        return await handleCheckPhone(request, env);
       }
 
-      // 관리자 관련 API
+      // 관리자 관련 엔드포인트
       if (path === '/api/admin/pending-users') {
         return await handleGetPendingUsers(request, env);
       }
-
+      
       if (path === '/api/admin/approve') {
         return await handleApproveUser(request, env);
       }
-
+      
       if (path === '/api/admin/reject') {
         return await handleRejectUser(request, env);
       }
-
+      
       if (path === '/api/admin/bulk-approve') {
         return await handleBulkApproveUsers(request, env);
       }
-
+      
       if (path === '/api/admin/bulk-reject') {
         return await handleBulkRejectUsers(request, env);
       }
-
+      
       if (path === '/api/admin/users') {
         return await handleGetAllUsers(request, env);
       }
-
+      
       if (path === '/api/admin/delete-user') {
         return await handleDeleteUser(request, env);
       }
-
+      
       if (path === '/api/admin/update-role') {
         return await handleUpdateUserRole(request, env);
       }
-
+      
       if (path === '/api/admin/update-user-info') {
         return await handleUpdateUserInfo(request, env);
       }
@@ -109,11 +110,29 @@ export default {
       }
 
       // 404 처리
-      return errorResponse('API endpoint not found', 404);
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'API endpoint not found'
+      }), {
+        status: 404,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
 
     } catch (error) {
       console.error('Worker error:', error);
-      return errorResponse('Internal server error', 500);
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Internal server error'
+      }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
     }
   }
 }; 

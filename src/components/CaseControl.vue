@@ -47,7 +47,7 @@
                   <span class="button-text">OR ≥ </span>
                   <button @click.stop="cycleOrThreshold" class="threshold-button">{{ currentOrThreshold }}.0</button>
                 </div>
-                <button @click="toggleYatesCorrection" class="filter-button" :class="{ active: !useYatesCorrection }">
+                <button @click="toggleYatesCorrection" class="filter-button" :class="{ active: useYatesCorrection }">
                   <span class="button-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M12 1v6m0 6v6"></path>
@@ -664,16 +664,19 @@ const validateStatistics = (result, factorName) => {
   return issues.length === 0;
 };
 
-// --- Fisher의 정확검정 계산 함수 ---
+// --- Fisher의 정확검정 계산 함수 (양측 검정) ---
 const calculateFisherExactTest = (a, b, c, d) => {
-  // 2x2 분할표에서 Fisher의 정확검정 계산
+  // 2x2 분할표에서 Fisher의 정확검정 계산 (양측 검정)
   const n = a + b + c + d;
   const row1 = a + b;
   const row2 = c + d;
   const col1 = a + c;
   const col2 = b + d;
   
-  // 초기 확률 계산
+  // 관측된 분할표의 확률 계산
+  const observedProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
+                      (factorial(n) * factorial(a) * factorial(b) * factorial(c) * factorial(d));
+  
   let pValue = 0;
   
   // 모든 가능한 분할표에 대해 확률 계산
@@ -687,8 +690,8 @@ const calculateFisherExactTest = (a, b, c, d) => {
       const currentProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
                          (factorial(n) * factorial(x) * factorial(y) * factorial(z) * factorial(w));
       
-      // 관측된 분할표보다 극단적인 경우의 확률만 합산
-      if (x <= a) {
+      // 관측된 분할표보다 극단적인 경우의 확률만 합산 (양측 검정)
+      if (currentProb <= observedProb) {
         pValue += currentProb;
       }
     }

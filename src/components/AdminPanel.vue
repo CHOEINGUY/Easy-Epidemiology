@@ -17,8 +17,50 @@
 
     <!-- Main Content -->
     <div class="admin-content">
+      <!-- Statistics Dashboard -->
+      <div class="stats-dashboard">
+        <div class="stats-cards">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <span class="material-icons">group</span>
+            </div>
+            <div class="stat-content">
+              <h3>{{ totalUsers }}</h3>
+              <p>전체 사용자</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <span class="material-icons">hourglass_empty</span>
+            </div>
+            <div class="stat-content">
+              <h3>{{ pendingUsers.length }}</h3>
+              <p>승인 대기</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <span class="material-icons">check_circle</span>
+            </div>
+            <div class="stat-content">
+              <h3>{{ approvedUsers.length }}</h3>
+              <p>승인됨</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <span class="material-icons">admin_panel_settings</span>
+            </div>
+            <div class="stat-content">
+              <h3>{{ adminUsers.length }}</h3>
+              <p>관리자</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Tab and Filter Bar -->
-      <div class="tab-filter-bar">
+      <div class="tab-filter-bar toolbar-bar">
         <div class="tab-buttons">
           <button 
             @click="activeTab = 'pending'" 
@@ -42,15 +84,40 @@
         </button>
       </div>
 
-      <!-- Filter Section -->
-      <div class="filter-section">
-        <div class="filter-row custom-filter-row">
-          <!-- 왼쪽: 오늘 버튼 -->
+      <!-- Toolbar/Action Bar (필터/검색/일괄 승인 Fab) -->
+      <div class="toolbar-bar">
+        <div class="toolbar-left" style="display: flex; align-items: center; gap: 16px;">
+          <!-- 소속유형 필터 -->
+          <div class="filter-group">
+            <label>소속 유형</label>
+            <select v-model="filters.affiliationType" class="filter-select">
+              <option value="">전체</option>
+              <option value="hospital">병원</option>
+              <option value="clinic">의원</option>
+              <option value="public_health">보건소</option>
+              <option value="university">대학교</option>
+              <option value="research">연구기관</option>
+              <option value="government">정부기관</option>
+              <option value="other">기타</option>
+            </select>
+          </div>
+          <!-- 소속 필터 -->
+          <div v-if="availableOrganizations.length > 0" class="filter-group">
+            <label>소속</label>
+            <select v-model="filters.affiliation" class="filter-select">
+              <option value="">전체</option>
+              <option v-for="org in availableOrganizations" :key="org" :value="org">
+                {{ org }}
+              </option>
+            </select>
+          </div>
+          <!-- 오늘 버튼 -->
           <button @click="filterToday" class="today-btn tab-btn" :class="{ active: filters.todayOnly }" title="오늘 가입자만 보기">
             오늘
           </button>
-          <!-- 검색란 (너비 300px 제한) -->
-          <div class="search-box" style="width: 300px;">
+        </div>
+        <div class="toolbar-center" style="flex: 1; display: flex; justify-content: center; align-items: center;">
+          <div class="search-box" style="width: 300px; position: relative; display: flex; align-items: center;">
             <span class="material-icons search-icon">search</span>
             <input 
               v-model="searchQuery" 
@@ -69,34 +136,22 @@
               <span class="material-icons">close</span>
             </button>
           </div>
-          <!-- 오른쪽: 일괄 승인/거부 버튼 (오른쪽 정렬) -->
-          <div v-if="activeTab === 'pending' && filteredPendingUsers.length > 0" class="bulk-actions-inline" style="margin-left:auto;">
-            <label class="select-all-label">
-              <input 
-                type="checkbox" 
-                :checked="isAllSelected"
-                @change="toggleSelectAll"
-                class="select-all-checkbox"
-              />
-              전체 선택 ({{ selectedCount }}/{{ filteredPendingUsers.length }})
-            </label>
-            <button 
-              @click="bulkApprove" 
+        </div>
+        <div class="toolbar-right" style="display: flex; align-items: center; gap: 16px; position: relative;">
+          <!-- 일괄 승인 Fab 버튼 (오른쪽 끝, 플로팅) -->
+          <transition name="fade">
+            <button
+              v-if="activeTab === 'pending' && filteredPendingUsers.length > 0"
+              class="fab-approve-btn"
+              @click="bulkApprove"
               :disabled="selectedCount === 0"
-              class="bulk-btn approve"
+              :title="selectedCount > 0 ? `선택된 ${selectedCount}명 승인` : '승인할 사용자를 선택하세요'"
             >
-              <span class="material-icons">check_circle</span>
-              일괄 승인 ({{ selectedCount }})
+              <span class="material-icons">done_all</span>
+              <span class="fab-label">일괄 승인</span>
+              <span v-if="selectedCount > 0" class="fab-count">({{ selectedCount }})</span>
             </button>
-            <button 
-              @click="bulkReject" 
-              :disabled="selectedCount === 0"
-              class="bulk-btn reject"
-            >
-              <span class="material-icons">cancel</span>
-              일괄 거부 ({{ selectedCount }})
-            </button>
-          </div>
+          </transition>
         </div>
       </div>
 
@@ -134,9 +189,10 @@
                   />
                 </th>
                 <th>이름</th>
-                <th>아이디</th>
+                <th>소속유형</th>
                 <th>소속</th>
-                <th>연락처</th>
+                <th>이메일</th>
+                <th>전화번호</th>
                 <th>상태</th>
                 <th v-if="activeTab === 'users'">권한</th>
                 <th>가입일</th>
@@ -153,13 +209,22 @@
                     class="user-select-checkbox"
                   />
                 </td>
-                <td>{{ user.name }}</td>
-                <td>{{ user.username }}</td>
-                <td>{{ user.organization }}</td>
+                <td>
+                  <span v-if="user.name">{{ user.name }}</span>
+                  <span v-else class="no-name">이름 없음</span>
+                </td>
+                <td>
+                  <span class="affiliation-type-badge" :class="getAffiliationTypeClass(user.affiliationType || user.organizationType)">
+                    {{ getAffiliationTypeLabel(user.affiliationType || user.organizationType) }}
+                  </span>
+                </td>
+                <td>{{ user.affiliation || user.organization || '-' }}</td>
+                <td>{{ user.email || '-' }}</td>
                 <td>{{ user.phone || '-' }}</td>
                 <td>
-                  <span :class="['status-badge', user.approved ? 'approved' : 'pending']">
-                    {{ user.approved ? '승인됨' : '승인 대기' }}
+                  <span :class="['status-badge', getStatusClass(user.status || (user.approved ? 'approved' : 'pending'))]">
+                    <span class="material-icons status-icon">{{ getStatusIcon(user.status || (user.approved ? 'approved' : 'pending')) }}</span>
+                    {{ getStatusLabel(user.status || (user.approved ? 'approved' : 'pending')) }}
                   </span>
                 </td>
                 <td v-if="activeTab === 'users'">
@@ -232,7 +297,8 @@ export default {
       searchQuery: '',
       searchTimeout: null,
       filters: {
-        organizationType: '',
+        affiliationType: '',
+        affiliation: '', // 소속 필터
         province: '',
         district: '',
         todayOnly: false
@@ -266,6 +332,9 @@ export default {
     currentUser() {
       return userManager.getUser();
     },
+    totalUsers() {
+      return this.allUsers.length;
+    },
     approvedUsers() {
       return this.allUsers.filter(user => user.approved);
     },
@@ -281,18 +350,22 @@ export default {
         filtered = filtered.filter(user => {
           return (
             (user.name && user.name.toLowerCase().includes(query)) ||
-            (user.username && user.username.toLowerCase().includes(query)) ||
-            (user.organization && user.organization.toLowerCase().includes(query)) ||
+            (user.email && user.email.toLowerCase().includes(query)) ||
             (user.phone && user.phone.includes(query)) ||
-            (user.email && user.email.toLowerCase().includes(query))
+            (user.affiliation && user.affiliation.toLowerCase().includes(query)) ||
+            (user.affiliationType && this.getAffiliationTypeLabel(user.affiliationType).includes(query))
           );
         });
       }
       
-      if (this.filters.organizationType) {
+      if (this.filters.affiliationType) {
         filtered = filtered.filter(user => 
-          user.organizationType === this.filters.organizationType
+          user.affiliationType === this.filters.affiliationType
         );
+      }
+
+      if (this.filters.affiliation) {
+        filtered = filtered.filter(user => user.affiliation === this.filters.affiliation);
       }
       
       if (this.filters.province) {
@@ -326,18 +399,22 @@ export default {
         filtered = filtered.filter(user => {
           return (
             (user.name && user.name.toLowerCase().includes(query)) ||
-            (user.username && user.username.toLowerCase().includes(query)) ||
-            (user.organization && user.organization.toLowerCase().includes(query)) ||
+            (user.email && user.email.toLowerCase().includes(query)) ||
             (user.phone && user.phone.includes(query)) ||
-            (user.email && user.email.toLowerCase().includes(query))
+            (user.affiliation && user.affiliation.toLowerCase().includes(query)) ||
+            (user.affiliationType && this.getAffiliationTypeLabel(user.affiliationType).includes(query))
           );
         });
       }
       
-      if (this.filters.organizationType) {
+      if (this.filters.affiliationType) {
         filtered = filtered.filter(user => 
-          user.organizationType === this.filters.organizationType
+          user.affiliationType === this.filters.affiliationType
         );
+      }
+
+      if (this.filters.affiliation) {
+        filtered = filtered.filter(user => user.affiliation === this.filters.affiliation);
       }
       
       if (this.filters.province) {
@@ -413,6 +490,37 @@ export default {
       });
       
       return Array.from(districts).sort();
+    },
+    availableOrganizationTypes() {
+      const types = new Set();
+      this.pendingUsers.forEach(user => {
+        if (user.organizationType) {
+          types.add(user.organizationType);
+        }
+      });
+      this.allUsers.forEach(user => {
+        if (user.organizationType) {
+          types.add(user.organizationType);
+        }
+      });
+      return Array.from(types).sort();
+    },
+    availableOrganizations() {
+      // 소속유형이 선택된 경우 해당 유형의 소속만 반환
+      const orgSet = new Set();
+      const users = [...this.pendingUsers, ...this.allUsers];
+      users.forEach(user => {
+        if (
+          (!this.filters.affiliationType || user.affiliationType === this.filters.affiliationType) &&
+          user.affiliation
+        ) {
+          orgSet.add(user.affiliation);
+        }
+      });
+      return Array.from(orgSet).sort();
+    },
+    hasActiveFilters() {
+      return Object.values(this.filters).some(value => value !== '') || this.searchQuery !== '';
     }
   },
   watch: {
@@ -421,8 +529,10 @@ export default {
       this.loadData();
     }
   },
-  async mounted() {
-    await this.loadData();
+  mounted() {
+    // 패널 진입 시 전체 사용자 목록도 미리 불러오기
+    this.loadAllUsers();
+    this.loadData();
   },
   methods: {
     async loadData() {
@@ -442,12 +552,38 @@ export default {
 
     async loadPendingUsers() {
       const result = await adminApi.getPendingUsers();
-      this.pendingUsers = result.data.users;
+      console.log('Pending Users API Response:', result);
+      
+      // API 응답 구조에 따라 유연하게 처리
+      if (result.data && result.data.users) {
+        this.pendingUsers = result.data.users;
+      } else if (result.users) {
+        this.pendingUsers = result.users;
+      } else if (result.data) {
+        this.pendingUsers = Array.isArray(result.data) ? result.data : [result.data];
+      } else {
+        this.pendingUsers = [];
+      }
+      
+      console.log('Pending Users after assignment:', this.pendingUsers);
     },
 
     async loadAllUsers() {
       const result = await adminApi.getAllUsers();
-      this.allUsers = result.data.users;
+      console.log('All Users API Response:', result);
+      
+      // API 응답 구조에 따라 유연하게 처리
+      if (result.data && result.data.users) {
+        this.allUsers = result.data.users;
+      } else if (result.users) {
+        this.allUsers = result.users;
+      } else if (result.data) {
+        this.allUsers = Array.isArray(result.data) ? result.data : [result.data];
+      } else {
+        this.allUsers = [];
+      }
+      
+      console.log('All Users after assignment:', this.allUsers);
     },
 
     async refreshData() {
@@ -618,11 +754,77 @@ export default {
       }
     },
 
+    clearFilters() {
+      this.filters.affiliationType = '';
+      this.filters.affiliation = ''; // 소속 필터 초기화
+      this.filters.province = '';
+      this.filters.district = '';
+      this.filters.todayOnly = false;
+      this.showMessage('모든 필터가 초기화되었습니다.', 'info');
+    },
+
+    // 소속유형 라벨 반환
+    getAffiliationTypeLabel(type) {
+      const labels = {
+        'hospital': '병원',
+        'clinic': '의원', 
+        'public_health': '보건소',
+        'university': '대학교',
+        'research': '연구기관',
+        'government': '정부기관',
+        'other': '기타'
+      };
+      return labels[type] || type || '-';
+    },
+    
+    // 소속유형 CSS 클래스 반환
+    getAffiliationTypeClass(type) {
+      return `affiliation-${type || 'other'}`;
+    },
+
+    // 상태 CSS 클래스 반환
+    getStatusClass(status) {
+      return {
+        'pending': 'pending',
+        'approved': 'approved', 
+        'rejected': 'rejected',
+        'suspended': 'suspended'
+      }[status] || 'pending';
+    },
+    
+    // 상태 라벨 반환
+    getStatusLabel(status) {
+      return {
+        'pending': '승인 대기',
+        'approved': '승인됨',
+        'rejected': '거부됨', 
+        'suspended': '정지됨'
+      }[status] || '승인 대기';
+    },
+    
+    // 상태 아이콘 반환
+    getStatusIcon(status) {
+      return {
+        'pending': 'hourglass_empty',
+        'approved': 'check_circle',
+        'rejected': 'cancel',
+        'suspended': 'block'
+      }[status] || 'hourglass_empty';
+    },
+
     logout() {
       if (confirm('정말로 로그아웃하시겠습니까?')) {
-        userManager.logout();
-        // App.vue의 updateAuthState를 호출하여 로그인 화면으로 전환
-        this.$emit('logout');
+        console.log('🚪 AdminPanel 로그아웃 시작');
+        // Store의 logout 액션을 통해 로그아웃 처리
+        this.$store.dispatch('auth/logout').then(() => {
+          console.log('✅ AdminPanel 로그아웃 완료');
+          // App.vue의 updateAuthState를 호출하여 로그인 화면으로 전환
+          this.$emit('logout');
+        }).catch(error => {
+          console.error('❌ AdminPanel 로그아웃 실패:', error);
+          // 에러가 발생해도 로그인 화면으로 전환
+          this.$emit('logout');
+        });
       }
     }
   }
@@ -1575,5 +1777,301 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 필터 초기화 버튼 */
+.clear-filters-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #dadce0;
+  background: white;
+  color: #5f6368;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.clear-filters-btn:hover {
+  background: #f1f3f4;
+  border-color: #c4c7c5;
+}
+
+.clear-filters-btn .material-icons {
+  font-size: 16px;
+}
+
+/* 이름 없음 스타일 */
+.no-name {
+  color: #9aa0a6;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* 통계 대시보드 스타일 */
+.stats-dashboard {
+  margin-bottom: 24px;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.stat-icon .material-icons {
+  font-size: 24px;
+}
+
+.stat-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.stat-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 소속유형 배지 스타일 */
+.affiliation-type-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  min-width: 60px;
+  display: inline-block;
+}
+
+.affiliation-hospital { 
+  background: #e3f2fd; 
+  color: #1976d2; 
+}
+
+.affiliation-clinic { 
+  background: #f3e5f5; 
+  color: #7b1fa2; 
+}
+
+.affiliation-public_health { 
+  background: #e8f5e8; 
+  color: #388e3c; 
+}
+
+.affiliation-university { 
+  background: #fff3e0; 
+  color: #f57c00; 
+}
+
+.affiliation-research { 
+  background: #fce4ec; 
+  color: #c2185b; 
+}
+
+.affiliation-government { 
+  background: #f1f8e9; 
+  color: #689f38; 
+}
+
+.affiliation-other { 
+  background: #f5f5f5; 
+  color: #616161; 
+}
+
+/* 상태 배지 개선 */
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.status-badge.approved { 
+  background: #e8f5e8; 
+  color: #2e7d32; 
+}
+
+.status-badge.pending { 
+  background: #fff3e0; 
+  color: #f57c00; 
+}
+
+.status-badge.rejected { 
+  background: #ffebee; 
+  color: #c62828; 
+}
+
+.status-badge.suspended { 
+  background: #f5f5f5; 
+  color: #616161; 
+}
+
+.status-icon {
+  font-size: 14px;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .stat-content h3 {
+    font-size: 20px;
+  }
+  
+  .stat-content p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 스타일 개선 */
+.bulk-actions-group {
+  display: flex;
+  gap: 8px;
+  margin-left: 12px;
+}
+.bulk-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+}
+.bulk-btn.approve {
+  background: #e6f4ea;
+  color: #137333;
+}
+.bulk-btn.approve:hover:not(:disabled) {
+  background: #ceead6;
+}
+.bulk-btn.reject {
+  background: #fce8e6;
+  color: #c5221f;
+}
+.bulk-btn.reject:hover:not(:disabled) {
+  background: #fad2cf;
+}
+.bulk-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.selected-count {
+  font-size: 13px;
+  color: #888;
+  margin-left: 2px;
+}
+
+/* 툴바/플로팅 Fab 스타일 */
+.toolbar-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 12px 20px;
+  margin-bottom: 16px;
+}
+.fab-approve-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #4285f4;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  box-shadow: 0 4px 16px rgba(66,133,244,0.18);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 28px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  position: relative;
+  z-index: 2;
+}
+.fab-approve-btn:hover:not(:disabled) {
+  background: #3367d6;
+  box-shadow: 0 6px 20px rgba(66,133,244,0.22);
+  transform: translateY(-2px) scale(1.04);
+}
+.fab-approve-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.fab-label {
+  font-size: 16px;
+  font-weight: 500;
+}
+.fab-count {
+  font-size: 15px;
+  color: #e3e3e3;
+  margin-left: 2px;
+}
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter, .fade-leave-to {
+  opacity: 0;
 }
 </style> 

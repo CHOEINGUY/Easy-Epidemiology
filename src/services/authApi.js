@@ -17,17 +17,46 @@ class AuthApiService {
       ...options
     };
 
+    console.log('🌐 API 요청 시작:', {
+      url,
+      method: config.method || 'GET',
+      body: config.body ? JSON.parse(config.body) : undefined
+    });
+
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'API 요청 실패');
+      console.log('📡 API 응답 받음:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+      });
+
+      // 응답 텍스트 먼저 가져오기
+      const responseText = await response.text();
+      console.log('📄 응답 텍스트:', responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log('✅ JSON 파싱 성공:', data);
+      } catch (parseError) {
+        console.error('❌ JSON 파싱 실패:', parseError);
+        throw new Error(`응답 파싱 실패: ${responseText}`);
       }
       
+      if (!response.ok) {
+        console.error('❌ API 요청 실패:', {
+          status: response.status,
+          data
+        });
+        throw new Error(data.message || `API 요청 실패 (${response.status})`);
+      }
+      
+      console.log('✅ API 요청 성공:', data);
       return data;
     } catch (error) {
-      console.error('API Error:', error);
+      console.error('❌ API 에러:', error);
       throw error;
     }
   }
@@ -56,11 +85,21 @@ class AuthApiService {
     });
   }
 
-  // 사용자명 중복 확인
-  async checkUsername(username) {
-    return this.makeRequest('/api/auth/check-username', {
+
+
+  // 이메일 중복 확인
+  async checkEmailAvailability(email) {
+    return this.makeRequest('/api/auth/check-email', {
       method: 'POST',
-      body: JSON.stringify({ username })
+      body: JSON.stringify({ email })
+    });
+  }
+
+  // 전화번호 중복 확인
+  async checkPhoneAvailability(phone) {
+    return this.makeRequest('/api/auth/check-phone', {
+      method: 'POST',
+      body: JSON.stringify({ phone })
     });
   }
 
@@ -205,9 +244,21 @@ export const tokenManager = {
 
     try {
       const result = await authApi.verifyToken(token);
-      return result.success && (result.data.user.isApproved || result.data.user.approved);
+      if (result.success && (result.data.user.isApproved || result.data.user.approved)) {
+        // 토큰이 유효하면 사용자 정보도 업데이트
+        userManager.saveUser(result.data.user);
+        return true;
+      } else {
+        // 토큰이 유효하지 않으면 정리
+        this.removeToken();
+        userManager.removeUser();
+        return false;
+      }
     } catch (error) {
+      console.error('토큰 검증 실패:', error);
+      // 에러 발생 시 정리
       this.removeToken();
+      userManager.removeUser();
       return false;
     }
   }
@@ -233,7 +284,18 @@ export const userManager = {
 
   // 로그인 상태 확인
   isLoggedIn() {
-    return !!this.getUser() && !!tokenManager.getToken();
+    const user = this.getUser();
+    const token = tokenManager.getToken();
+    
+    // 사용자 정보와 토큰이 모두 있어야 로그인 상태로 간주
+    if (!user || !token) {
+      return false;
+    }
+    
+    // 사용자가 승인된 상태인지 확인 (둘 다 체크)
+    const isApproved = user.isApproved || user.approved;
+    
+    return isApproved;
   },
 
   // 관리자 권한 확인

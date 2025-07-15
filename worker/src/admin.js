@@ -8,102 +8,100 @@ import {
 
 // 관리자 권한 확인
 async function checkAdminAuth(request, env) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { isAdmin: false, error: '인증 토큰이 필요합니다.' };
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { isAdmin: false, error: "인증 토큰이 필요합니다." };
   }
-
   const token = authHeader.substring(7);
   const decoded = await verifyToken(token);
-  
   if (!decoded) {
-    return { isAdmin: false, error: '유효하지 않은 토큰입니다.' };
+    return { isAdmin: false, error: "유효하지 않은 토큰입니다." };
   }
-
-  // 사용자 정보 조회하여 관리자 권한 확인
   try {
-    const allUsers = await env.USERS.list({ prefix: 'user:' });
+    const allUsers = await env.USERS.list({ prefix: "user:" });
     let userData = null;
-
+    
     for (const key of allUsers.keys) {
-      const userStr = await env.USERS.get(key.name);
-      let user;
       try {
-        user = JSON.parse(userStr);
-      } catch (parseError) {
-        console.log('JSON parse failed for admin auth, trying manual parse...');
-        // JSON 파싱 실패 시, 문자열을 직접 파싱
-        const cleanDataStr = userStr.replace(/^'|'$/g, ''); // 앞뒤 따옴표 제거
-        const matches = cleanDataStr.match(/(\w+):([^,}]+)/g);
-        user = {};
-        matches.forEach(match => {
-          const [key, value] = match.split(':');
-          user[key.trim()] = value.trim().replace(/^"|"$/g, ''); // 따옴표 제거
-        });
-      }
-      if (user.id === decoded.userId) {
-        userData = user;
-        break;
+        const userStr = await env.USERS.get(key.name);
+        if (!userStr) continue;
+        
+        let user;
+        try {
+          user = JSON.parse(userStr);
+        } catch (parseError) {
+          console.error(`JSON parse failed for admin auth ${key.name}:`, parseError);
+          continue; // 이 사용자는 건너뛰고 다음 사용자로
+        }
+        
+        if (user.id === decoded.userId) {
+          userData = user;
+          break;
+        }
+      } catch (userError) {
+        console.error(`Error processing user ${key.name} for admin auth:`, userError);
+        continue;
       }
     }
-
-    if (!userData || userData.role !== 'admin') {
-      return { isAdmin: false, error: '관리자 권한이 필요합니다.' };
+    
+    if (!userData || userData.role !== "admin") {
+      return { isAdmin: false, error: "관리자 권한이 필요합니다." };
     }
-
+    
     return { isAdmin: true, user: userData };
   } catch (error) {
-    console.error('Admin auth error:', error);
-    return { isAdmin: false, error: '권한 확인 중 오류가 발생했습니다.' };
+    console.error("Admin auth error:", error);
+    return { isAdmin: false, error: "권한 확인 중 오류가 발생했습니다." };
   }
 }
 
 // 승인 대기 사용자 목록 조회
 export async function handleGetPendingUsers(request, env) {
-  if (request.method !== 'GET') {
-    return errorResponse('Method not allowed', 405);
+  if (request.method !== "GET") {
+    return errorResponse("Method not allowed", 405);
   }
-
-  // 관리자 권한 확인
   const authCheck = await checkAdminAuth(request, env);
   if (!authCheck.isAdmin) {
     return errorResponse(authCheck.error, 401);
   }
-
   try {
-    const pendingUsers = await env.USERS.list({ prefix: 'pending:' });
+    const pendingUsers = await env.USERS.list({ prefix: "pending:" });
     const users = [];
-
+    
     for (const key of pendingUsers.keys) {
-      const userStr = await env.USERS.get(key.name);
-      let user;
       try {
-        user = JSON.parse(userStr);
-      } catch (parseError) {
-        console.log('JSON parse failed for pending user, trying manual parse...');
-        // JSON 파싱 실패 시, 문자열을 직접 파싱
-        const cleanDataStr = userStr.replace(/^'|'$/g, ''); // 앞뒤 따옴표 제거
-        const matches = cleanDataStr.match(/(\w+):([^,}]+)/g);
-        user = {};
-        matches.forEach(match => {
-          const [key, value] = match.split(':');
-          user[key.trim()] = value.trim().replace(/^"|"$/g, ''); // 따옴표 제거
+        const userStr = await env.USERS.get(key.name);
+        if (!userStr) continue;
+        
+        let user;
+        try {
+          user = JSON.parse(userStr);
+        } catch (parseError) {
+          console.error(`JSON parse failed for pending user ${key.name}:`, parseError);
+          continue; // 이 사용자는 건너뛰고 다음 사용자로
+        }
+        
+        users.push({
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          organization: user.organization,
+          phone: user.phone,
+          createdAt: user.createdAt,
+          affiliation: user.affiliation,
+          affiliationType: user.affiliationType
         });
+      } catch (userError) {
+        console.error(`Error processing pending user ${key.name}:`, userError);
+        continue;
       }
-      users.push({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        organization: user.organization,
-        phone: user.phone,
-        createdAt: user.createdAt
-      });
     }
-
-    return successResponse({ users }, '승인 대기 사용자 목록 조회 성공');
+    
+    return successResponse({ users }, "승인 대기 사용자 목록 조회 성공");
   } catch (error) {
-    console.error('Get pending users error:', error);
-    return errorResponse('사용자 목록 조회 중 오류가 발생했습니다.', 500);
+    console.error("Get pending users error:", error);
+    return errorResponse("사용자 목록 조회 중 오류가 발생했습니다.", 500);
   }
 }
 
@@ -143,7 +141,7 @@ export async function handleApproveUser(request, env) {
     };
 
     // KV 업데이트
-    await env.USERS.put(`user:${pendingUser.username}`, JSON.stringify(updatedUser));
+    await env.USERS.put(`user:${pendingUser.id}`, JSON.stringify(updatedUser));
     await env.USERS.delete(`pending:${body.userId}`);
 
     return successResponse({
@@ -188,7 +186,7 @@ export async function handleRejectUser(request, env) {
     const pendingUser = JSON.parse(pendingUserStr);
 
     // 사용자 데이터 삭제
-    await env.USERS.delete(`user:${pendingUser.username}`);
+    await env.USERS.delete(`user:${pendingUser.id}`);
     await env.USERS.delete(`email:${pendingUser.email}`);
     await env.USERS.delete(`pending:${body.userId}`);
 
@@ -265,7 +263,7 @@ export async function handleBulkApproveUsers(request, env) {
         };
 
         // KV 업데이트
-        await env.USERS.put(`user:${pendingUser.username}`, JSON.stringify(updatedUser));
+        await env.USERS.put(`user:${pendingUser.id}`, JSON.stringify(updatedUser));
         await env.USERS.delete(`pending:${userId}`);
 
         results.approved.push(userId);
@@ -342,7 +340,7 @@ export async function handleBulkRejectUsers(request, env) {
         }
 
         // 사용자 데이터 삭제
-        await env.USERS.delete(`user:${pendingUser.username}`);
+        await env.USERS.delete(`user:${pendingUser.id}`);
         await env.USERS.delete(`email:${pendingUser.email}`);
         await env.USERS.delete(`pending:${userId}`);
 
@@ -369,114 +367,132 @@ export async function handleBulkRejectUsers(request, env) {
 
 // 모든 사용자 목록 조회
 export async function handleGetAllUsers(request, env) {
-  if (request.method !== 'GET') {
-    return errorResponse('Method not allowed', 405);
+  if (request.method !== "GET") {
+    return errorResponse("Method not allowed", 405);
   }
-
-  // 관리자 권한 확인
   const authCheck = await checkAdminAuth(request, env);
   if (!authCheck.isAdmin) {
     return errorResponse(authCheck.error, 401);
   }
-
   try {
-    const allUsers = await env.USERS.list({ prefix: 'user:' });
+    const allUsers = await env.USERS.list({ prefix: "user:" });
     const users = [];
-
+    
     for (const key of allUsers.keys) {
-      const userStr = await env.USERS.get(key.name);
-      let user;
       try {
-        user = JSON.parse(userStr);
-      } catch (parseError) {
-        console.log('JSON parse failed for all users, trying manual parse...');
-        // JSON 파싱 실패 시, 문자열을 직접 파싱
-        const cleanDataStr = userStr.replace(/^'|'$/g, ''); // 앞뒤 따옴표 제거
-        const matches = cleanDataStr.match(/(\w+):([^,}]+)/g);
-        user = {};
-        matches.forEach(match => {
-          const [key, value] = match.split(':');
-          user[key.trim()] = value.trim().replace(/^"|"$/g, ''); // 따옴표 제거
+        const userStr = await env.USERS.get(key.name);
+        if (!userStr) continue;
+        
+        let user;
+        try {
+          user = JSON.parse(userStr);
+        } catch (parseError) {
+          console.error(`JSON parse failed for all users ${key.name}:`, parseError);
+          continue; // 이 사용자는 건너뛰고 다음 사용자로
+        }
+        
+        users.push({
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          organization: user.organization,
+          phone: user.phone,
+          role: user.role,
+          approved: user.approved,
+          createdAt: user.createdAt,
+          approvedAt: user.approvedAt,
+          approvedBy: user.approvedBy,
+          affiliation: user.affiliation,
+          affiliationType: user.affiliationType
         });
+      } catch (userError) {
+        console.error(`Error processing user ${key.name}:`, userError);
+        continue;
       }
-      users.push({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        organization: user.organization,
-        phone: user.phone,
-        role: user.role,
-        approved: user.approved,
-        createdAt: user.createdAt,
-        approvedAt: user.approvedAt,
-        approvedBy: user.approvedBy
-      });
     }
-
-    return successResponse({ users }, '전체 사용자 목록 조회 성공');
+    
+    return successResponse({ users }, "전체 사용자 목록 조회 성공");
   } catch (error) {
-    console.error('Get all users error:', error);
-    return errorResponse('사용자 목록 조회 중 오류가 발생했습니다.', 500);
+    console.error("Get all users error:", error);
+    return errorResponse("사용자 목록 조회 중 오류가 발생했습니다.", 500);
   }
 }
 
 // 사용자 삭제
 export async function handleDeleteUser(request, env) {
-  if (request.method !== 'DELETE') {
-    return errorResponse('Method not allowed', 405);
+  if (request.method !== "DELETE") {
+    return errorResponse("Method not allowed", 405);
   }
-
-  // 관리자 권한 확인
   const authCheck = await checkAdminAuth(request, env);
   if (!authCheck.isAdmin) {
     return errorResponse(authCheck.error, 401);
   }
-
   const url = new URL(request.url);
-  const userId = url.searchParams.get('userId');
-  
+  const userId = url.searchParams.get("userId");
   if (!userId) {
-    return errorResponse('사용자 ID가 필요합니다.');
+    return errorResponse("사용자 ID가 필요합니다.");
   }
-
   try {
-    // 사용자 정보 조회
-    const allUsers = await env.USERS.list({ prefix: 'user:' });
+    const allUsers = await env.USERS.list({ prefix: "user:" });
     let userToDelete = null;
-
+    let userKey = null;
+    
     for (const key of allUsers.keys) {
-      const userStr = await env.USERS.get(key.name);
-      const user = JSON.parse(userStr);
-      if (user.id === userId) {
-        userToDelete = user;
-        break;
+      try {
+        const userStr = await env.USERS.get(key.name);
+        if (!userStr) continue;
+        
+        let user;
+        try {
+          user = JSON.parse(userStr);
+        } catch (parseError) {
+          console.error(`JSON parse failed for delete user ${key.name}:`, parseError);
+          continue; // 이 사용자는 건너뛰고 다음 사용자로
+        }
+        
+        if (user.id === userId) {
+          userToDelete = user;
+          userKey = key.name;
+          break;
+        }
+      } catch (userError) {
+        console.error(`Error processing user ${key.name} for deletion:`, userError);
+        continue;
       }
     }
-
-    if (!userToDelete) {
-      return errorResponse('사용자를 찾을 수 없습니다.');
-    }
-
-    // 관리자는 자신을 삭제할 수 없음
-    if (userToDelete.id === authCheck.user.id) {
-      return errorResponse('자신의 계정은 삭제할 수 없습니다.');
-    }
-
-    // 사용자 데이터 삭제
-    await env.USERS.delete(`user:${userToDelete.username}`);
-    await env.USERS.delete(`email:${userToDelete.email}`);
     
-    // 승인 대기 중이었다면 pending에서도 삭제
+    if (!userToDelete) {
+      return errorResponse("사용자를 찾을 수 없습니다.");
+    }
+    
+    if (userToDelete.id === authCheck.user.id) {
+      return errorResponse("자신의 계정은 삭제할 수 없습니다.");
+    }
+    
+    // 사용자 데이터 삭제
+    await env.USERS.delete(userKey);
+    
+    // 이메일 키 삭제
+    if (userToDelete.email) {
+      await env.USERS.delete(`email:${userToDelete.email}`);
+    }
+    
+    // 전화번호 키 삭제
+    if (userToDelete.phone) {
+      await env.USERS.delete(`phone:${userToDelete.phone}`);
+    }
+    
+    // 대기 중인 사용자 키 삭제
     await env.USERS.delete(`pending:${userId}`);
-
+    
     return successResponse(
       { userId },
-      '사용자가 삭제되었습니다.'
+      "사용자가 삭제되었습니다."
     );
-
   } catch (error) {
-    console.error('Delete user error:', error);
-    return errorResponse('사용자 삭제 중 오류가 발생했습니다.', 500);
+    console.error("Delete user error:", error);
+    return errorResponse("사용자 삭제 중 오류가 발생했습니다.", 500);
   }
 }
 

@@ -4,9 +4,14 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
+    "serve:noauth": "vue-cli-service serve --mode noauth",
     "build": "vue-cli-service build",
+    "build:noauth": "vue-cli-service build --mode noauth",
+    "build:auth": "vue-cli-service build --mode production",
     "lint": "vue-cli-service lint",
-    "test": "jest"
+    "test": "jest",
+    "test:auth": "node test-modes.js auth",
+    "test:noauth": "node test-modes.js noauth"
   },
 
   "dependencies": {

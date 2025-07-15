@@ -7,10 +7,15 @@ const SALT_ROUNDS = 10;
 // JWT 토큰 생성
 export async function generateToken(userId, role = 'user') {
   try {
-    const token = await new SignJWT({ userId, role, iat: Math.floor(Date.now() / 1000) })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime('7d')
-      .sign(new TextEncoder().encode(JWT_SECRET));
+    const token = await new SignJWT({ 
+      userId, 
+      role, 
+      iat: Math.floor(Date.now() / 1000) 
+    })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime('7d')
+    .sign(new TextEncoder().encode(JWT_SECRET));
+    
     return token;
   } catch (error) {
     console.error('Token generation error:', error);
@@ -38,7 +43,7 @@ export async function verifyPassword(password, hashedPassword) {
   return await bcrypt.compare(password, hashedPassword);
 }
 
-// 성공 응답 생성
+// 성공 응답
 export function successResponse(data, message = 'Success') {
   return new Response(JSON.stringify({
     success: true,
@@ -55,7 +60,7 @@ export function successResponse(data, message = 'Success') {
   });
 }
 
-// 에러 응답 생성
+// 에러 응답
 export function errorResponse(message, status = 400) {
   return new Response(JSON.stringify({
     success: false,
@@ -80,33 +85,37 @@ export async function parseRequestBody(request) {
   }
 }
 
-// 사용자 ID 생성 (간단한 UUID 대체)
+// 사용자 ID 생성
 export function generateUserId() {
   return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
-// 입력 검증
+// 회원가입 데이터 유효성 검사 (업데이트됨)
 export function validateRegistrationData(data) {
-  const { username, password, email, organization, name } = data;
+  const { name, email, phone, password, affiliation, affiliationType } = data;
   
   if (!name || name.trim().length === 0) {
     return { valid: false, message: '사용자 이름을 입력해주세요.' };
-  }
-  
-  if (!username || username.length < 3 || username.length > 20) {
-    return { valid: false, message: '사용자명은 3-20자 사이여야 합니다.' };
-  }
-  
-  if (!password || password.length < 6) {
-    return { valid: false, message: '비밀번호는 최소 6자 이상이어야 합니다.' };
   }
   
   if (!email || !email.includes('@')) {
     return { valid: false, message: '유효한 이메일 주소를 입력해주세요.' };
   }
   
-  if (!organization || organization.trim().length === 0) {
+  if (!phone || phone.trim().length === 0) {
+    return { valid: false, message: '전화번호를 입력해주세요.' };
+  }
+  
+  if (!password || password.length < 6) {
+    return { valid: false, message: '비밀번호는 최소 6자 이상이어야 합니다.' };
+  }
+  
+  if (!affiliation || affiliation.trim().length === 0) {
     return { valid: false, message: '소속을 입력해주세요.' };
+  }
+  
+  if (!affiliationType || affiliationType.trim().length === 0) {
+    return { valid: false, message: '소속 유형을 선택해주세요.' };
   }
   
   return { valid: true };
