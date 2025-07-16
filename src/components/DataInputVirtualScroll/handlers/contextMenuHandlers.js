@@ -271,6 +271,25 @@ function getMenuItemsForContext(rowIndex, colIndex, selectionState, allColumnsMe
       });
     }
     
+    // 날짜/시간 컬럼 필터 메뉴 (증상발현시간, 개별노출시간)
+    if (column && (column.type === 'symptomOnset' || column.type === 'individualExposureTime')) {
+      const uniqueDatesWithCounts = getUniqueDatesForColumn(colIndex, context);
+      
+      menuItems.push({ type: 'separator' });
+      
+      // 고유한 날짜들에 대한 체크박스 추가 (개수 포함)
+      uniqueDatesWithCounts.forEach(({ date, count }) => {
+        const displayDate = date === '' ? '빈 셀' : date;
+        const action = `filter-datetime-${date === '' ? 'empty' : date}`;
+        menuItems.push({
+          label: `${displayDate} (${count})`,
+          action,
+          type: 'checkbox',
+          checked: isFilterActive(colIndex, date === '' ? 'empty' : date, context)
+        });
+      });
+    }
+    
     // 필터가 적용된 상태에서만 "모든 필터 해제" 옵션 추가
     if (context.storeBridge && context.storeBridge.filterState.isFiltered) {
       menuItems.push(
@@ -494,6 +513,135 @@ function getUniqueValuesForColumn(colIndex, context) {
     colIndex,
     columnType: columnMeta.type,
     result: result.map(r => `${r.value}(${r.count})`).join(', ')
+  });
+
+  return result;
+}
+
+/**
+ * 특정 날짜/시간 컬럼의 고유한 날짜들과 각 날짜의 개수를 반환합니다.
+ * 날짜 부분만 추출하여 그룹화합니다 (시간 제거).
+ * @param {number} colIndex - 컬럼 인덱스
+ * @param {object} context - 핸들러 컨텍스트
+ * @returns {Array} 고유한 날짜들과 개수의 배열 [{date, count}, ...]
+ */
+function getUniqueDatesForColumn(colIndex, context) {
+  const { rows, filteredRows, allColumnsMeta } = context;
+  const columnMeta = allColumnsMeta.find(c => c.colIndex === colIndex);
+  
+  console.log('[Filter] getUniqueDatesForColumn 호출:', {
+    colIndex,
+    columnMeta,
+    rowsType: typeof rows,
+    rowsValueType: typeof rows?.value,
+    rowsLength: rows?.value?.length || rows?.length,
+    filteredRowsType: typeof filteredRows,
+    filteredRowsValueType: typeof filteredRows?.value,
+    filteredRowsLength: filteredRows?.value?.length || filteredRows?.length,
+    isFiltered: context.storeBridge?.filterState?.isFiltered
+  });
+  
+  if (!columnMeta || !columnMeta.dataKey) {
+    console.log('[Filter] 날짜 컬럼 메타데이터 조건 불충족:', {
+      hasColumnMeta: !!columnMeta,
+      dataKey: columnMeta?.dataKey
+    });
+    return [];
+  }
+
+  // 컨텍스트 메뉴 로직:
+  // 1. 현재 컬럼의 필터가 있는 경우: 전체 데이터 기준으로 모든 날짜 표시
+  // 2. 현재 컬럼의 필터가 없는 경우: 다른 컬럼의 필터로 인해 보이는 행들 기준으로 표시
+  const allData = rows?.value || rows;
+  const filteredData = filteredRows?.value || filteredRows;
+  const isFiltered = context.storeBridge?.filterState?.isFiltered;
+  const currentColumnFilter = context.storeBridge?.filterState?.activeFilters?.get(colIndex);
+  
+  console.log('[Filter] 날짜 컨텍스트 메뉴 데이터 결정:', {
+    isFiltered,
+    allDataLength: allData?.length,
+    filteredDataLength: filteredData?.length,
+    currentColIndex: colIndex,
+    hasCurrentColumnFilter: !!currentColumnFilter
+  });
+
+  if (!allData || !Array.isArray(allData)) {
+    console.log('[Filter] 전체 데이터가 없거나 배열이 아님:', allData);
+    return [];
+  }
+
+  // 데이터 소스 결정
+  const dataToUse = currentColumnFilter ? allData : (isFiltered ? filteredData : allData);
+  
+  console.log('[Filter] 사용할 날짜 데이터 소스:', {
+    currentColumnFilter: !!currentColumnFilter,
+    dataSource: currentColumnFilter ? 'allData' : (isFiltered ? 'filteredData' : 'allData'),
+    dataLength: dataToUse?.length
+  });
+
+  if (!dataToUse || !Array.isArray(dataToUse)) {
+    console.log('[Filter] 사용할 날짜 데이터가 없거나 배열이 아님:', dataToUse);
+    return [];
+  }
+
+  // 날짜 부분 추출 함수
+  const extractDatePart = (dateTimeString) => {
+    if (!dateTimeString || dateTimeString === '') return '';
+    
+    // yyyy-mm-dd hh:mm 형식에서 날짜 부분만 추출
+    const dateMatch = dateTimeString.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      return dateMatch[1]; // yyyy-mm-dd 부분만 반환
+    }
+    
+    // 다른 형식도 시도 (yyyy/mm/dd 등)
+    const altDateMatch = dateTimeString.match(/^(\d{4}[/-]\d{2}[/-]\d{2})/);
+    if (altDateMatch) {
+      // yyyy/mm/dd를 yyyy-mm-dd로 변환
+      return altDateMatch[1].replace(/[/]/g, '-');
+    }
+    
+    return dateTimeString; // 매칭되지 않으면 원본 반환
+  };
+
+  // 선택된 데이터 소스에서 고유한 날짜들과 개수 계산
+  const dateCounts = new Map();
+
+  dataToUse.forEach((row) => {
+    const cellValue = String(row[columnMeta.dataKey] ?? '');
+    
+    // 빈 값 정규화
+    if (cellValue === 'null' || cellValue === 'undefined' || cellValue === '') {
+      dateCounts.set('', (dateCounts.get('') || 0) + 1);
+      return;
+    }
+
+    // 날짜 부분만 추출
+    const datePart = extractDatePart(cellValue);
+    dateCounts.set(datePart, (dateCounts.get(datePart) || 0) + 1);
+  });
+
+  // 결과 배열 생성
+  const result = Array.from(dateCounts.entries())
+    .map(([date, count]) => ({ 
+      date, 
+      count  // 선택된 데이터 소스에서의 개수
+    }));
+
+  // 날짜 순으로 정렬 (빈 값은 맨 뒤로)
+  result.sort((a, b) => {
+    // 빈 값은 맨 뒤로
+    if (a.date === '' && b.date !== '') return 1;
+    if (a.date !== '' && b.date === '') return -1;
+    
+    // 날짜 비교 (yyyy-mm-dd 형식이므로 문자열 비교로도 정렬됨)
+    return a.date.localeCompare(b.date);
+  });
+
+  console.log('[Filter] 고유한 날짜들 계산 완료:', {
+    colIndex,
+    columnType: columnMeta.type,
+    result: result.map(r => `${r.date}(${r.count})`).join(', ')
   });
 
   return result;

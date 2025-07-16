@@ -16,9 +16,12 @@
         <div class="controls-area">
           <div class="ui-group">
             <label class="ui-label">폰트 크기:</label>
-            <button class="control-button" @click="cycleFontSize">
-              {{ tableFontSize }}px
-            </button>
+            <div class="control-button-wrapper">
+              <button class="control-button" @click="cycleFontSize" @mouseenter="handleFontSizeMouseEnter" @mouseleave="handleFontSizeMouseLeave">
+                {{ fontSizeButtonText }}
+              </button>
+              <div v-if="activeTooltip === 'fontSize'" class="control-tooltip">{{ tooltipText }}</div>
+            </div>
           </div>
 
         </div>
@@ -167,10 +170,37 @@ import { jStat } from 'jstat';
 const store = useStore();
 
 const fontSizes = [12, 14, 16];
+const fontSizeLabels = ['작게', '보통', '크게'];
 const tableFontSize = ref(14);
 
 // Yates 보정 토글 변수 (기대값 5이상일 때 사용)
 const useYatesCorrection = ref(true); // 기본값: Yates 보정 사용
+const fontSizeButtonText = ref('보통');
+
+// 툴팁 상태 관리
+const activeTooltip = ref(null);
+const tooltipText = ref('');
+
+const showTooltip = (key, text) => {
+  activeTooltip.value = key;
+  tooltipText.value = text;
+};
+
+const hideTooltip = () => {
+  activeTooltip.value = null;
+};
+
+// 폰트 크기 마우스 이벤트 핸들러
+const handleFontSizeMouseEnter = () => {
+  const currentIndex = fontSizes.indexOf(tableFontSize.value);
+  const nextIndex = (currentIndex + 1) % fontSizes.length;
+  const nextFontSize = fontSizeLabels[nextIndex];
+  showTooltip('fontSize', `폰트 크기를 ${nextFontSize}로 변경합니다`);
+};
+
+const handleFontSizeMouseLeave = () => {
+  hideTooltip();
+};
 
 const getNextValue = (currentValue, valueArray) => {
   const currentIndex = valueArray.indexOf(currentValue);
@@ -180,6 +210,8 @@ const getNextValue = (currentValue, valueArray) => {
 
 const cycleFontSize = () => {
   tableFontSize.value = getNextValue(tableFontSize.value, fontSizes);
+  const currentIndex = fontSizes.indexOf(tableFontSize.value);
+  fontSizeButtonText.value = fontSizeLabels[currentIndex];
 };
 
 // Yates 보정 토글 함수
@@ -1222,5 +1254,48 @@ const factorial = (n) => {
   background-color: #1a73e8;
   border-color: #1a73e8;
   color: white;
+}
+
+/* --- 툴팁 스타일 --- */
+.control-button-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.control-tooltip {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: tooltipFadeIn 0.2s ease-in-out;
+}
+
+.control-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #333;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>

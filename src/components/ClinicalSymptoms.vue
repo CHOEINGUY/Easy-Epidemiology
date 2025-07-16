@@ -62,8 +62,8 @@
               <div class="control-group">
                 <label class="control-label">막대 방향:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button" @click="toggleBarDirection" @mouseenter="showTooltip('direction', `차트 방향을 ${barDirection === 'vertical' ? '가로' : '세로'} 막대로 변경합니다`)" @mouseleave="hideTooltip">
-                    {{ barDirection === 'vertical' ? '가로' : '세로' }}
+                  <button class="control-button" @click="toggleBarDirection" @mouseenter="handleBarDirectionMouseEnter" @mouseleave="handleBarDirectionMouseLeave">
+                    {{ barDirectionButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'direction'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
@@ -71,8 +71,8 @@
               <div class="control-group">
                 <label class="control-label">폰트 크기:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button font-button" @click="cycleFontSize" @mouseenter="showTooltip('fontSize', '폰트 크기를 조절합니다')" @mouseleave="hideTooltip">
-                    {{ chartFontSize }}
+                  <button class="control-button font-button" @click="cycleFontSize" @mouseenter="handleFontSizeMouseEnter" @mouseleave="handleFontSizeMouseLeave">
+                    {{ fontSizeButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'fontSize'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
@@ -80,7 +80,7 @@
               <div class="control-group">
                 <label class="control-label">차트 너비:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button width-button" @click="cycleChartWidth" @mouseenter="showTooltip('chartWidth', '차트 너비를 조절합니다')" @mouseleave="hideTooltip">
+                  <button class="control-button width-button" @click="cycleChartWidth" @mouseenter="handleChartWidthMouseEnter" @mouseleave="handleChartWidthMouseLeave">
                     {{ chartWidthButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'chartWidth'" class="control-tooltip">{{ tooltipText }}</div>
@@ -89,7 +89,7 @@
               <div class="control-group">
                 <label class="control-label">막대 너비:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button width-button" @click="cycleBarWidthPercent" @mouseenter="showTooltip('barWidth', '막대 너비를 조절합니다')" @mouseleave="hideTooltip">
+                  <button class="control-button width-button" @click="cycleBarWidthPercent" @mouseenter="handleBarWidthMouseEnter" @mouseleave="handleBarWidthMouseLeave">
                     {{ barWidthButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'barWidth'" class="control-tooltip">{{ tooltipText }}</div>
@@ -98,7 +98,7 @@
               <div class="control-group">
                 <label class="control-label">색상:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button color-button" :style="{ backgroundColor: selectedBarColor }" @click="cycleBarColor" @mouseenter="showTooltip('color', '막대 색상을 변경합니다')" @mouseleave="hideTooltip"></button>
+                  <button class="control-button color-button" :style="{ backgroundColor: selectedBarColor }" @click="cycleBarColor" @mouseenter="handleBarColorMouseEnter" @mouseleave="handleBarColorMouseLeave"></button>
                   <div v-if="activeTooltip === 'color'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
               </div>
@@ -116,8 +116,8 @@
               <div class="control-group">
                 <label class="control-label">정렬:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button sort-button" @click="cycleSort" @mouseenter="showTooltip('sort', currentSortOption.tooltip)" @mouseleave="hideTooltip">
-                    {{ currentSortOption.label }}
+                  <button class="control-button sort-button" @click="cycleSort" @mouseenter="handleSortMouseEnter" @mouseleave="handleSortMouseLeave">
+                    {{ sortButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'sort'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
@@ -281,6 +281,7 @@ const symptomStats = computed(() => {
 });
 
 const fontSizes = [14, 16, 18, 20, 24];
+const fontSizeLabels = ['매우 작게', '작게', '보통', '크게', '매우 크게'];
 const chartWidths = [500, 700, 900, 1100];
 const barWidthPercents = [30, 50, 70];
 const barColors = [
@@ -292,8 +293,11 @@ const chartWidth = ref(700);
 const barWidthPercent = ref(50);
 const selectedBarColor = ref(barColors[0]);
 const barDirection = ref('vertical'); // 'vertical' or 'horizontal'
+const fontSizeButtonText = ref('보통');
 const chartWidthButtonText = ref(`${chartWidth.value}px`);
 const barWidthButtonText = ref(`${barWidthPercent.value}%`);
+const barDirectionButtonText = ref('세로');
+const sortButtonText = ref('빈도순');
 
 // +++ 신규: 그라디언트 색상 생성 함수 (PatientCharacteristics.vue에서 가져옴) +++
 const generateGradientColors = (baseColor) => {
@@ -351,9 +355,7 @@ const sortOptions = [
 ];
 
 const currentSort = ref('none');
-const currentSortOption = computed(() => {
-  return sortOptions.find(option => option.key === currentSort.value) || sortOptions[0];
-});
+
 
 // 정렬된 증상 통계 데이터
 const sortedSymptomStats = computed(() => {
@@ -382,6 +384,88 @@ const showTooltip = (key, text) => {
 
 const hideTooltip = () => {
   activeTooltip.value = null;
+};
+
+
+
+// 폰트 크기 마우스 이벤트 핸들러
+const handleFontSizeMouseEnter = () => {
+  const currentIndex = fontSizes.indexOf(chartFontSize.value);
+  const nextIndex = (currentIndex + 1) % fontSizes.length;
+  const nextFontSize = fontSizeLabels[nextIndex];
+  fontSizeButtonText.value = nextFontSize;
+  showTooltip('fontSize', `폰트 크기를 ${nextFontSize}로 변경합니다`);
+};
+
+const handleFontSizeMouseLeave = () => {
+  const currentIndex = fontSizes.indexOf(chartFontSize.value);
+  fontSizeButtonText.value = fontSizeLabels[currentIndex];
+  hideTooltip();
+};
+
+// 차트 너비 마우스 이벤트 핸들러
+const handleChartWidthMouseEnter = () => {
+  const currentIndex = chartWidths.indexOf(chartWidth.value);
+  const nextIndex = (currentIndex + 1) % chartWidths.length;
+  const nextWidth = chartWidths[nextIndex];
+  chartWidthButtonText.value = `${nextWidth}px`;
+  showTooltip('chartWidth', `차트 너비를 ${nextWidth}px로 변경합니다`);
+};
+
+const handleChartWidthMouseLeave = () => {
+  chartWidthButtonText.value = `${chartWidth.value}px`;
+  hideTooltip();
+};
+
+// 막대 너비 마우스 이벤트 핸들러
+const handleBarWidthMouseEnter = () => {
+  const currentIndex = barWidthPercents.indexOf(barWidthPercent.value);
+  const nextIndex = (currentIndex + 1) % barWidthPercents.length;
+  const nextWidth = barWidthPercents[nextIndex];
+  barWidthButtonText.value = `${nextWidth}%`;
+  showTooltip('barWidth', `막대 너비를 ${nextWidth}%로 변경합니다`);
+};
+
+const handleBarWidthMouseLeave = () => {
+  barWidthButtonText.value = `${barWidthPercent.value}%`;
+  hideTooltip();
+};
+
+// 막대 방향 마우스 이벤트 핸들러
+const handleBarDirectionMouseEnter = () => {
+  const nextDirection = barDirection.value === 'vertical' ? '가로' : '세로';
+  barDirectionButtonText.value = nextDirection;
+  showTooltip('direction', `막대 방향을 ${nextDirection}로 변경합니다`);
+};
+
+const handleBarDirectionMouseLeave = () => {
+  const currentDirection = barDirection.value === 'vertical' ? '세로' : '가로';
+  barDirectionButtonText.value = currentDirection;
+  hideTooltip();
+};
+
+// 막대 색상 마우스 이벤트 핸들러
+const handleBarColorMouseEnter = () => {
+  showTooltip('color', '막대 색상을 변경합니다');
+};
+
+const handleBarColorMouseLeave = () => {
+  hideTooltip();
+};
+
+// 정렬 마우스 이벤트 핸들러
+const handleSortMouseEnter = () => {
+  const currentIndex = sortOptions.findIndex(option => option.key === currentSort.value);
+  const nextIndex = (currentIndex + 1) % sortOptions.length;
+  const nextSort = sortOptions[nextIndex];
+  sortButtonText.value = nextSort.label;
+  showTooltip('sort', nextSort.tooltip);
+};
+
+const handleSortMouseLeave = () => {
+  const currentSortOption = sortOptions.find(option => option.key === currentSort.value);
+  sortButtonText.value = currentSortOption.label;
+  hideTooltip();
 };
 
 /**
@@ -428,6 +512,8 @@ const canUpdateChart = () => {
 function cycleFontSize() {
   try {
     chartFontSize.value = getNextValue(chartFontSize.value, fontSizes);
+    const currentIndex = fontSizes.indexOf(chartFontSize.value);
+    fontSizeButtonText.value = fontSizeLabels[currentIndex];
     console.log('폰트 크기 변경:', chartFontSize.value);
     nextTick(() => {
       if (canUpdateChart()) {
@@ -503,6 +589,8 @@ function cycleBarColor() {
 function toggleBarDirection() {
   try {
     barDirection.value = barDirection.value === 'vertical' ? 'horizontal' : 'vertical';
+    const currentDirection = barDirection.value === 'vertical' ? '세로' : '가로';
+    barDirectionButtonText.value = currentDirection;
     console.log('막대 방향 변경:', barDirection.value);
     nextTick(() => {
       if (canUpdateChart()) {
@@ -556,6 +644,8 @@ const cycleSort = () => {
     const currentIndex = sortOptions.findIndex(option => option.key === currentSort.value);
     const nextIndex = (currentIndex + 1) % sortOptions.length;
     currentSort.value = sortOptions[nextIndex].key;
+    const currentSortOption = sortOptions.find(option => option.key === currentSort.value);
+    sortButtonText.value = currentSortOption.label;
     
     console.log('정렬 변경:', currentSort.value);
     nextTick(() => {

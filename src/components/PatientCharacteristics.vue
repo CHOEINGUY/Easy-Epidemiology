@@ -156,21 +156,21 @@
             <div class="ui-group">
               <label class="ui-label">폰트 크기:</label>
               <div class="control-button-wrapper">
-                <button class="control-button font-button" @click="cycleFontSize" @mouseenter="showTooltip('fontSize', '폰트 크기를 조절합니다')" @mouseleave="hideTooltip"> {{ fontSizeButtonText }} </button>
+                <button class="control-button font-button" @click="cycleFontSize" @mouseenter="handleFontSizeMouseEnter" @mouseleave="handleFontSizeMouseLeave"> {{ fontSizeButtonText }} </button>
                 <div v-if="activeTooltip === 'fontSize'" class="control-tooltip">{{ tooltipText }}</div>
               </div>
             </div>
             <div class="ui-group">
               <label class="ui-label">차트 너비:</label>
               <div class="control-button-wrapper">
-                <button class="control-button width-button" @click="cycleChartWidth" @mouseenter="showTooltip('chartWidth', '차트 너비를 조절합니다')" @mouseleave="hideTooltip"> {{ chartWidthButtonText }} </button>
+                <button class="control-button width-button" @click="cycleChartWidth" @mouseenter="handleChartWidthMouseEnter" @mouseleave="handleChartWidthMouseLeave"> {{ chartWidthButtonText }} </button>
                 <div v-if="activeTooltip === 'chartWidth'" class="control-tooltip">{{ tooltipText }}</div>
               </div>
             </div>
             <div class="ui-group">
               <label class="ui-label">막대 너비:</label>
               <div class="control-button-wrapper">
-                <button class="control-button width-button" @click="cycleBarWidthPercent" @mouseenter="showTooltip('barWidth', '막대 너비를 조절합니다')" @mouseleave="hideTooltip"> {{ barWidthButtonText }} </button>
+                <button class="control-button width-button" @click="cycleBarWidthPercent" @mouseenter="handleBarWidthMouseEnter" @mouseleave="handleBarWidthMouseLeave"> {{ barWidthButtonText }} </button>
                 <div v-if="activeTooltip === 'barWidth'" class="control-tooltip">{{ tooltipText }}</div>
               </div>
             </div>
@@ -257,6 +257,7 @@ const selectedDataType = ref('count'); // 'count' | 'percentage'
 const chartInstance = ref(null);
 const chartContainer = ref(null);
 const fontSizes = [12, 15, 18, 21, 24];
+const fontSizeLabels = ['매우 작게', '작게', '보통', '크게', '매우 크게'];
 const chartWidths = [500, 700, 900, 1100];
 const barWidthPercents = [30, 50, 70];
 const barColors = [
@@ -267,7 +268,7 @@ const chartFontSize = ref(18);
 const chartWidth = ref(700);
 const barWidthPercent = ref(50);
 const selectedBarColor = ref(barColors[0]);
-const fontSizeButtonText = ref(chartFontSize.value);
+const fontSizeButtonText = ref('보통');
 const chartWidthButtonText = ref(`${chartWidth.value}px`);
 const barWidthButtonText = ref(`${barWidthPercent.value}%`);
 // === 원본 스크립트 끝 ===
@@ -288,6 +289,51 @@ const hideTooltip = () => {
   activeTooltip.value = null;
 };
 
+
+
+// 폰트 크기 마우스 이벤트 핸들러
+const handleFontSizeMouseEnter = () => {
+  const currentIndex = fontSizes.indexOf(chartFontSize.value);
+  const nextIndex = (currentIndex + 1) % fontSizes.length;
+  const nextFontSize = fontSizeLabels[nextIndex];
+  fontSizeButtonText.value = nextFontSize;
+  showTooltip('fontSize', `폰트 크기를 ${nextFontSize}로 변경합니다`);
+};
+
+const handleFontSizeMouseLeave = () => {
+  const currentIndex = fontSizes.indexOf(chartFontSize.value);
+  fontSizeButtonText.value = fontSizeLabels[currentIndex];
+  hideTooltip();
+};
+
+// 차트 너비 마우스 이벤트 핸들러
+const handleChartWidthMouseEnter = () => {
+  const currentIndex = chartWidths.indexOf(chartWidth.value);
+  const nextIndex = (currentIndex + 1) % chartWidths.length;
+  const nextWidth = chartWidths[nextIndex];
+  chartWidthButtonText.value = `${nextWidth}px`;
+  showTooltip('chartWidth', `차트 너비를 ${nextWidth}px로 변경합니다`);
+};
+
+const handleChartWidthMouseLeave = () => {
+  chartWidthButtonText.value = `${chartWidth.value}px`;
+  hideTooltip();
+};
+
+// 막대 너비 마우스 이벤트 핸들러
+const handleBarWidthMouseEnter = () => {
+  const currentIndex = barWidthPercents.indexOf(barWidthPercent.value);
+  const nextIndex = (currentIndex + 1) % barWidthPercents.length;
+  const nextWidth = barWidthPercents[nextIndex];
+  barWidthButtonText.value = `${nextWidth}%`;
+  showTooltip('barWidth', `막대 너비를 ${nextWidth}%로 변경합니다`);
+};
+
+const handleBarWidthMouseLeave = () => {
+  barWidthButtonText.value = `${barWidthPercent.value}%`;
+  hideTooltip();
+};
+
 // === 원본 스크립트 ===
 // --- 유틸리티 및 핸들러 ---
 const getNextValue = (currentValue, valueArray) => {
@@ -299,7 +345,8 @@ const getNextValue = (currentValue, valueArray) => {
 
 const cycleFontSize = () => {
   chartFontSize.value = getNextValue(chartFontSize.value, fontSizes);
-  fontSizeButtonText.value = chartFontSize.value;
+  const currentIndex = fontSizes.indexOf(chartFontSize.value);
+  fontSizeButtonText.value = fontSizeLabels[currentIndex];
   // +++ 수정: 차트 업데이트 트리거 호출 +++
   triggerChartUpdate();
 };

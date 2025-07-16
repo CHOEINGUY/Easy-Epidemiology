@@ -2633,6 +2633,67 @@ export class StoreBridge {
       return hasExactMatch;
     }
     
+    // 날짜/시간 컬럼 처리 (증상발현시간, 개별노출시간)
+    if (filterConfig.columnType === 'symptomOnset' || filterConfig.columnType === 'individualExposureTime') {
+      const cellValue = String(row[filterConfig.columnType] ?? '');
+      console.log('[Filter] 날짜/시간 필터링:', { 
+        colIndex,
+        columnType: filterConfig.columnType,
+        cellValue, 
+        filterValues: filterConfig.values,
+        filterValuesType: typeof filterConfig.values,
+        filterValuesLength: filterConfig.values?.length,
+        filterValuesString: JSON.stringify(filterConfig.values)
+      });
+      
+      // 'empty'가 포함된 경우 빈 값도 허용
+      const allowEmpty = filterConfig.values.includes('empty');
+      if (allowEmpty && (cellValue === '' || cellValue === 'null' || cellValue === 'undefined')) {
+        console.log('[Filter] 빈 값 허용됨');
+        return true;
+      }
+      
+      // 날짜 값에서 날짜 부분만 추출 (시간 제거)
+      const extractDatePart = (dateTimeString) => {
+        if (!dateTimeString || dateTimeString === '') return '';
+        
+        // yyyy-mm-dd hh:mm 형식에서 날짜 부분만 추출
+        const dateMatch = dateTimeString.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          return dateMatch[1]; // yyyy-mm-dd 부분만 반환
+        }
+        
+        // 다른 형식도 시도 (yyyy/mm/dd 등)
+        const altDateMatch = dateTimeString.match(/^(\d{4}[/-]\d{2}[/-]\d{2})/);
+        if (altDateMatch) {
+          // yyyy/mm/dd를 yyyy-mm-dd로 변환
+          return altDateMatch[1].replace(/[/]/g, '-');
+        }
+        
+        return dateTimeString; // 매칭되지 않으면 원본 반환
+      };
+      
+      const cellDatePart = extractDatePart(cellValue);
+      console.log('[Filter] 날짜 부분 추출:', { 
+        originalValue: cellValue, 
+        extractedDate: cellDatePart 
+      });
+      
+      // 필터 값들과 비교
+      const hasDateMatch = filterConfig.values.some(filterDate => {
+        if (filterDate === 'empty') return false; // empty는 이미 처리됨
+        return cellDatePart === filterDate;
+      });
+      
+      console.log('[Filter] 날짜 매칭 결과:', { 
+        cellDatePart, 
+        hasDateMatch,
+        filterDates: filterConfig.values.filter(v => v !== 'empty')
+      });
+      
+      return hasDateMatch;
+    }
+    
     console.log('[Filter] 지원하지 않는 컬럼 타입 - 필터링하지 않음');
     return true; // 지원하지 않는 컬럼은 필터링하지 않음
   }
@@ -2720,6 +2781,72 @@ export class StoreBridge {
       // 오류 시 필터 초기화
       this.clearAllFilters();
     }
+  }
+
+  /**
+   * 날짜/시간 필터 토글 (특정 날짜만)
+   * @param {number} colIndex - 컬럼 인덱스
+   * @param {string} dateValue - 날짜 값 (yyyy-mm-dd 형식)
+   */
+  toggleDateTimeFilter(colIndex, dateValue) {
+    console.log('[Filter] toggleDateTimeFilter 호출:', { colIndex, dateValue });
+    
+    const currentFilter = this.filterState.activeFilters.get(colIndex);
+    
+    console.log('[Filter] 현재 필터 상태:', { 
+      currentFilter,
+      activeFiltersSize: this.filterState.activeFilters.size,
+      allActiveFilters: Array.from(this.filterState.activeFilters.entries())
+    });
+    
+    let newValues;
+    
+    if (!currentFilter) {
+      // 필터가 없으면 새로 생성
+      console.log('[Filter] 필터 없음 - 새로 생성');
+      newValues = [dateValue];
+    } else {
+      // 현재 필터에서 해당 값 토글
+      newValues = [...currentFilter.values];
+      const valueIndex = newValues.indexOf(dateValue);
+      
+      console.log('[Filter] 값 토글:', { dateValue, valueIndex, newValues });
+      
+      if (valueIndex > -1) {
+        // 값이 있으면 제거
+        newValues.splice(valueIndex, 1);
+        console.log('[Filter] 값 제거됨:', newValues);
+      } else {
+        // 값이 없으면 추가
+        newValues.push(dateValue);
+        console.log('[Filter] 값 추가됨:', newValues);
+      }
+    }
+    
+    // 빈 값 필터는 항상 유지 가능
+    if (newValues.length === 0) {
+      // 모두 해제하려고 하면 필터 제거
+      console.log('[Filter] 모든 값 제거됨 - 필터 제거');
+      this.removeFilter(colIndex);
+      return;
+    }
+    
+    console.log('[Filter] 최종 필터 적용:', { colIndex, newValues });
+    this.applyFilter(colIndex, {
+      type: 'date',
+      values: newValues,
+      columnType: this._getColumnTypeByIndex(colIndex)
+    });
+  }
+
+  /**
+   * 컬럼 인덱스로 컬럼 타입을 가져오는 헬퍼 메서드
+   * @param {number} colIndex - 컬럼 인덱스
+   * @returns {string} 컬럼 타입
+   */
+  _getColumnTypeByIndex(colIndex) {
+    const columnMeta = this.columnMetas?.find(c => c.colIndex === colIndex);
+    return columnMeta?.type || 'unknown';
   }
 }
 
@@ -2832,6 +2959,7 @@ export function useStoreBridge(legacyStore = null, validationManager = null, opt
     toggleDietFilter: (colIndex, value) => bridge.toggleDietFilter(colIndex, value),
     toggleBasicFilter: (colIndex, value) => bridge.toggleBasicFilter(colIndex, value),
     toggleConfirmedFilter: (colIndex, value) => bridge.toggleConfirmedFilter(colIndex, value),
+    toggleDateTimeFilter: (colIndex, dateValue) => bridge.toggleDateTimeFilter(colIndex, dateValue),
     applyFilter: (colIndex, filterConfig) => bridge.applyFilter(colIndex, filterConfig),
     clearAllFilters: () => bridge.clearAllFilters(),
     removeFilter: (colIndex) => bridge.removeFilter(colIndex),

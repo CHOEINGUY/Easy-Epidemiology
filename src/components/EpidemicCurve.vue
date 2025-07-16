@@ -14,7 +14,24 @@
 
       <div class="output-area">
         <div class="output-row">
-          <div class="table-container analysis-table-container">
+          <div class="table-container analysis-table-container">            <!-- 의심식단 입력 필드 추가 -->
+            <div class="suspected-food-input-container">
+              <div class="suspected-food-input-wrapper">
+                <div class="suspected-food-title">
+                  <span class="selected-variable-details__title-dot"></span>
+                  <span style="margin-left: 0.2em;">의심식단 입력</span>
+                </div>
+                <input
+                  id="suspected-food"
+                  v-model="suspectedFood"
+                  type="text"
+                  class="suspected-food-input"
+                  placeholder="의심식단을 입력하면 차트 하단에 표시됩니다"
+                  @input="onSuspectedFoodChange"
+                />
+              </div>
+            </div>
+
             <div class="table-title" style="display: flex; align-items: center; justify-content: space-between;">
               <span style="display: flex; align-items: center;">
                 <span class="selected-variable-details__title-dot"></span>
@@ -109,7 +126,7 @@
               <div class="control-group">
                 <label class="control-label">폰트 크기:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button font-button" @click="cycleEpiFontSize" @mouseenter="handleEpiMouseEnterFontSize" @mouseleave="handleEpiMouseLeaveFontSize">
+                  <button class="control-button font-button" @click="cycleEpiFontSize" @mouseenter="handleEpiFontSizeMouseEnter" @mouseleave="handleEpiFontSizeMouseLeave">
                     {{ epiFontSizeButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'epiFontSize'" class="control-tooltip">{{ tooltipText }}</div>
@@ -118,7 +135,7 @@
               <div class="control-group">
                 <label class="control-label">차트 너비:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button width-button" @click="cycleEpiChartWidth" @mouseenter="handleEpiMouseEnterChartWidth" @mouseleave="handleEpiMouseLeaveChartWidth">
+                  <button class="control-button width-button" @click="cycleEpiChartWidth" @mouseenter="handleEpiChartWidthMouseEnter" @mouseleave="handleEpiChartWidthMouseLeave">
                     {{ epiChartWidthButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'epiChartWidth'" class="control-tooltip">{{ tooltipText }}</div>
@@ -308,14 +325,18 @@
                 <label for="exposure-time" class="control-label">의심원 노출시간 :</label>
                 <div class="control-button-wrapper">
                   <input
-                    type="datetime-local"
+                    type="text"
                     id="exposure-time"
-                    v-model="exposureDateTime"
+                    :value="formattedExposureDateTime"
+                    @click="showExposureDateTimePicker"
+                    readonly
                     class="control-input-datetime"
                     @mouseenter="showTooltip('exposureTime', '기준 의심원 노출일을 설정합니다.', $event)"
                     @mouseleave="hideTooltip"
                     title="모든 환자에게 동일하게 적용될 기준 의심원 노출시간을 설정합니다."
+                    placeholder="YYYY-MM-DD HH:MM"
                   />
+                  <div v-if="activeTooltip === 'exposureTime'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
               </div>
               <div class="control-group">
@@ -339,7 +360,7 @@
               <div class="control-group">
                 <label class="control-label">폰트 크기:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button font-button" @click="cycleIncubationFontSize" @mouseenter="handleIncubationMouseEnterFontSize" @mouseleave="handleIncubationMouseLeaveFontSize">
+                  <button class="control-button font-button" @click="cycleIncubationFontSize" @mouseenter="handleIncubationFontSizeMouseEnter" @mouseleave="handleIncubationFontSizeMouseLeave">
                     {{ incubationFontSizeButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'incubationFontSize'" class="control-tooltip">{{ tooltipText }}</div>
@@ -348,7 +369,7 @@
               <div class="control-group">
                 <label class="control-label">차트 너비:</label>
                 <div class="control-button-wrapper">
-                  <button class="control-button width-button" @click="cycleIncubationChartWidth" @mouseenter="handleIncubationMouseEnterChartWidth" @mouseleave="handleIncubationMouseLeaveChartWidth">
+                  <button class="control-button width-button" @click="cycleIncubationChartWidth" @mouseenter="handleIncubationChartWidthMouseEnter" @mouseleave="handleIncubationChartWidthMouseLeave">
                     {{ incubationChartWidthButtonText }}
                   </button>
                   <div v-if="activeTooltip === 'incubationChartWidth'" class="control-tooltip">{{ tooltipText }}</div>
@@ -407,6 +428,16 @@
         </div>
       </div>
     </div>
+    
+    <!-- DateTimePicker 추가 -->
+    <DateTimePicker 
+      ref="exposureDateTimePickerRef"
+      :visible="exposureDateTimePickerState.visible"
+      :position="exposureDateTimePickerState.position"
+      :initialValue="exposureDateTimePickerState.initialValue"
+      @confirm="onExposureDateTimeConfirm"
+      @cancel="onExposureDateTimeCancel"
+    />
   </div>
 </template>
 
@@ -428,6 +459,8 @@ import { useUndoRedo } from '../hooks/useUndoRedo.js';
 import * as echarts from 'echarts';
 // 성능 최적화: lodash-es 임포트
 import { debounce } from 'lodash-es';
+// DateTimePicker 컴포넌트 import
+import DateTimePicker from './DataInputVirtualScroll/parts/DateTimePicker.vue';
 
 const store = useStore();
 const storeBridge = useStoreBridge(store);
@@ -445,6 +478,17 @@ const isConfirmedCaseColumnVisible = computed(() => store.state.isConfirmedCaseC
 // 확진자 꺾은선 표시 여부 상태 추가
 const showConfirmedCaseLine = ref(true);
 
+// 의심식단 상태 추가
+const suspectedFood = ref('');
+
+// DateTimePicker 관련 상태
+const exposureDateTimePickerRef = ref(null);
+const exposureDateTimePickerState = ref({
+  visible: false,
+  position: { top: 0, left: 0 },
+  initialValue: null
+});
+
 const selectedSymptomInterval = computed({
   get: () => store.getters.getSelectedSymptomInterval,
   set: (value) => storeBridge.updateSymptomInterval(value)
@@ -460,6 +504,7 @@ const selectedIncubationInterval = computed({
 
 // Chart customization states (상태 관리 개선)
 const fontSizes = [12, 15, 18, 21, 24];
+const fontSizeLabels = ['매우 작게', '작게', '보통', '크게', '매우 크게'];
 const chartWidths = [700, 900, 1100]; // 차트 너비 배열
 const barColors = [
   '#5470c6', // 기본 파란색
@@ -479,14 +524,14 @@ const barColors = [
 const epiChartFontSize = ref(15);
 const epiChartWidth = ref(1100);
 const epiBarColor = ref('#1E88E5');
-const epiFontSizeButtonText = ref(epiChartFontSize.value);
+const epiFontSizeButtonText = ref('작게');
 const epiChartWidthButtonText = ref(`${epiChartWidth.value}px`);
 
 // 잠복기 차트 상태
 const incubationChartFontSize = ref(15);
 const incubationChartWidth = ref(1100);
 const incubationBarColor = ref('#91cc75'); // 녹색으로 구분
-const incubationFontSizeButtonText = ref(incubationChartFontSize.value);
+const incubationFontSizeButtonText = ref('작게');
 const incubationChartWidthButtonText = ref(`${incubationChartWidth.value}px`);
 
 // --- 차트 표시 모드 설정 ---
@@ -644,38 +689,61 @@ const getNextValue = (currentValue, valueArray) => {
 
 
 
-// 유행곡선 차트 마우스 이벤트 핸들러 (단순화)
-const handleEpiMouseEnterFontSize = () => {
-  showTooltip('epiFontSize', '폰트 크기를 조절합니다');
+// 유행곡선 차트 마우스 이벤트 핸들러
+const handleEpiFontSizeMouseEnter = () => {
+  const currentIndex = fontSizes.indexOf(epiChartFontSize.value);
+  const nextIndex = (currentIndex + 1) % fontSizes.length;
+  const nextFontSize = fontSizeLabels[nextIndex];
+  epiFontSizeButtonText.value = nextFontSize;
+  showTooltip('epiFontSize', `폰트 크기를 ${nextFontSize}로 변경합니다`);
 };
-const handleEpiMouseLeaveFontSize = () => {
+const handleEpiFontSizeMouseLeave = () => {
+  const currentIndex = fontSizes.indexOf(epiChartFontSize.value);
+  epiFontSizeButtonText.value = fontSizeLabels[currentIndex];
   hideTooltip();
 };
-const handleEpiMouseEnterChartWidth = () => {
-  showTooltip('epiChartWidth', '차트 너비를 조절합니다');
+const handleEpiChartWidthMouseEnter = () => {
+  const currentIndex = chartWidths.indexOf(epiChartWidth.value);
+  const nextIndex = (currentIndex + 1) % chartWidths.length;
+  const nextWidth = chartWidths[nextIndex];
+  epiChartWidthButtonText.value = `${nextWidth}px`;
+  showTooltip('epiChartWidth', `차트 너비를 ${nextWidth}px로 변경합니다`);
 };
-const handleEpiMouseLeaveChartWidth = () => {
+const handleEpiChartWidthMouseLeave = () => {
+  epiChartWidthButtonText.value = `${epiChartWidth.value}px`;
   hideTooltip();
 };
 
-// 잠복기 차트 마우스 이벤트 핸들러 (단순화)
-const handleIncubationMouseEnterFontSize = () => {
-  showTooltip('incubationFontSize', '폰트 크기를 조절합니다');
+// 잠복기 차트 마우스 이벤트 핸들러
+const handleIncubationFontSizeMouseEnter = () => {
+  const currentIndex = fontSizes.indexOf(incubationChartFontSize.value);
+  const nextIndex = (currentIndex + 1) % fontSizes.length;
+  const nextFontSize = fontSizeLabels[nextIndex];
+  incubationFontSizeButtonText.value = nextFontSize;
+  showTooltip('incubationFontSize', `폰트 크기를 ${nextFontSize}로 변경합니다`);
 };
-const handleIncubationMouseLeaveFontSize = () => {
+const handleIncubationFontSizeMouseLeave = () => {
+  const currentIndex = fontSizes.indexOf(incubationChartFontSize.value);
+  incubationFontSizeButtonText.value = fontSizeLabels[currentIndex];
   hideTooltip();
 };
-const handleIncubationMouseEnterChartWidth = () => {
-  showTooltip('incubationChartWidth', '차트 너비를 조절합니다');
+const handleIncubationChartWidthMouseEnter = () => {
+  const currentIndex = chartWidths.indexOf(incubationChartWidth.value);
+  const nextIndex = (currentIndex + 1) % chartWidths.length;
+  const nextWidth = chartWidths[nextIndex];
+  incubationChartWidthButtonText.value = `${nextWidth}px`;
+  showTooltip('incubationChartWidth', `차트 너비를 ${nextWidth}px로 변경합니다`);
 };
-const handleIncubationMouseLeaveChartWidth = () => {
+const handleIncubationChartWidthMouseLeave = () => {
+  incubationChartWidthButtonText.value = `${incubationChartWidth.value}px`;
   hideTooltip();
 };
 
 // 유행곡선 차트 사이클 버튼 핸들러
 const cycleEpiFontSize = () => {
   epiChartFontSize.value = getNextValue(epiChartFontSize.value, fontSizes);
-  epiFontSizeButtonText.value = epiChartFontSize.value;
+  const currentIndex = fontSizes.indexOf(epiChartFontSize.value);
+  epiFontSizeButtonText.value = fontSizeLabels[currentIndex];
   nextTick(safeUpdateCharts);
 };
 const cycleEpiChartWidth = () => {
@@ -693,7 +761,8 @@ const cycleIncubationFontSize = () => {
     incubationChartFontSize.value,
     fontSizes
   );
-  incubationFontSizeButtonText.value = incubationChartFontSize.value;
+  const currentIndex = fontSizes.indexOf(incubationChartFontSize.value);
+  incubationFontSizeButtonText.value = fontSizeLabels[currentIndex];
   nextTick(safeUpdateCharts);
 };
 const cycleIncubationChartWidth = () => {
@@ -1186,6 +1255,27 @@ const formattedFirstOnsetTime = computed(() =>
 const formattedLastOnsetTime = computed(() =>
   formatShortDateTime(lastOnsetTime.value)
 );
+
+// 의심원 노출시간 포맷팅 (YYYY-MM-DD HH:MM 형식)
+const formattedExposureDateTime = computed(() => {
+  if (!exposureDateTime.value) return '';
+  
+  try {
+    const date = new Date(exposureDateTime.value);
+    if (isNaN(date.getTime())) return '';
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  } catch (error) {
+    console.error('노출시간 포맷팅 오류:', error);
+    return '';
+  }
+});
 const symptomOnsetTableData = computed(() => {
   const intervalHours = selectedSymptomInterval.value;
   if (
@@ -1375,12 +1465,25 @@ const incubationPeriodTableData = computed(() => {
   }
   
   // 모든 구간을 데이터로 변환 (0건 구간도 포함)
-  const data = bins.map((count, index) => ({
-    intervalLabel: `${formatDurationHHMM(
-      index * intervalMillis
-    )} ~ ${formatDurationHHMM((index + 1) * intervalMillis)}`,
-    count
-  }));
+  const data = bins.map((count, index) => {
+    const startTime = index * intervalMillis;
+    const endTime = (index + 1) * intervalMillis;
+    
+    // 시:분 단위 모드에서는 끝점을 1분 빼서 XX:59로 표시
+    let intervalLabel;
+    if (incubationChartDisplayMode.value === 'hhmm') {
+      const displayEndTime = endTime - 60000; // 1분 빼기
+      intervalLabel = `${formatDurationHHMM(startTime)} ~ ${formatDurationHHMM(displayEndTime)}`;
+    } else {
+      // 시간 단위 모드에서는 기존 방식 유지
+      intervalLabel = `${formatDurationHHMM(startTime)} ~ ${formatDurationHHMM(endTime)}`;
+    }
+    
+    return {
+      intervalLabel,
+      count
+    };
+  });
 
   return data;
 });
@@ -1652,6 +1755,20 @@ const generateEpiCurveChartOptions = () => {
         textStyle: { fontSize: (epiChartFontSize.value || 15) + 4, fontWeight: 'bold' },
         top: 15
       },
+      // 의심식단 풋노트 추가
+      ...(suspectedFood.value.trim() && {
+        graphic: [{
+          type: 'text',
+          left: '5%', // 적당한 위치로 조정
+          bottom: '5%', // 차트 영역 하단
+          style: {
+            text: `의심식단: ${suspectedFood.value}`,
+            fontSize: epiChartFontSize.value || 15,
+            fill: '#333',
+            fontWeight: 'normal'
+          }
+        }]
+      }),
       tooltip: { 
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
@@ -1680,7 +1797,7 @@ const generateEpiCurveChartOptions = () => {
       grid: {
         left: getDynamicLeftMargin(), // 동적 여백 적용
         right: chartDisplayMode.value === 'datetime' ? 60 : '4%',
-        bottom: '7%',
+        bottom: suspectedFood.value.trim() ? '15%' : '7%', // 의심식단이 있으면 하단 여백 증가
         top: 80, // 제목과 그래프 사이 간격 확보
         containLabel: true
       },
@@ -1885,6 +2002,20 @@ const generateIncubationChartOptions = () => {
         },
         top: 15
       },
+      // 의심식단 풋노트 추가
+      ...(suspectedFood.value.trim() && {
+        graphic: [{
+          type: 'text',
+          left: '5%', // 적당한 위치로 조정
+          bottom: '8%', // 차트 영역 하단 (간격 조정)
+          style: {
+            text: `의심식단: ${suspectedFood.value}`,
+            fontSize: incubationChartFontSize.value || 15,
+            fill: '#333',
+            fontWeight: 'normal'
+          }
+        }]
+      }),
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
@@ -1897,7 +2028,7 @@ const generateIncubationChartOptions = () => {
       grid: {
         left: incubationChartDisplayMode.value === 'hhmm' ? 60 : '3%',
         right: incubationChartDisplayMode.value === 'hhmm' ? 60 : '4%',
-        bottom: '5%',
+        bottom: suspectedFood.value.trim() ? '15%' : '5%', // 의심식단이 있으면 하단 여백 증가
         top: 80,
         containLabel: true
       },
@@ -2088,6 +2219,9 @@ const updateCharts = () => {
 onMounted(() => {
   console.log('유행곡선 컴포넌트 마운트됨');
   nextTick(updateCharts);
+  
+  // 컴포넌트 내부에서만 이벤트 처리하도록 수정
+  // 전역 이벤트 리스너는 제거하고 컴포넌트 레벨에서 처리
 });
 
 
@@ -2302,10 +2436,11 @@ watch(
     incubationChartFontSize,
     chartDisplayMode,
     incubationChartDisplayMode,
-    showConfirmedCaseLine
+    showConfirmedCaseLine,
+    suspectedFood
   ],
-  ([newSymptomInterval, newExposureDateTime, newIncubationInterval, newEpiBarColor, newEpiFontSize, newIncubationBarColor, newIncubationFontSize, newDisplayMode, newIncubationDisplayMode, newShowConfirmedCaseLine],
-    [oldSymptomInterval, oldExposureDateTime, oldIncubationInterval, oldEpiBarColor, oldEpiFontSize, oldIncubationBarColor, oldIncubationFontSize, oldDisplayMode, oldIncubationDisplayMode, oldShowConfirmedCaseLine]) => {
+  ([newSymptomInterval, newExposureDateTime, newIncubationInterval, newEpiBarColor, newEpiFontSize, newIncubationBarColor, newIncubationFontSize, newDisplayMode, newIncubationDisplayMode, newShowConfirmedCaseLine, newSuspectedFood],
+    [oldSymptomInterval, oldExposureDateTime, oldIncubationInterval, oldEpiBarColor, oldEpiFontSize, oldIncubationBarColor, oldIncubationFontSize, oldDisplayMode, oldIncubationDisplayMode, oldShowConfirmedCaseLine, oldSuspectedFood]) => {
     
     // 실제 변경사항 확인 (불필요한 업데이트 방지)
     const hasSymptomChange = newSymptomInterval !== oldSymptomInterval;
@@ -2316,13 +2451,14 @@ watch(
     const hasDisplayModeChange = newDisplayMode !== oldDisplayMode;
     const hasIncubationDisplayModeChange = newIncubationDisplayMode !== oldIncubationDisplayMode;
     const hasConfirmedCaseLineChange = newShowConfirmedCaseLine !== oldShowConfirmedCaseLine;
+    const hasSuspectedFoodChange = newSuspectedFood !== oldSuspectedFood;
     
-    if (!hasSymptomChange && !hasExposureChange && !hasIncubationChange && !hasEpiStyleChange && !hasIncubationStyleChange && !hasDisplayModeChange && !hasIncubationDisplayModeChange && !hasConfirmedCaseLineChange) {
+    if (!hasSymptomChange && !hasExposureChange && !hasIncubationChange && !hasEpiStyleChange && !hasIncubationStyleChange && !hasDisplayModeChange && !hasIncubationDisplayModeChange && !hasConfirmedCaseLineChange && !hasSuspectedFoodChange) {
       return; // 변경사항 없으면 조기 종료
     }
     
     console.log('Chart update triggered with changes:', {
-      hasSymptomChange, hasExposureChange, hasIncubationChange, hasEpiStyleChange, hasIncubationStyleChange, hasDisplayModeChange, hasIncubationDisplayModeChange, hasConfirmedCaseLineChange
+      hasSymptomChange, hasExposureChange, hasIncubationChange, hasEpiStyleChange, hasIncubationStyleChange, hasDisplayModeChange, hasIncubationDisplayModeChange, hasConfirmedCaseLineChange, hasSuspectedFoodChange
     });
     
     nextTick(() => {
@@ -2395,6 +2531,80 @@ watch(
     }
   }
 );
+
+// DateTimePicker 관련 메서드들
+const showExposureDateTimePicker = () => {
+  // 현재 설정된 값이 있으면 파싱, 없으면 현재 시간
+  let initialValue;
+  if (exposureDateTime.value) {
+    try {
+      const date = new Date(exposureDateTime.value);
+      if (!isNaN(date.getTime())) {
+        initialValue = {
+          year: date.getFullYear(),
+          month: date.getMonth() + 1,
+          day: date.getDate(),
+          hour: String(date.getHours()).padStart(2, '0'),
+          minute: String(date.getMinutes()).padStart(2, '0')
+        };
+      }
+    } catch (error) {
+      console.error('기존 노출시간 파싱 오류:', error);
+    }
+  }
+  
+  if (!initialValue) {
+    // 현재 시간으로 초기화
+    const now = new Date();
+    initialValue = {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      day: now.getDate(),
+      hour: String(now.getHours()).padStart(2, '0'),
+      minute: String(now.getMinutes()).padStart(2, '0')
+    };
+  }
+  
+  // input 위치 계산
+  const input = document.querySelector('#exposure-time');
+  if (input) {
+    const rect = input.getBoundingClientRect();
+    exposureDateTimePickerState.value.position = {
+      top: rect.bottom + window.scrollY + 5,
+      left: rect.left + window.scrollX
+    };
+  }
+  
+  exposureDateTimePickerState.value.initialValue = initialValue;
+  exposureDateTimePickerState.value.visible = true;
+};
+
+const onExposureDateTimeConfirm = (dateTimeObject) => {
+  try {
+    const { year, month, day, hour, minute } = dateTimeObject;
+    const formattedDateTime = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${hour}:${minute}`;
+    exposureDateTime.value = formattedDateTime;
+    console.log('노출시간 설정 완료:', formattedDateTime);
+  } catch (error) {
+    console.error('노출시간 설정 오류:', error);
+  }
+  
+  exposureDateTimePickerState.value.visible = false;
+};
+
+const onExposureDateTimeCancel = () => {
+  exposureDateTimePickerState.value.visible = false;
+};
+
+// 의심식단 변경 핸들러
+const onSuspectedFoodChange = () => {
+  // 차트 업데이트 트리거
+  nextTick(() => {
+    if (hasValidPatientData.value) {
+      safeUpdateCharts();
+    }
+  });
+};
 
 // 잠복기 차트 내보내기 함수 추가
 const exportIncubationChart = async () => {
@@ -2616,15 +2826,34 @@ const exportIncubationChart = async () => {
   transform: scale(1.05);
 }
 
+
+
 .control-input-datetime {
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  min-width: 150px;
-  height: 28px;
-  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 160px;
+  background-color: #fff;
+  color: #333;
   font-family: "Noto Sans KR", sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  height: 32px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.control-input-datetime:hover {
+  border-color: #1a73e8;
+  box-shadow: 0 2px 6px rgba(26, 115, 232, 0.15);
+}
+
+.control-input-datetime:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
 }
 
 /* --- 요약 정보 아이템 스타일 (텍스트 기반) --- */
@@ -3060,5 +3289,56 @@ const exportIncubationChart = async () => {
   font-weight: 300;
   font-family: "Noto Sans KR", sans-serif;
   color: #202124;
+}
+
+/* --- 의심식단 입력 필드 스타일 --- */
+.suspected-food-input-container {
+  padding: 20px 20px 10px 20px;
+  background-color: #fff;
+  border-radius: 12px 12px 0 0;
+}
+
+.suspected-food-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suspected-food-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.1em;
+  color: #333;
+  font-weight: 500;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.suspected-food-input {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: "Noto Sans KR", sans-serif;
+  background-color: #fff;
+  color: #333;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.suspected-food-input:hover {
+  border-color: #1a73e8;
+  box-shadow: 0 2px 6px rgba(26, 115, 232, 0.15);
+}
+
+.suspected-food-input:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.suspected-food-input::placeholder {
+  color: #999;
+  font-style: italic;
 }
 </style>

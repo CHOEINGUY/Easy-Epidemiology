@@ -511,12 +511,26 @@ watch(() => props.initialValue, (newValue) => {
   }
 }, { immediate: true });
 
-// 피커가 보여질 때 포커스 설정
+// 피커가 보여질 때 포커스 설정 및 스크롤 방지
 watch(() => props.visible, (visible) => {
   if (visible) {
     nextTick(() => {
       // pickerRef 포커스를 주지 않아 셀 입력을 가능하게 함
     });
+    
+    // 스크롤 방지
+    preventScroll();
+    
+    // 외부 클릭 감지 이벤트 리스너 추가
+    setTimeout(() => {
+      document.addEventListener('click', handleOutsideClick);
+    }, 0);
+  } else {
+    // 스크롤 방지 해제
+    restoreScroll();
+    
+    // 외부 클릭 감지 이벤트 리스너 제거
+    document.removeEventListener('click', handleOutsideClick);
   }
 });
 
@@ -675,6 +689,74 @@ const handleDirectInputBlur = () => {
 const handleDirectInputFocus = () => {
   // 포커스 인 시 직접 입력 필드 업데이트
   directInputValue.value = formatCurrentSelection();
+};
+
+// 스크롤 방지 관련 변수
+let scrollPrevented = false;
+let originalOverflow = '';
+
+// 스크롤 방지 함수
+const preventScroll = () => {
+  if (scrollPrevented) return;
+  
+  scrollPrevented = true;
+  originalOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  
+  // 휠 이벤트 방지
+  const preventWheel = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  document.addEventListener('wheel', preventWheel, { passive: false });
+  document.addEventListener('touchmove', preventWheel, { passive: false });
+  
+  // 이벤트 리스너 참조 저장
+  document._preventWheel = preventWheel;
+};
+
+// 스크롤 방지 해제 함수
+const restoreScroll = () => {
+  if (!scrollPrevented) return;
+  
+  scrollPrevented = false;
+  document.body.style.overflow = originalOverflow;
+  
+  // 휠 이벤트 리스너 제거
+  if (document._preventWheel) {
+    document.removeEventListener('wheel', document._preventWheel, { passive: false });
+    document.removeEventListener('touchmove', document._preventWheel, { passive: false });
+    delete document._preventWheel;
+  }
+};
+
+// 외부 클릭 감지 함수
+const handleOutsideClick = (event) => {
+  if (!props.visible) return;
+  
+  // 데이트피커 요소인지 확인
+  const pickerElement = pickerRef.value;
+  if (pickerElement) {
+    // 클릭된 요소가 데이트피커 내부인지 확인
+    let isInsidePicker = false;
+    let currentElement = event.target;
+    
+    // DOM 트리를 올라가면서 데이트피커 요소를 찾음
+    while (currentElement && currentElement !== document.body) {
+      if (currentElement === pickerElement) {
+        isInsidePicker = true;
+        break;
+      }
+      currentElement = currentElement.parentElement;
+    }
+    
+    // 데이트피커 외부 클릭이면 닫기
+    if (!isInsidePicker) {
+      console.log('외부 클릭으로 데이트피커 닫기');
+      cancel();
+    }
+  }
 };
 
 // 부모 컴포넌트에서 confirm / cancel 메서드에 접근할 수 있도록 노출

@@ -1737,6 +1737,23 @@ function onContextMenuSelect(action) {
       
       console.log('[Filter] 기본정보 값 필터 적용:', value);
     }
+    // 날짜/시간 필터 (동적 액션 처리)
+    else if (action.startsWith('filter-datetime-')) {
+      const dateValue = action.replace('filter-datetime-', '');
+      console.log('[Filter] 날짜/시간 필터:', {
+        action,
+        dateValue,
+        colIndex: target.colIndex,
+        currentFilterState: storeBridge.filterState
+      });
+      
+      storeBridge.toggleDateTimeFilter(target.colIndex, dateValue);
+      
+      // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
+      filterState.value = { ...storeBridge.filterState };
+      
+      console.log('[Filter] 날짜/시간 필터 적용:', dateValue);
+    }
     break;
   }
   case 'clear-all-filters': {
