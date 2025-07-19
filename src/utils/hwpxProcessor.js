@@ -1,4 +1,8 @@
 import JSZip from 'jszip';
+import { createComponentLogger } from './logger.js';
+
+// Logger 초기화
+const logger = createComponentLogger('HwpxProcessor');
 
 /**
  * XML 특수문자 이스케이프 함수
@@ -25,7 +29,7 @@ function escapeXml(text) {
 export function replacePlaceholders(xmlText, replacements) {
   let modifiedText = xmlText;
   
-  console.log('🔍 원본 XML 길이:', xmlText.length);
+  logger.debug('원본 XML 길이:', xmlText.length);
   
   // VSCode에서 수동으로 하는 것과 정확히 동일한 방식
   Object.entries(replacements).forEach(([placeholder, value]) => {
@@ -34,25 +38,203 @@ export function replacePlaceholders(xmlText, replacements) {
     
     // 플레이스홀더가 있는지 확인
     if (modifiedText.includes(searchText)) {
-      console.log(`🔎 플레이스홀더 발견: ${searchText}`);
-      console.log(`📝 교체할 값: ${value}`);
+      logger.debug(`플레이스홀더 발견: ${searchText}`);
+      logger.debug(`교체할 값: ${value}`);
       
       // XML 특수문자 이스케이프 적용
       const escapedValue = escapeXml(value);
-      console.log(`🔒 이스케이프된 값: ${escapedValue}`);
+      logger.debug(`이스케이프된 값: ${escapedValue}`);
       
       // 단순 문자열 교체 (VSCode Find & Replace와 동일)
       modifiedText = modifiedText.split(searchText).join(escapedValue);
       
-      console.log(`✅ 교체 완료: ${searchText} → ${escapedValue}`);
+      logger.debug(`교체 완료: ${searchText} → ${escapedValue}`);
     } else {
-      console.log(`❌ 플레이스홀더 없음: ${searchText}`);
+      logger.debug(`플레이스홀더 없음: ${searchText}`);
     }
   });
   
-  console.log('🎯 수정된 XML 길이:', modifiedText.length);
+  logger.debug('수정된 XML 길이:', modifiedText.length);
   return modifiedText;
 }
+
+/**
+ * HWPX XML에서 차트 이미지 크기를 사용자 설정에 맞게 조정 (1100, 700 크기 지원)
+ * @param {string} xmlText - XML 텍스트
+ * @param {Object} chartImages - 차트 이미지 정보
+ * @returns {string} 크기가 조정된 XML 텍스트
+ */
+function adjustChartImageSizes(xmlText, chartImages) {
+  let modifiedText = xmlText;
+  
+  // 유행곡선 차트 크기 조정
+  if (chartImages.epidemicChart && chartImages.epidemicChart.width) {
+    const userWidth = chartImages.epidemicChart.width;
+    
+    // 3배 픽셀로 생성된 이미지에 대한 정확한 매핑
+    let orgSzWidth, curSzHeight, szHeight;
+    
+    if (userWidth === 3300) {  // 1100 * 3
+      orgSzWidth = 247500;
+      curSzHeight = 26285;
+      szHeight = 26285;
+    } else if (userWidth === 2100) {  // 700 * 3
+      orgSzWidth = 157500;
+      curSzHeight = 41310;
+      szHeight = 41310;
+    } else if (userWidth === 2700) {  // 900 * 3
+      orgSzWidth = 202500;
+      curSzHeight = 32128;
+      szHeight = 32128;
+    } else {
+      // 기본값 (1100 기준)
+      orgSzWidth = 247500;
+      curSzHeight = 26285;
+      szHeight = 26285;
+    }
+    
+    logger.debug(`유행곡선 차트 크기 조정: ${userWidth}px → orgSzWidth=${orgSzWidth}, curSzHeight=${curSzHeight}`);
+    
+    // orgSz 태그 수정 (원본 크기)
+    const orgSzPattern = /<hp:orgSz width="(\d+)" height="(\d+)"/g;
+    modifiedText = modifiedText.replace(orgSzPattern, (match) => {
+      // 첫 번째 이미지(유행곡선)만 수정
+      if (match.includes('width="247500"') && match.includes('height="135000"')) {
+        return `<hp:orgSz width="${orgSzWidth}" height="135000"`;
+      }
+      return match;
+    });
+    
+    // curSz 태그 수정 (현재 크기)
+    const curSzPattern = /<hp:curSz width="(\d+)" height="(\d+)"/g;
+    modifiedText = modifiedText.replace(curSzPattern, (match) => {
+      // 첫 번째 이미지(유행곡선)만 수정
+      if (match.includes('width="48190"') && match.includes('height="26285"')) {
+        return `<hp:curSz width="48190" height="${curSzHeight}"`;
+      }
+      return match;
+    });
+    
+    // sz 태그 수정 (표시 크기)
+    const szPattern = /<hp:sz width="(\d+)" widthRelTo="ABSOLUTE" height="(\d+)" heightRelTo="ABSOLUTE"/g;
+    modifiedText = modifiedText.replace(szPattern, (match) => {
+      // 첫 번째 이미지(유행곡선)만 수정
+      if (match.includes('width="48190"') && match.includes('height="26285"')) {
+        return `<hp:sz width="48190" widthRelTo="ABSOLUTE" height="${szHeight}" heightRelTo="ABSOLUTE"`;
+      }
+      return match;
+    });
+    
+    // imgRect 태그 수정 (이미지 영역)
+    const imgRectPattern = /<hc:pt1 x="(\d+)" y="(\d+)"/g;
+    modifiedText = modifiedText.replace(imgRectPattern, (match) => {
+      // 첫 번째 이미지(유행곡선)만 수정
+      if (match.includes('x="247500"') && match.includes('y="0"')) {
+        return `<hc:pt1 x="${orgSzWidth}" y="0"`;
+      }
+      return match;
+    });
+    
+    const imgRectPattern2 = /<hc:pt2 x="(\d+)" y="(\d+)"/g;
+    modifiedText = modifiedText.replace(imgRectPattern2, (match) => {
+      // 첫 번째 이미지(유행곡선)만 수정
+      if (match.includes('x="247500"') && match.includes('y="135000"')) {
+        return `<hc:pt2 x="${orgSzWidth}" y="135000"`;
+      }
+      return match;
+    });
+    
+    // imgClip 태그 수정 (이미지 클리핑)
+    const imgClipPattern = /<hp:imgClip left="0" right="(\d+)" top="0" bottom="(\d+)"/g;
+    modifiedText = modifiedText.replace(imgClipPattern, (match) => {
+      // 첫 번째 이미지(유행곡선)만 수정
+      if (match.includes('right="247500"') && match.includes('bottom="135000"')) {
+        return `<hp:imgClip left="0" right="${orgSzWidth}" top="0" bottom="135000"`;
+      }
+      return match;
+    });
+    
+    // imgDim 태그 수정 (이미지 차원)
+    const imgDimPattern = /<hp:imgDim dimwidth="(\d+)" dimheight="(\d+)"/g;
+    modifiedText = modifiedText.replace(imgDimPattern, (match) => {
+      // 첫 번째 이미지(유행곡선)만 수정
+      if (match.includes('dimwidth="247500"') && match.includes('dimheight="135000"')) {
+        return `<hp:imgDim dimwidth="${orgSzWidth}" dimheight="135000"`;
+      }
+      return match;
+    });
+  }
+  
+  // 잠복기 차트 크기 조정
+  if (chartImages.incubationChart && chartImages.incubationChart.width) {
+    const userWidth = chartImages.incubationChart.width;
+    
+    // 3배 픽셀로 생성된 이미지에 대한 정확한 매핑
+    let orgSzWidth, curSzHeight, szHeight;
+    
+    if (userWidth === 3300) {  // 1100 * 3
+      orgSzWidth = 247500;
+      curSzHeight = 26285;
+      szHeight = 26285;
+    } else if (userWidth === 2100) {  // 700 * 3
+      orgSzWidth = 157500;
+      curSzHeight = 41310;
+      szHeight = 41310;
+    } else if (userWidth === 2700) {  // 900 * 3
+      orgSzWidth = 202500;
+      curSzHeight = 32128;
+      szHeight = 32128;
+    } else {
+      // 기본값 (1100 기준)
+      orgSzWidth = 247500;
+      curSzHeight = 26285;
+      szHeight = 26285;
+    }
+    
+    logger.debug(`잠복기 차트 크기 조정: ${userWidth}px → orgSzWidth=${orgSzWidth}, curSzHeight=${curSzHeight}`);
+    
+    // 두 번째 이미지(잠복기)에 대한 수정
+    // orgSz 태그 수정 (원본 크기)
+    const orgSzPattern = /<hp:orgSz width="(\d+)" height="(\d+)"/g;
+    let count = 0;
+    modifiedText = modifiedText.replace(orgSzPattern, (match) => {
+      count++;
+      // 두 번째 이미지(잠복기)만 수정
+      if (count === 2) {
+        return `<hp:orgSz width="${orgSzWidth}" height="135000"`;
+      }
+      return match;
+    });
+    
+    // curSz 태그 수정 (현재 크기)
+    const curSzPattern = /<hp:curSz width="(\d+)" height="(\d+)"/g;
+    count = 0;
+    modifiedText = modifiedText.replace(curSzPattern, (match) => {
+      count++;
+      // 두 번째 이미지(잠복기)만 수정
+      if (count === 2) {
+        return `<hp:curSz width="48190" height="${curSzHeight}"`;
+      }
+      return match;
+    });
+    
+    // sz 태그 수정 (표시 크기)
+    const szPattern = /<hp:sz width="(\d+)" widthRelTo="ABSOLUTE" height="(\d+)" heightRelTo="ABSOLUTE"/g;
+    count = 0;
+    modifiedText = modifiedText.replace(szPattern, (match) => {
+      count++;
+      // 두 번째 이미지(잠복기)만 수정
+      if (count === 2) {
+        return `<hp:sz width="48190" widthRelTo="ABSOLUTE" height="${szHeight}" heightRelTo="ABSOLUTE"`;
+      }
+      return match;
+    });
+  }
+  
+  return modifiedText;
+}
+
+
 
 /**
  * Data URL을 Blob으로 변환하는 함수
@@ -69,7 +251,7 @@ async function convertDataUrlToBlob(dataUrl) {
     }
     return await response.blob();
   } catch (error) {
-    console.error('Data URL을 Blob으로 변환 실패:', error);
+    logger.error('Data URL을 Blob으로 변환 실패:', error);
     return null;
   }
 }
@@ -83,12 +265,12 @@ async function convertDataUrlToBlob(dataUrl) {
  */
 export async function createHwpxFromTemplate(modifiedXmlText, chartImages = {}, studyDesign = 'case-control') {
   try {
-    console.log('🔄 원본 HWPX 파일 로드 시작...');
+    logger.info('원본 HWPX 파일 로드 시작...');
     
     // 조사 디자인에 따라 템플릿 파일 선택
     const templateFile = studyDesign === 'case-control' ? '/report_template_caseControl.zip' : 
       studyDesign === 'cohort' ? '/report_template_cohort.zip' : '/report_template.zip';
-    console.log(`📄 사용할 템플릿: ${templateFile}`);
+    logger.debug(`사용할 템플릿: ${templateFile}`);
     
     // 1. 원본 HWPX 파일 로드
     const response = await fetch(templateFile);
@@ -97,26 +279,30 @@ export async function createHwpxFromTemplate(modifiedXmlText, chartImages = {}, 
     }
     
     const hwpxArrayBuffer = await response.arrayBuffer();
-    console.log('✅ 원본 HWPX 파일 로드 완료:', hwpxArrayBuffer.byteLength, 'bytes');
+    logger.info('원본 HWPX 파일 로드 완료:', hwpxArrayBuffer.byteLength, 'bytes');
     
     // 2. HWPX 파일을 ZIP으로 파싱
     const zip = new JSZip();
     try {
       await zip.loadAsync(hwpxArrayBuffer);
     } catch (error) {
-      console.log('⚠️ 일반 ZIP 파싱 실패, HWPX 형식으로 재시도...');
+      logger.warn('일반 ZIP 파싱 실패, HWPX 형식으로 재시도...');
       await zip.loadAsync(hwpxArrayBuffer, {
         checkCRC32: false,
         optimizedBinaryString: false
       });
     }
-    console.log('✅ HWPX 파일 파싱 완료');
+    logger.info('HWPX 파일 파싱 완료');
     
-    // 3. Contents/section0.xml 파일 교체
-    zip.file('Contents/section0.xml', modifiedXmlText);
-    console.log('✅ Contents/section0.xml 교체 완료');
+    // 3. 차트 이미지 크기 조정 (사용자 설정에 맞게)
+    const adjustedXmlText = adjustChartImageSizes(modifiedXmlText, chartImages);
+    logger.info('차트 이미지 크기 조정 완료');
     
-    // 4. 차트 이미지 파일 교체 (있는 경우)
+    // 4. Contents/section0.xml 파일 교체
+    zip.file('Contents/section0.xml', adjustedXmlText);
+    logger.info('Contents/section0.xml 교체 완료');
+    
+    // 5. 차트 이미지 파일 교체 (있는 경우)
     if (chartImages.incubationChart) {
       const incubationBlob = await convertDataUrlToBlob(chartImages.incubationChart.dataUrl);
       if (incubationBlob) {
@@ -133,7 +319,7 @@ export async function createHwpxFromTemplate(modifiedXmlText, chartImages = {}, 
       }
     }
     
-    // 5. 새로운 HWPX 파일 생성 (원본과 동일한 압축 방식)
+    // 6. 새로운 HWPX 파일 생성 (원본과 동일한 압축 방식)
     const hwpxBlob = await zip.generateAsync({
       type: 'blob',
       compression: 'DEFLATE',
@@ -142,11 +328,11 @@ export async function createHwpxFromTemplate(modifiedXmlText, chartImages = {}, 
       }
     });
     
-    console.log('✅ 새로운 HWPX 파일 생성 완료:', hwpxBlob.size, 'bytes');
+    logger.info('새로운 HWPX 파일 생성 완료:', hwpxBlob.size, 'bytes');
     return hwpxBlob;
     
   } catch (error) {
-    console.error('❌ HWPX 파일 생성 오류:', error);
+    logger.error('HWPX 파일 생성 오류:', error);
     throw error;
   }
 }

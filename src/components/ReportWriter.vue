@@ -93,7 +93,7 @@
           <div class="download-buttons">
             <button class="download-btn primary" @click="downloadHwpxReport">
               <span class="material-icons">description</span>
-              HWPX 다운로드
+              보고서 다운로드
             </button>
           </div>
         </div>
@@ -131,6 +131,10 @@
 import { ref, computed } from 'vue';
 import reportTemplate from '../templates/reportTemplate.js';
 import { useStore } from 'vuex';
+import { createComponentLogger } from '../utils/logger.js';
+
+// Logger 초기화
+const logger = createComponentLogger('ReportWriter');
 
 function formatKoreanDate(dateObj) {
   if (!dateObj || isNaN(dateObj)) return null;
@@ -481,16 +485,16 @@ function generateFoodIntakeText() {
 // 차트 이미지 경로 결정 (store에 저장된 데이터)
 const getChartImagePath = () => {
   const settings = store.getters.getEpidemicCurveSettings;
-  console.log('ReportWriter - 차트 설정:', settings);
-  console.log('ReportWriter - reportChartDataUrl:', settings?.reportChartDataUrl);
+  logger.debug('차트 설정:', settings);
+  logger.debug('reportChartDataUrl:', settings?.reportChartDataUrl);
   return settings && settings.reportChartDataUrl ? settings.reportChartDataUrl : null;
 };
 
 // 잠복기 차트 이미지 경로 결정 (store에 저장된 데이터)
 const getIncubationChartImagePath = () => {
   const settings = store.getters.getEpidemicCurveSettings;
-  console.log('ReportWriter - 잠복기 차트 설정:', settings);
-  console.log('ReportWriter - reportIncubationChartDataUrl:', settings?.reportIncubationChartDataUrl);
+  logger.debug('잠복기 차트 설정:', settings);
+  logger.debug('reportIncubationChartDataUrl:', settings?.reportIncubationChartDataUrl);
   return settings && settings.reportIncubationChartDataUrl ? settings.reportIncubationChartDataUrl : null;
 };
 
@@ -564,20 +568,20 @@ const renderedHtml = computed(() => {
   
   // 차트 이미지 HTML
   const chartImagePath = getChartImagePath();
-  console.log('ReportWriter - chartImagePath:', chartImagePath ? '있음' : '없음');
+  logger.debug('chartImagePath:', chartImagePath ? '있음' : '없음');
   const chartImageHtml = chartImagePath 
     ? `<img src="${chartImagePath}" alt="유행곡선 차트" style="max-width: 100%; height: auto; margin: 20px 0; border: 1px solid #ddd;" />`
     : '<div class="placeholder-chart"><strong>유행곡선 차트</strong><br/><small>EpidemicCurve 탭에서 "보고서 저장" 버튼을 클릭하여<br/>차트 이미지를 저장한 후 확인하세요.</small></div>';
-  console.log('ReportWriter - chartImageHtml 길이:', chartImageHtml.length);
-  console.log('ReportWriter - chartImageHtml 시작 부분:', chartImageHtml.substring(0, 100));
+  logger.debug('chartImageHtml 길이:', chartImageHtml.length);
+  logger.debug('chartImageHtml 시작 부분:', chartImageHtml.substring(0, 100));
   
   // 잠복기 차트 이미지 HTML
   const incubationChartImagePath = getIncubationChartImagePath();
-  console.log('ReportWriter - incubationChartImagePath:', incubationChartImagePath ? '있음' : '없음');
+  logger.debug('incubationChartImagePath:', incubationChartImagePath ? '있음' : '없음');
   const incubationChartImageHtml = incubationChartImagePath 
     ? `<img src="${incubationChartImagePath}" alt="잠복기 차트" style="max-width: 100%; height: auto; margin: 20px 0; border: 1px solid #ddd;" />`
     : '<div class="placeholder-chart"><strong>잠복기 차트</strong><br/><small>EpidemicCurve 탭에서 잠복기 차트 "보고서 저장" 버튼을 클릭하여<br/>차트 이미지를 저장한 후 확인하세요.</small></div>';
-  console.log('ReportWriter - incubationChartImageHtml 길이:', incubationChartImageHtml.length);
+  logger.debug('incubationChartImageHtml 길이:', incubationChartImageHtml.length);
   
   function generateFoodIntakeTable() {
     const results = getDesignResults();
@@ -847,7 +851,7 @@ function generateCohortTableData() {
 // HWPX 파일 다운로드 함수 (실제 사용)
 async function downloadHwpxReport() {
   try {
-    console.log('HWPX 파일 생성 시작...');
+    logger.info('HWPX 파일 생성 시작...');
     
     // 1. 템플릿 Section0 파일을 텍스트로 로드
     const section0Text = await loadTemplateSection0(studyDesign.value);
@@ -906,7 +910,7 @@ async function downloadHwpxReport() {
     }
     
     // 디버깅: 교체할 데이터 확인
-    console.log('🔍 교체할 데이터:', replacements);
+    logger.debug('교체할 데이터:', replacements);
     
     // 발병률결과 키 추가
     replacements['% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %발병률결과% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %'] = `조사에 포함된 대상자 ${totalParticipants.value || '미상'}명 중 사례 수는 ${patientCount.value || '미상'}명으로 사례 발병률은 ${caseAttackRate.value ? `${caseAttackRate.value}%` : '미상'}이다. 이 중, 인체 검사 결과 검출된 확진환자 수는 ${confirmedCount.value || '미상'}명으로 확진환자 발병률은 ${confirmedAttackRate.value ? `${confirmedAttackRate.value}%` : '미상'}이다.`;
@@ -914,7 +918,7 @@ async function downloadHwpxReport() {
     // 3. 텍스트에서 플레이스홀더 교체
     const modifiedXmlText = replacePlaceholders(section0Text, replacements);
     
-    // 4. 차트 이미지 정보 준비
+    // 4. 차트 이미지 정보 준비 (사용자 설정 크기 포함)
     const settings = store.getters.getEpidemicCurveSettings;
     const chartImages = {};
     
@@ -923,7 +927,7 @@ async function downloadHwpxReport() {
         dataUrl: settings.reportIncubationChartDataUrl,
         width: settings.reportIncubationChartWidth || 1100
       };
-      console.log('📊 잠복기 차트 이미지 정보:', chartImages.incubationChart);
+      logger.debug('잠복기 차트 이미지 정보:', chartImages.incubationChart);
     }
     
     if (settings.reportChartDataUrl) {
@@ -931,7 +935,7 @@ async function downloadHwpxReport() {
         dataUrl: settings.reportChartDataUrl,
         width: settings.reportChartWidth || 1100
       };
-      console.log('📊 유행곡선 차트 이미지 정보:', chartImages.epidemicChart);
+      logger.debug('유행곡선 차트 이미지 정보:', chartImages.epidemicChart);
     }
     
     // 5. HWPX 파일 생성 (이미지 포함)
@@ -941,12 +945,12 @@ async function downloadHwpxReport() {
     const filename = `역학조사보고서_${new Date().toISOString().slice(0, 10)}.hwpx`;
     downloadHwpxFile(hwpxBlob, filename);
     
-    console.log('HWPX 파일 생성 완료!');
-    console.log('📄 HWPX 파일을 다운로드했습니다.');
-    console.log('📝 한글 프로그램에서 열어서 확인하세요.');
+    logger.info('HWPX 파일 생성 완료!');
+    logger.info('HWPX 파일을 다운로드했습니다.');
+    logger.info('한글 프로그램에서 열어서 확인하세요.');
     
   } catch (error) {
-    console.error('HWPX 파일 생성 오류:', error);
+    logger.error('HWPX 파일 생성 오류:', error);
     alert(`보고서 생성 중 오류가 발생했습니다: ${error.message}`);
   }
 }

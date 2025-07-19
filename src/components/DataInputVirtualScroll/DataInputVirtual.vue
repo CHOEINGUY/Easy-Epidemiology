@@ -155,6 +155,8 @@ import { useUndoRedo } from '../../hooks/useUndoRedo.js';
 import ValidationManager from '../../validation/ValidationManager.js';
 import { createProcessingOptions } from '../../utils/environmentUtils.js';
 import ValidationProgress from './parts/ValidationProgress.vue';
+// Logger
+import { createComponentLogger } from '../../utils/logger.js';
 
 // --- 상수 (기존 컴포넌트에서 가져옴) ---
 import {
@@ -169,6 +171,9 @@ import {
   COL_TYPE_DIET,
   COLUMN_STYLES
 } from './constants/index.js';
+
+// --- Logger 초기화 ---
+const logger = createComponentLogger('DataInputVirtual');
 
 const COL_TYPE_INDIVIDUAL_EXPOSURE = 'individualExposureTime';
 
@@ -232,7 +237,7 @@ function captureSnapshotWithFilter(actionType, metadata = {}) {
     // 단순히 _captureSnapshot을 호출하면 됩니다.
     storeBridge._captureSnapshot(actionType, metadata);
   } catch (error) {
-    console.error(`[Snapshot] 스냅샷 캡처 실패: ${actionType}`, error);
+    logger.error(`스냅샷 캡처 실패: ${actionType}`, error);
   }
 }
 
@@ -276,7 +281,7 @@ function syncFilterStateAfterHistoryChange() {
       }, 10);
       
     } catch (error) {
-      console.error('[Filter-Undo] UI 업데이트 중 오류:', error);
+      logger.error('UI 업데이트 중 오류:', error);
     }
   });
 }
@@ -713,7 +718,7 @@ const filteredRows = computed(() => {
   // 개발 모드에서 두 상태의 동기화 여부 확인 (currentFilterState 사용)
   if (import.meta.env?.MODE === 'development') {
     const isStateSynced = JSON.stringify(currentFilterState) === JSON.stringify(bridgeFilterState);
-    console.log('[Filter] filteredRows computed 실행:', {
+    logger.debug('filteredRows computed 실행:', {
       isFiltered: bridgeFilterState.isFiltered,
       activeFiltersSize,
       totalRowsLength: rows.value.length,
@@ -828,7 +833,7 @@ async function onExcelFileSelected(file) {
     validationManager.clearAllErrors();
     
     // 필터 초기화 (새로운 데이터 가져오기 시 필터 상태 리셋)
-    console.log('[ExcelImport] 필터 초기화 시작');
+    logger.debug('필터 초기화 시작');
     const wasFiltered = storeBridge.filterState.isFiltered;
     const oldFilterState = wasFiltered ? { ...storeBridge.filterState } : null;
     
@@ -862,7 +867,7 @@ async function onExcelFileSelected(file) {
     
     // 데이트피커가 열려있으면 닫기
     if (dateTimePickerState.visible) {
-      console.log('[DataInputVirtual] Excel 업로드로 데이트피커 닫기');
+      logger.debug('Excel 업로드로 데이트피커 닫기');
       closeDateTimePicker();
     }
     
@@ -923,13 +928,13 @@ async function onExcelFileSelected(file) {
     
     // 필터 상태 강제 업데이트 (UI 동기화)
     filterState.value = { ...storeBridge.filterState };
-    console.log('[ExcelImport] 필터 초기화 완료 및 UI 동기화');
+    logger.debug('필터 초기화 완료 및 UI 동기화');
     
     // focus first cell
     selectionSystem.selectCell(0, 1);
     await ensureCellIsVisible(0, 1);
   } catch (e) {
-    console.error(e);
+    logger.error('Excel 업로드 실패:', e);
     alert(e.message || '엑셀 처리 실패');
   } finally {
     isUploadingExcel.value = false;
@@ -959,7 +964,7 @@ function onExportData() {
     showToast('데이터가 성공적으로 내보내졌습니다. 파일을 다시 가져오기할 수 있습니다.', 'success');
     
   } catch (error) {
-    console.error('Export failed:', error);
+    logger.error('Export failed:', error);
     showToast(`데이터 내보내기 중 오류가 발생했습니다: ${error.message}`, 'error');
   }
 }
@@ -986,7 +991,7 @@ async function onCopyEntireData() {
     await navigator.clipboard.writeText(tsvLines);
     showToast('전체 데이터가 클립보드에 복사되었습니다.', 'success');
   } catch (err) {
-    console.error('copy entire data failed', err);
+    logger.error('copy entire data failed', err);
     showToast('전체 데이터 복사 중 오류가 발생했습니다.', 'error');
   }
 }
@@ -1082,7 +1087,7 @@ async function onResetSheet() {
         }
         showToast('데이터가 초기화되었습니다.', 'success');
       } catch (err) {
-        console.error('reset sheet failed', err);
+        logger.error('reset sheet failed', err);
         showToast('시트 초기화 중 오류가 발생했습니다.', 'error');
       }
     }
@@ -1093,9 +1098,7 @@ function onToggleExposureColumn() {
   const current = storeBridge.state.isIndividualExposureColumnVisible;
   const isAdding = !current; // 열을 추가하는지 여부
   
-  console.log('onToggleExposureColumn 호출됨');
-  console.log('현재 상태:', current);
-  console.log('isAdding:', isAdding);
+  logger.debug('onToggleExposureColumn 호출됨', { current, isAdding });
   
   // === 개별 노출시간 열 삽입 위치 ===
   // "증상발현시간" 열의 현재 위치가 바로 개별-노출시간 열의 삽입 위치가 되므로,
@@ -1121,7 +1124,7 @@ function onToggleExposureColumn() {
     }).filter(item => item.value !== '' && item.value !== null && item.value !== undefined);
     
     // 디버깅: 백업된 데이터 확인
-    console.log('백업된 개별 노출시간 데이터:', individualExposureBackupData.value);
+    logger.debug('백업된 개별 노출시간 데이터:', individualExposureBackupData.value);
   }
   
   // 변경 전 컬럼 메타 저장
@@ -1134,7 +1137,7 @@ function onToggleExposureColumn() {
   nextTick(() => {
     const newColumnsMeta = allColumnsMeta.value;
     if (validationManager && oldColumnsMeta.length !== newColumnsMeta.length) {
-      console.log('[DataInputVirtual] 컬럼 구조 변경 감지 - 에러 재매핑 시작');
+      logger.debug('컬럼 구조 변경 감지 - 에러 재매핑 시작');
       validationManager.remapValidationErrorsByColumnIdentity(oldColumnsMeta, newColumnsMeta);
     }
   });
@@ -1166,10 +1169,10 @@ function onToggleExposureColumn() {
           }
         );
       } else {
-        console.error('새로운 개별 노출시간 열 인덱스를 찾을 수 없습니다!');
+        logger.error('새로운 개별 노출시간 열 인덱스를 찾을 수 없습니다!');
         
         // 대안: exposureInsertIndex 사용
-        console.log('대안으로 exposureInsertIndex 사용:', exposureInsertIndex);
+        logger.debug('대안으로 exposureInsertIndex 사용:', exposureInsertIndex);
         validationManager.validateIndividualExposureColumn(
           individualExposureBackupData.value, 
           exposureInsertIndex,
@@ -1198,7 +1201,7 @@ function onToggleConfirmedCaseColumn() {
   const current = storeBridge.state.isConfirmedCaseColumnVisible;
   const isAdding = !current;
   
-  console.log(`[SpecialColumn] 확진여부 열 토글 시작: 현재 상태 ${current} -> ${!current} (${isAdding ? '추가' : '제거'})`);
+  logger.debug(`확진여부 열 토글 시작: 현재 상태 ${current} -> ${!current} (${isAdding ? '추가' : '제거'})`);
   
   // 확진자 여부 열의 정확한 인덱스 찾기
   const confirmedCaseColumnIndex = allColumnsMeta.value.findIndex(col => 
@@ -1306,7 +1309,7 @@ function onToggleConfirmedCaseColumn() {
         
         console.log('[SpecialColumn] 확진여부 열 검증 완료');
       } else {
-        console.error('[SpecialColumn] 새로운 확진자 여부 열 인덱스를 찾을 수 없습니다!');
+        logger.error('새로운 확진자 여부 열 인덱스를 찾을 수 없습니다!');
       }
       
       // 검증 완료 후 백업 데이터 초기화

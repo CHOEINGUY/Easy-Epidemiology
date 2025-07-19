@@ -10,8 +10,14 @@ import { UserManager } from './auth/UserManager.js';
 // 마이그레이션 유틸리티 import
 import { logMigrationStatus, executeMigration, getMigrationStatus } from './store/utils/migration.js';
 
+// Logger import
+import { createComponentLogger } from './utils/logger.js';
+
 const app = createApp(App);
 app.use(store); // Vue 앱에 Vuex 스토어 연결
+
+// Logger 초기화
+const logger = createComponentLogger('Main');
 
 // 개발 환경 설정
 const isDevelopment = import.meta.env?.MODE === 'development' || false;
@@ -38,7 +44,7 @@ if (isDevelopment) {
 }
 
 if (isDevelopment) {
-  console.log('Easy-Epidemiology Web v1.0 - Development Mode');
+  logger.info('Easy-Epidemiology Web v1.0 - Development Mode');
 }
 
 // 개발 환경에서 마이그레이션 상태 확인 함수를 전역으로 추가
@@ -53,10 +59,10 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
       .then(registration => {
-        console.log('SW registered: ', registration);
+        logger.info('SW registered: ', registration);
       })
       .catch(registrationError => {
-        console.log('SW registration failed: ', registrationError);
+        logger.error('SW registration failed: ', registrationError);
       });
   });
 }

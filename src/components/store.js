@@ -138,6 +138,11 @@ const store = createStore({
             displayMode: 'time', // 'time' | 'datetime'
             reportChartDataUrl: null, // 유행곡선 차트 이미지 URL
             reportIncubationChartDataUrl: null, // 잠복기 차트 이미지 URL
+            // 잠복기 차트 설정 추가
+            incubationFontSize: 15, // 잠복기 차트 폰트 크기
+            incubationChartWidth: 1100, // 잠복기 차트 너비
+            incubationBarColor: '#91cc75', // 잠복기 차트 막대 색상
+            incubationDisplayMode: 'hour', // 잠복기 차트 표시 모드
             ...parsed // 저장된 설정으로 덮어쓰기
           };
         }
@@ -157,7 +162,12 @@ const store = createStore({
         backgroundColor: '#ffffff', // 배경색
         displayMode: 'time', // 'time' | 'datetime'
         reportChartDataUrl: null, // 유행곡선 차트 이미지 URL
-        reportIncubationChartDataUrl: null // 잠복기 차트 이미지 URL
+        reportIncubationChartDataUrl: null, // 잠복기 차트 이미지 URL
+        // 잠복기 차트 설정 추가
+        incubationFontSize: 15, // 잠복기 차트 폰트 크기
+        incubationChartWidth: 1100, // 잠복기 차트 너비
+        incubationBarColor: '#91cc75', // 잠복기 차트 막대 색상
+        incubationDisplayMode: 'hour' // 잠복기 차트 표시 모드
       };
     })(),
 

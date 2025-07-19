@@ -455,10 +455,10 @@
               <div class="control-group">
                 <label class="control-label">차트 표시:</label>
                 <div class="control-button-wrapper">
-                  <button @click="incubationChartDisplayMode = 'hour'" :class="{ 'chart-select-button--active': incubationChartDisplayMode === 'hour' }" class="chart-select-button">시간 단위</button>
+                  <button @click="selectIncubationDisplayMode('hour')" :class="{ 'chart-select-button--active': incubationChartDisplayMode === 'hour' }" class="chart-select-button">시간 단위</button>
                 </div>
                 <div class="control-button-wrapper">
-                  <button @click="incubationChartDisplayMode = 'hhmm'" :class="{ 'chart-select-button--active': incubationChartDisplayMode === 'hhmm' }" class="chart-select-button">시:분 단위</button>
+                  <button @click="selectIncubationDisplayMode('hhmm')" :class="{ 'chart-select-button--active': incubationChartDisplayMode === 'hhmm' }" class="chart-select-button">시:분 단위</button>
                 </div>
               </div>
               <!-- 차트 설정 초기화 버튼 -->
@@ -660,16 +660,17 @@ const epiBarColor = ref(chartSettings.value.barColor || '#1E88E5');
 const epiFontSizeButtonText = ref(fontSizeLabels[fontSizes.indexOf(epiChartFontSize.value)] || '작게');
 const epiChartWidthButtonText = ref(`${epiChartWidth.value}px`);
 
-// 잠복기 차트 상태
-const incubationChartFontSize = ref(15);
-const incubationChartWidth = ref(1100);
-const incubationBarColor = ref('#91cc75'); // 녹색으로 구분
-const incubationFontSizeButtonText = ref('작게');
+// 잠복기 차트 상태 - store에서 설정 불러오기
+const incubationChartSettings = computed(() => store.getters.getEpidemicCurveSettings);
+const incubationChartFontSize = ref(incubationChartSettings.value.incubationFontSize || 15);
+const incubationChartWidth = ref(incubationChartSettings.value.incubationChartWidth || 1100);
+const incubationBarColor = ref(incubationChartSettings.value.incubationBarColor || '#91cc75'); // 녹색으로 구분
+const incubationFontSizeButtonText = ref(fontSizeLabels[fontSizes.indexOf(incubationChartFontSize.value)] || '작게');
 const incubationChartWidthButtonText = ref(`${incubationChartWidth.value}px`);
 
 // --- 차트 표시 모드 설정 ---
 const chartDisplayMode = ref(chartSettings.value.displayMode || 'time'); // 'time' | 'datetime'
-const incubationChartDisplayMode = ref('hour'); // 'hour' | 'hhmm'
+const incubationChartDisplayMode = ref(incubationChartSettings.value.incubationDisplayMode || 'hour'); // 'hour' | 'hhmm'
 
 const activeTooltip = ref(null);
 const tooltipText = ref('');
@@ -899,6 +900,9 @@ const cycleIncubationFontSize = () => {
   );
   const currentIndex = fontSizes.indexOf(incubationChartFontSize.value);
   incubationFontSizeButtonText.value = fontSizeLabels[currentIndex];
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { 
+    incubationFontSize: incubationChartFontSize.value 
+  });
   nextTick(safeUpdateCharts);
 };
 const cycleIncubationChartWidth = () => {
@@ -907,12 +911,18 @@ const cycleIncubationChartWidth = () => {
     chartWidths
   );
   incubationChartWidthButtonText.value = `${incubationChartWidth.value}px`;
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { 
+    incubationChartWidth: incubationChartWidth.value 
+  });
 };
 const cycleIncubationBarColor = () => {
   incubationBarColor.value = getNextValue(
     incubationBarColor.value,
     barColors
   );
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { 
+    incubationBarColor: incubationBarColor.value 
+  });
   nextTick(safeUpdateCharts);
 };
 
@@ -920,6 +930,13 @@ const cycleIncubationBarColor = () => {
 const selectDisplayMode = (mode) => {
   chartDisplayMode.value = mode;
   store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { displayMode: mode });
+  nextTick(safeUpdateCharts);
+};
+
+// --- 잠복기 차트 표시 모드 선택 함수 ---
+const selectIncubationDisplayMode = (mode) => {
+  incubationChartDisplayMode.value = mode;
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { incubationDisplayMode: mode });
   nextTick(safeUpdateCharts);
 };
 
@@ -2943,14 +2960,14 @@ const saveChartForReport = async () => {
     
     const dataUrl = instance.getDataURL({
       type: 'bmp',
-      pixelRatio: 1,
+      pixelRatio: 3,
       backgroundColor: '#ffffff'
     });
 
     if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
       store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { 
         reportChartDataUrl: dataUrl,
-        reportChartWidth: epiChartWidth.value
+        reportChartWidth: epiChartWidth.value * 3  // 3배 픽셀로 생성되므로 실제 크기도 3배
       });
       window.currentEpidemicChartInstance = instance; // 최신 인스턴스 보존 (선택)
       isChartSaved.value = true;
@@ -2984,7 +3001,7 @@ watch([
   selectedIncubationInterval
 ], () => {
   isIncubationChartSaved.value = false;
-});
+}, { deep: false, immediate: false });
 
 // 잠복기 차트 저장 버튼 (보고서용)
 const saveIncubationChartForReport = async () => {
@@ -3011,14 +3028,14 @@ const saveIncubationChartForReport = async () => {
     
     const dataUrl = instance.getDataURL({
       type: 'bmp',
-      pixelRatio: 1,
+      pixelRatio: 3,
       backgroundColor: '#ffffff'
     });
 
     if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
       store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { 
         reportIncubationChartDataUrl: dataUrl,
-        reportIncubationChartWidth: incubationChartWidth.value
+        reportIncubationChartWidth: incubationChartWidth.value * 3  // 3배 픽셀로 생성되므로 실제 크기도 3배
       });
       isIncubationChartSaved.value = true;
       showIncubationChartSavedTooltip.value = true;
@@ -3082,6 +3099,14 @@ const resetIncubationChartSettings = () => {
   // 버튼 텍스트 업데이트
   incubationFontSizeButtonText.value = '작게';
   incubationChartWidthButtonText.value = '1100px';
+  
+  // Vuex store 업데이트
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', {
+    incubationFontSize: 15,
+    incubationChartWidth: 1100,
+    incubationBarColor: '#91cc75',
+    incubationDisplayMode: 'hour'
+  });
   
   // 저장 상태 초기화
   isIncubationChartSaved.value = false;
