@@ -1,0 +1,331 @@
+import JSZip from 'jszip';
+
+/**
+ * XML 특수문자 이스케이프 함수
+ * @param {string} text - 이스케이프할 텍스트
+ * @returns {string} 이스케이프된 텍스트
+ */
+function escapeXml(text) {
+  if (typeof text !== 'string') return text;
+  
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * XML 텍스트에서 플레이스홀더를 교체 (수동 방식과 동일)
+ * @param {string} xmlText - XML 텍스트
+ * @param {Object} replacements - 교체할 텍스트 객체
+ * @returns {string} 교체된 XML 텍스트
+ */
+export function replacePlaceholders(xmlText, replacements) {
+  let modifiedText = xmlText;
+  
+  console.log('🔍 원본 XML 길이:', xmlText.length);
+  
+  // VSCode에서 수동으로 하는 것과 정확히 동일한 방식
+  Object.entries(replacements).forEach(([placeholder, value]) => {
+    // const searchText = `%${placeholder}%`;
+    const searchText = placeholder; // 이제 % 없이 key 그대로 검색
+    
+    // 플레이스홀더가 있는지 확인
+    if (modifiedText.includes(searchText)) {
+      console.log(`🔎 플레이스홀더 발견: ${searchText}`);
+      console.log(`📝 교체할 값: ${value}`);
+      
+      // XML 특수문자 이스케이프 적용
+      const escapedValue = escapeXml(value);
+      console.log(`🔒 이스케이프된 값: ${escapedValue}`);
+      
+      // 단순 문자열 교체 (VSCode Find & Replace와 동일)
+      modifiedText = modifiedText.split(searchText).join(escapedValue);
+      
+      console.log(`✅ 교체 완료: ${searchText} → ${escapedValue}`);
+    } else {
+      console.log(`❌ 플레이스홀더 없음: ${searchText}`);
+    }
+  });
+  
+  console.log('🎯 수정된 XML 길이:', modifiedText.length);
+  return modifiedText;
+}
+
+/**
+ * Data URL을 Blob으로 변환하는 함수
+ * @param {string} dataUrl - Data URL
+ * @returns {Promise<Blob>} 변환된 Blob
+ */
+async function convertDataUrlToBlob(dataUrl) {
+  if (!dataUrl) return null;
+  
+  try {
+    const response = await fetch(dataUrl);
+    if (!response.ok) {
+      throw new Error(`이미지 로드 실패: ${response.statusText}`);
+    }
+    return await response.blob();
+  } catch (error) {
+    console.error('Data URL을 Blob으로 변환 실패:', error);
+    return null;
+  }
+}
+
+/**
+ * 원본 ZIP 파일에서 section0.xml만 교체하여 새로운 HWPX 파일 생성
+ * @param {string} modifiedXmlText - 수정된 XML 텍스트
+ * @param {Object} chartImages - 차트 이미지 정보 (선택사항)
+ * @param {string} studyDesign - 조사 디자인 ('case-control' 또는 'cohort')
+ * @returns {Promise<Blob>} 생성된 HWPX 파일의 Blob
+ */
+export async function createHwpxFromTemplate(modifiedXmlText, chartImages = {}, studyDesign = 'case-control') {
+  try {
+    console.log('🔄 원본 HWPX 파일 로드 시작...');
+    
+    // 조사 디자인에 따라 템플릿 파일 선택
+    const templateFile = studyDesign === 'case-control' ? '/report_template_caseControl.zip' : 
+      studyDesign === 'cohort' ? '/report_template_cohort.zip' : '/report_template.zip';
+    console.log(`📄 사용할 템플릿: ${templateFile}`);
+    
+    // 1. 원본 HWPX 파일 로드
+    const response = await fetch(templateFile);
+    if (!response.ok) {
+      throw new Error(`원본 HWPX 파일을 로드할 수 없습니다. 상태: ${response.status}`);
+    }
+    
+    const hwpxArrayBuffer = await response.arrayBuffer();
+    console.log('✅ 원본 HWPX 파일 로드 완료:', hwpxArrayBuffer.byteLength, 'bytes');
+    
+    // 2. HWPX 파일을 ZIP으로 파싱
+    const zip = new JSZip();
+    try {
+      await zip.loadAsync(hwpxArrayBuffer);
+    } catch (error) {
+      console.log('⚠️ 일반 ZIP 파싱 실패, HWPX 형식으로 재시도...');
+      await zip.loadAsync(hwpxArrayBuffer, {
+        checkCRC32: false,
+        optimizedBinaryString: false
+      });
+    }
+    console.log('✅ HWPX 파일 파싱 완료');
+    
+    // 3. Contents/section0.xml 파일 교체
+    zip.file('Contents/section0.xml', modifiedXmlText);
+    console.log('✅ Contents/section0.xml 교체 완료');
+    
+    // 4. 차트 이미지 파일 교체 (있는 경우)
+    if (chartImages.incubationChart) {
+      const incubationBlob = await convertDataUrlToBlob(chartImages.incubationChart.dataUrl);
+      if (incubationBlob) {
+        zip.file('BinData/image2.BMP', incubationBlob);
+        console.log('✅ 잠복기 차트 이미지 교체 완료 (image2.BMP)');
+      }
+    }
+    
+    if (chartImages.epidemicChart) {
+      const epidemicBlob = await convertDataUrlToBlob(chartImages.epidemicChart.dataUrl);
+      if (epidemicBlob) {
+        zip.file('BinData/image1.BMP', epidemicBlob);
+        console.log('✅ 유행곡선 차트 이미지 교체 완료 (image1.BMP)');
+      }
+    }
+    
+    // 5. 새로운 HWPX 파일 생성 (원본과 동일한 압축 방식)
+    const hwpxBlob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: {
+        level: 6  // 적당한 압축 레벨
+      }
+    });
+    
+    console.log('✅ 새로운 HWPX 파일 생성 완료:', hwpxBlob.size, 'bytes');
+    return hwpxBlob;
+    
+  } catch (error) {
+    console.error('❌ HWPX 파일 생성 오류:', error);
+    throw error;
+  }
+}
+
+/**
+ * 원본 ZIP 파일에서 section0.xml만 교체하여 폴더 형태로 생성 (개발/테스트용)
+ * @param {string} modifiedXmlText - 수정된 XML 텍스트
+ * @param {Object} chartImages - 차트 이미지 정보 (선택사항)
+ * @param {string} studyDesign - 조사 디자인 ('case-control' 또는 'cohort')
+ * @returns {Promise<Blob>} 생성된 ZIP 파일의 Blob (압축 없음)
+ */
+export async function createHwpxFolderFromTemplate(modifiedXmlText, chartImages = {}, studyDesign = 'case-control') {
+  try {
+    console.log('🔄 원본 HWPX 파일 로드 시작 (폴더 생성용)...');
+    
+    // 조사 디자인에 따라 템플릿 파일 선택
+    const templateFile = studyDesign === 'case-control' ? '/report_template_caseControl.zip' : 
+      studyDesign === 'cohort' ? '/report_template_cohort.zip' : '/report_template.zip';
+    console.log(`📄 사용할 템플릿 (폴더용): ${templateFile}`);
+    
+    // 1. 원본 HWPX 파일 로드
+    const response = await fetch(templateFile);
+    if (!response.ok) {
+      throw new Error(`원본 HWPX 파일을 로드할 수 없습니다. 상태: ${response.status}`);
+    }
+    
+    const hwpxArrayBuffer = await response.arrayBuffer();
+    console.log('✅ 원본 HWPX 파일 로드 완료:', hwpxArrayBuffer.byteLength, 'bytes');
+    
+    // 2. HWPX 파일을 ZIP으로 파싱
+    const zip = new JSZip();
+    try {
+      await zip.loadAsync(hwpxArrayBuffer);
+    } catch (error) {
+      console.log('⚠️ 일반 ZIP 파싱 실패, HWPX 형식으로 재시도...');
+      await zip.loadAsync(hwpxArrayBuffer, {
+        checkCRC32: false,
+        optimizedBinaryString: false
+      });
+    }
+    console.log('✅ HWPX 파일 파싱 완료');
+    
+    // 3. Contents/section0.xml 파일 교체
+    zip.file('Contents/section0.xml', modifiedXmlText);
+    console.log('✅ Contents/section0.xml 교체 완료');
+    
+    // 4. 차트 이미지 파일 교체 (있는 경우)
+    if (chartImages.incubationChart) {
+      const incubationBlob = await convertDataUrlToBlob(chartImages.incubationChart.dataUrl);
+      if (incubationBlob) {
+        zip.file('BinData/image2.BMP', incubationBlob);
+        console.log('✅ 잠복기 차트 이미지 교체 완료 (폴더용, image2.BMP)');
+      }
+    }
+    
+    if (chartImages.epidemicChart) {
+      const epidemicBlob = await convertDataUrlToBlob(chartImages.epidemicChart.dataUrl);
+      if (epidemicBlob) {
+        zip.file('BinData/image1.BMP', epidemicBlob);
+        console.log('✅ 유행곡선 차트 이미지 교체 완료 (폴더용, image1.BMP)');
+      }
+    }
+    
+    // 5. 압축 없이 폴더 형태로 생성
+    const folderBlob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'STORE'  // 압축 없음
+    });
+    
+    console.log('✅ 폴더 형태 ZIP 파일 생성 완료:', folderBlob.size, 'bytes');
+    console.log('📁 이 ZIP 파일을 압축해제하면 완전한 HWPX 파일 구조가 나옵니다');
+    return folderBlob;
+    
+  } catch (error) {
+    console.error('❌ HWPX 폴더 생성 오류:', error);
+    throw error;
+  }
+}
+
+/**
+ * 원본 ZIP 파일에서 section0.xml 내용을 텍스트로 로드
+ * @param {string} studyDesign - 조사 디자인 ('case-control' 또는 'cohort')
+ * @returns {Promise<string>} Section0 파일의 텍스트 내용
+ */
+export async function loadTemplateSection0(studyDesign = 'case-control') {
+  try {
+    console.log('🔍 원본 HWPX에서 section0.xml 로드 시작...');
+    
+    // 조사 디자인에 따라 템플릿 파일 선택
+    const templateFile = studyDesign === 'case-control' ? '/report_template_caseControl.zip' : 
+      studyDesign === 'cohort' ? '/report_template_cohort.zip' : '/report_template.zip';
+    console.log(`📄 사용할 템플릿 (로드용): ${templateFile}`);
+    
+    // 1. 원본 HWPX 파일 로드
+    const response = await fetch(templateFile);
+    console.log('📡 Fetch 응답 상태:', response.status, response.statusText);
+    console.log('📡 Content-Type:', response.headers.get('content-type'));
+    console.log('📡 Content-Length:', response.headers.get('content-length'));
+    
+    if (!response.ok) {
+      throw new Error(`원본 HWPX 파일을 로드할 수 없습니다. 상태: ${response.status}`);
+    }
+    
+    const hwpxArrayBuffer = await response.arrayBuffer();
+    console.log('✅ 원본 HWPX 파일 로드 완료:', hwpxArrayBuffer.byteLength, 'bytes');
+    
+    // HWPX 파일 헤더 확인
+    const uint8Array = new Uint8Array(hwpxArrayBuffer);
+    console.log('📄 HWPX 파일 시작 바이트:', Array.from(uint8Array.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+    
+    // 2. HWPX 파일을 ZIP으로 파싱 (강제로 ZIP으로 처리)
+    const zip = new JSZip();
+    try {
+      await zip.loadAsync(hwpxArrayBuffer);
+    } catch (error) {
+      console.log('⚠️ 일반 ZIP 파싱 실패, HWPX 형식으로 재시도...');
+      // HWPX 파일을 강제로 ZIP으로 처리
+      await zip.loadAsync(hwpxArrayBuffer, {
+        checkCRC32: false,
+        optimizedBinaryString: false
+      });
+    }
+    
+    // HWPX 파일 내용 확인
+    console.log('📁 HWPX 파일 내용:');
+    zip.forEach((relativePath, file) => {
+      console.log(`  - ${relativePath} (${file.dir ? 'DIR' : 'FILE'})`);
+    });
+    
+    // 3. Contents/section0.xml 파일 추출
+    const section0File = zip.file('Contents/section0.xml');
+    if (!section0File) {
+      throw new Error('Contents/section0.xml 파일을 찾을 수 없습니다.');
+    }
+    
+    // 4. 텍스트로 읽기
+    const text = await section0File.async('text');
+    console.log('✅ section0.xml 로드 완료, 길이:', text.length);
+    console.log('📄 파일 시작 부분:', text.substring(0, 200));
+    return text;
+    
+  } catch (error) {
+    console.error('❌ section0.xml 로드 오류:', error);
+    throw error;
+  }
+}
+
+/**
+ * HWPX 파일을 다운로드
+ * @param {Blob} hwpxBlob - HWPX 파일의 Blob
+ * @param {string} filename - 파일명
+ */
+export function downloadHwpxFile(hwpxBlob, filename = '역학조사보고서.hwpx') {
+  const url = URL.createObjectURL(hwpxBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 폴더를 ZIP으로 다운로드
+ * @param {Blob} folderBlob - 폴더 ZIP 파일의 Blob
+ * @param {string} filename - 파일명
+ */
+export function downloadFolderZip(folderBlob, filename = '역학조사보고서_폴더.zip') {
+  const url = URL.createObjectURL(folderBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// 이전 함수들과의 호환성을 위한 별칭
+export const createHwpxFile = createHwpxFromTemplate;
+export const createHwpxFolder = createHwpxFolderFromTemplate; 

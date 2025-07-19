@@ -103,6 +103,73 @@ const store = createStore({
     selectedIncubationInterval: 6, // 잠복기 간격 (기본값: 6시간)
     isIndividualExposureColumnVisible: false,
     isConfirmedCaseColumnVisible: false, // <-- 추가
+
+    // --- 통계 분석 옵션 (보고서용) ---
+    analysisOptions: {
+      statMethod: 'chi-square', // 'chi-square' | 'chi-fisher' | 'yates' | 'yates-fisher'
+      haldaneCorrection: false
+    },
+
+    // --- 유행곡선 탭에서 선택한 의심식단 (쉼표 구분 문자열) ---
+    selectedSuspectedFoods: (() => {
+      try {
+        return localStorage.getItem('selectedSuspectedFoods') || '';
+      } catch {
+        return '';
+      }
+    })(),
+    
+    // --- 유행곡선 차트 설정 (보고서용) ---
+    epidemicCurveSettings: (() => {
+      // localStorage에서 저장된 차트 설정 불러오기
+      try {
+        const saved = localStorage.getItem('epidemicCurveSettings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            timeInterval: 6, // 시간 간격 (기본값: 6시간)
+            chartWidth: 800, // 차트 너비
+            chartHeight: 400, // 차트 높이
+            fontSize: 14, // 폰트 크기
+            barColor: '#5470c6', // 막대 색상
+            showGrid: true, // 격자 표시 여부
+            showLegend: true, // 범례 표시 여부
+            backgroundColor: '#ffffff', // 배경색
+            displayMode: 'time', // 'time' | 'datetime'
+            reportChartDataUrl: null, // 유행곡선 차트 이미지 URL
+            reportIncubationChartDataUrl: null, // 잠복기 차트 이미지 URL
+            ...parsed // 저장된 설정으로 덮어쓰기
+          };
+        }
+      } catch (error) {
+        console.warn('localStorage에서 epidemicCurveSettings 로드 실패:', error);
+      }
+      
+      // 기본 설정 반환
+      return {
+        timeInterval: 6, // 시간 간격 (기본값: 6시간)
+        chartWidth: 800, // 차트 너비
+        chartHeight: 400, // 차트 높이
+        fontSize: 14, // 폰트 크기
+        barColor: '#5470c6', // 막대 색상
+        showGrid: true, // 격자 표시 여부
+        showLegend: true, // 범례 표시 여부
+        backgroundColor: '#ffffff', // 배경색
+        displayMode: 'time', // 'time' | 'datetime'
+        reportChartDataUrl: null, // 유행곡선 차트 이미지 URL
+        reportIncubationChartDataUrl: null // 잠복기 차트 이미지 URL
+      };
+    })(),
+
+    // --- 보고서용 파생 통계
+    suspectedSource: '',
+    
+    // --- 분석 결과 저장 (의심식단 드롭다운용) ---
+    analysisResults: {
+      caseControl: [], // 환자-대조군 분석 결과
+      cohort: []       // 코호트 분석 결과
+    },
+    
     // === Validation ===
     validationState: {
       errors: new Map(), // key: "row_col" , value: { message, timestamp }
@@ -131,7 +198,57 @@ const store = createStore({
     // --- 유행곡선 탭 관련 Getters 추가 ---
     getSelectedSymptomInterval: (state) => state.selectedSymptomInterval,
     getExposureDateTime: (state) => state.exposureDateTime,
-    getSelectedIncubationInterval: (state) => state.selectedIncubationInterval
+    getSelectedIncubationInterval: (state) => state.selectedIncubationInterval,
+
+    // 보고서용 파생 통계
+    getCaseAttackRate: (state) => {
+      const total = state.rows.length;
+      if (!total) return null;
+      const cases = state.rows.filter(r => r && r.isPatient === '1').length;
+      return ((cases / total) * 100).toFixed(1);
+    },
+    getPatientAttackRate: (state) => {
+      // 확진여부 열이 보이지 않으면 null 반환
+      if (!state.isConfirmedCaseColumnVisible) return null;
+      const total = state.rows.length;
+      if (!total) return null;
+      const confirmed = state.rows.filter(r => r && r.isConfirmedCase === '1').length;
+      return ((confirmed / total) * 100).toFixed(1);
+    },
+    getExposureDate: (state) => state.exposureDateTime || null,
+    getFirstCaseDate: (state) => {
+      const onsets = state.rows
+        .map(r => r.symptomOnset)
+        .filter(Boolean)
+        .map(ts => new Date(ts));
+      if (!onsets.length) return null;
+      const earliest = new Date(Math.min(...onsets));
+      return earliest;
+    },
+    getMeanIncubation: (state, getters) => {
+      const exposure = new Date(getters.getExposureDate);
+      if (!exposure || isNaN(exposure)) return null;
+      const diffs = state.rows
+        .map(r => r.symptomOnset)
+        .filter(Boolean)
+        .map(ts => (new Date(ts) - exposure) / 3600000) // hours
+        .filter(h => h > 0);
+      if (!diffs.length) return null;
+      const avg = diffs.reduce((a,b) => a+b,0)/diffs.length;
+      return avg.toFixed(1);
+    },
+    getSuspectedSource: (state) => state.suspectedSource || null,
+
+    // 보고서용 통계 분석 옵션
+    getAnalysisOptions: (state) => state.analysisOptions,
+
+    // 유행곡선 차트 설정
+    getEpidemicCurveSettings: (state) => state.epidemicCurveSettings,
+    
+    // 분석 결과
+    getAnalysisResults: (state) => state.analysisResults,
+    // 유행곡선 탭에서 선택한 의심식단 문자열
+    getSelectedSuspectedFoods: (state) => state.selectedSuspectedFoods
   },
   mutations: {
     // --- 기존 Mutations ---
@@ -705,184 +822,11 @@ const store = createStore({
     SET_INCUBATION_INTERVAL(state, value) {
       state.selectedIncubationInterval = value;
     },
-    TOGGLE_INDIVIDUAL_EXPOSURE_COLUMN(state) {
-      state.isIndividualExposureColumnVisible = !state.isIndividualExposureColumnVisible;
-    },
-    UPDATE_INDIVIDUAL_EXPOSURE_TIME(state, { rowIndex, value }) {
-      if (state.rows[rowIndex]) {
-        state.rows[rowIndex].individualExposureTime = value;
-      }
-    },
-    SET_INDIVIDUAL_EXPOSURE_COLUMN_VISIBILITY(state, isVisible) {
-      state.isIndividualExposureColumnVisible = isVisible;
-    },
-    TOGGLE_CONFIRMED_CASE_COLUMN(state) {
-      state.isConfirmedCaseColumnVisible = !state.isConfirmedCaseColumnVisible;
-    },
-    UPDATE_CONFIRMED_CASE(state, { rowIndex, value }) {
-      if (state.rows[rowIndex]) {
-        state.rows[rowIndex].isConfirmedCase = value;
-      }
-    },
-    SET_CONFIRMED_CASE_COLUMN_VISIBILITY(state, isVisible) {
-      state.isConfirmedCaseColumnVisible = isVisible;
-    },
 
-    // --- Excel Upload Mutations ---
-    
-    /**
-     * 엑셀에서 읽어온 헤더로 전체 업데이트
-     */
-    UPDATE_HEADERS_FROM_EXCEL(state, headers) {
-      if (!headers || typeof headers !== 'object') {
-        console.error('Invalid headers format');
-        return;
-      }
-
-      // 기본 구조 설정
-      state.headers = {
-        basic: headers.basic || [],
-        clinical: headers.clinical || [],
-        diet: headers.diet || []
-      };
-
-      // 기존 행들의 배열 크기를 새로운 헤더에 맞게 조정
-      state.rows.forEach((row) => {
-        // basicInfo 배열 조정
-        if (!row.basicInfo) row.basicInfo = [];
-        while (row.basicInfo.length < state.headers.basic.length) {
-          row.basicInfo.push('');
-        }
-        row.basicInfo = row.basicInfo.slice(0, state.headers.basic.length);
-
-        // clinicalSymptoms 배열 조정
-        if (!row.clinicalSymptoms) row.clinicalSymptoms = [];
-        while (row.clinicalSymptoms.length < state.headers.clinical.length) {
-          row.clinicalSymptoms.push('');
-        }
-        row.clinicalSymptoms = row.clinicalSymptoms.slice(
-          0,
-          state.headers.clinical.length
-        );
-
-        // dietInfo 배열 조정
-        if (!row.dietInfo) row.dietInfo = [];
-        while (row.dietInfo.length < state.headers.diet.length) {
-          row.dietInfo.push('');
-        }
-        row.dietInfo = row.dietInfo.slice(0, state.headers.diet.length);
-      });
+    // --- 보고서 통계 업데이트 ---
+    SET_SUSPECTED_SOURCE(state, value) {
+      state.suspectedSource = value;
     },
-
-    /**
-     * 엑셀에서 읽어온 데이터로 행들 추가
-     */
-    ADD_ROWS_FROM_EXCEL(state, rows) {
-      if (!rows || !Array.isArray(rows)) {
-        console.error('Invalid rows format');
-        return;
-      }
-
-      state.rows = rows;
-    },
-
-    // 행 데이터 삭제 (행은 유지, 데이터만 초기화)
-    CLEAR_ROW_DATA(state, { rowIndex }) {
-      if (rowIndex < 0 || rowIndex >= state.rows.length) return;
-      
-      const row = state.rows[rowIndex];
-      if (!row) return;
-      
-      // 행의 모든 데이터를 초기값으로 설정
-      row.isPatient = '';
-      row.isConfirmedCase = ''; // <-- 추가
-      row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
-      row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
-      row.symptomOnset = '';
-      row.individualExposureTime = '';
-      row.dietInfo = Array(state.headers.diet?.length || 0).fill('');
-    },
-
-    // 여러 행 데이터 삭제 (연속 범위)
-    CLEAR_MULTIPLE_ROWS_DATA(state, { startRow, endRow }) {
-      if (startRow < 0 || endRow >= state.rows.length || startRow > endRow) return;
-      
-      for (let i = startRow; i <= endRow; i++) {
-        const row = state.rows[i];
-        if (!row) continue;
-        
-        // 각 행의 데이터를 초기값으로 설정
-        row.isPatient = '';
-        row.isConfirmedCase = ''; // <-- 추가
-        row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
-        row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
-        row.symptomOnset = '';
-        row.individualExposureTime = '';
-        row.dietInfo = Array(state.headers.diet?.length || 0).fill('');
-      }
-    },
-
-    // 개별 선택된 행들 데이터 삭제
-    CLEAR_INDIVIDUAL_ROWS_DATA(state, { rowIndices }) {
-      if (!Array.isArray(rowIndices)) return;
-      
-      rowIndices.forEach(rowIndex => {
-        if (rowIndex < 0 || rowIndex >= state.rows.length) return;
-        
-        const row = state.rows[rowIndex];
-        if (!row) return;
-        
-        // 행의 모든 데이터를 초기값으로 설정
-        row.isPatient = '';
-        row.isConfirmedCase = ''; // <-- 추가
-        row.basicInfo = Array(state.headers.basic?.length || 0).fill('');
-        row.clinicalSymptoms = Array(state.headers.clinical?.length || 0).fill('');
-        row.symptomOnset = '';
-        row.individualExposureTime = '';
-        row.dietInfo = Array(state.headers.diet?.length || 0).fill('');
-      });
-    },
-
-    /* ===== Validation mutations ===== */
-    ADD_VALIDATION_ERROR(state, { rowIndex, colIndex, message }) {
-      const key = `${rowIndex}_${colIndex}`;
-      const newMap = new Map(state.validationState.errors);
-      newMap.set(key, { message, timestamp: Date.now() });
-      state.validationState.errors = newMap;
-      state.validationState.version++;
-      
-      // 유효성 검사 오류가 변경되면 자동 저장
-      if (window.storeBridge) {
-        window.storeBridge.saveCurrentState();
-      }
-    },
-    
-    REMOVE_VALIDATION_ERROR(state, { rowIndex, colIndex }) {
-      const key = `${rowIndex}_${colIndex}`;
-      if (!state.validationState.errors.has(key)) {
-        return;
-      }
-      const newMap = new Map(state.validationState.errors);
-      newMap.delete(key);
-      state.validationState.errors = newMap;
-      state.validationState.version++;
-      
-      // 유효성 검사 오류가 변경되면 자동 저장
-      if (window.storeBridge) {
-        window.storeBridge.saveCurrentState();
-      }
-    },
-    
-    CLEAR_VALIDATION_ERRORS(state) {
-      state.validationState.errors = new Map();
-      state.validationState.version++;
-      
-      // 유효성 검사 오류가 변경되면 자동 저장
-      if (window.storeBridge) {
-        window.storeBridge.saveCurrentState();
-      }
-    },
-    
     SET_VALIDATION_ERRORS(state, errors) {
       state.validationState.errors = errors;
       state.validationState.version++;
@@ -922,7 +866,73 @@ const store = createStore({
       if (window.storeBridge) {
         window.storeBridge.saveCurrentState();
       }
+    },
+
+    // === [NEW] Missing Mutations Added ===
+    // 1. 개별 노출시간 열 가시성 토글
+    SET_INDIVIDUAL_EXPOSURE_COLUMN_VISIBILITY(state, isVisible) {
+      state.isIndividualExposureColumnVisible = !!isVisible;
+    },
+
+    // 2. 확진자 여부 열 가시성 토글
+    SET_CONFIRMED_CASE_COLUMN_VISIBILITY(state, isVisible) {
+      state.isConfirmedCaseColumnVisible = !!isVisible;
+    },
+
+    // 3. 유효성 검사 오류 초기화
+    CLEAR_VALIDATION_ERRORS(state) {
+      state.validationState.errors = new Map();
+      state.validationState.version++;
+    },
+
+    // 4. 엑셀 헤더 업데이트 (가져오기)
+    UPDATE_HEADERS_FROM_EXCEL(state, headers) {
+      state.headers = headers;
+      // 헤더 변경 후 행 데이터 길이 맞추기
+      syncRowDataWithHeaders(state);
+    },
+
+    // 5. 엑셀 행 데이터 추가 (가져오기)
+    ADD_ROWS_FROM_EXCEL(state, rows) {
+      // 엑셀에서 불러온 rows 는 전체를 대체한다고 가정
+      state.rows = rows;
+    },
+
+    // --- 통계 분석 옵션 업데이트 ---
+    SET_ANALYSIS_OPTIONS(state, { statMethod, haldaneCorrection }) {
+      state.analysisOptions.statMethod = statMethod || 'chi-square';
+      state.analysisOptions.haldaneCorrection = !!haldaneCorrection;
+    },
+
+    // --- 유행곡선 차트 설정 업데이트 ---
+    UPDATE_EPIDEMIC_CURVE_SETTINGS(state, settings) {
+      state.epidemicCurveSettings = { ...state.epidemicCurveSettings, ...settings };
+      
+      // localStorage에 차트 설정 저장
+      try {
+        localStorage.setItem('epidemicCurveSettings', JSON.stringify(state.epidemicCurveSettings));
+      } catch (error) {
+        console.warn('localStorage에 epidemicCurveSettings 저장 실패:', error);
+      }
+    },
+    
+    // --- 분석 결과 저장 ---
+    SET_ANALYSIS_RESULTS(state, { type, results }) {
+      if (type === 'caseControl' || type === 'cohort') {
+        state.analysisResults[type] = results;
+      }
+    },
+    // 의심식단 문자열 업데이트
+    SET_SELECTED_SUSPECTED_FOODS(state, foodsStr) {
+      state.selectedSuspectedFoods = foodsStr;
+      // localStorage에 저장
+      try {
+        localStorage.setItem('selectedSuspectedFoods', foodsStr);
+      } catch (error) {
+        console.warn('localStorage에 selectedSuspectedFoods 저장 실패:', error);
+      }
     }
+    // === [NEW] Missing Mutations Added End ===
   },
   actions: {
     // --- 기존 Actions (SAVE_HISTORY 호출 등 유지) ---

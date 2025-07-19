@@ -1170,7 +1170,12 @@ async function handleClearSelectedData(context) {
 
   // 변경사항이 있는 경우에만 스냅샷 캡처
   if (changedCells.length > 0 && !context.storeBridge.isEditing()) {
-    context.storeBridge._captureSnapshot('delete_clear', { changedCells });
+    // 필터 상태 포함한 스냅샷 캡처 함수가 있으면 사용, 없으면 기본 방식 사용
+    if (context.captureSnapshotWithFilter) {
+      context.captureSnapshotWithFilter('delete_clear', { changedCells });
+    } else {
+      context.storeBridge._captureSnapshot('delete_clear', { changedCells });
+    }
   }
 
   try {

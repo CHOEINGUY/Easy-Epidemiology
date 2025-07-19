@@ -442,6 +442,29 @@ export class StoreBridge {
     // localStorage 최신화
     this.enhancedManager.saveData(prevState);
 
+    // 필터 상태 복원 (핵심 추가)
+    if (prevState.filterState) {
+      this.filterState.activeFilters = new Map(prevState.filterState.activeFilters || []);
+      this.filterState.isFiltered = prevState.filterState.isFiltered || false;
+      this.filterState.filteredRowCount = prevState.filterState.filteredRowCount || 0;
+      this.filterState.originalRowCount = prevState.filterState.originalRowCount || 0;
+      this.filterState.lastAppliedAt = prevState.filterState.lastAppliedAt || null;
+      
+      // 필터된 행 재계산
+      this._updateFilteredRows();
+      
+      if (this.debug) {
+        console.log('[StoreBridge] 필터 상태 복원 완료:', {
+          isFiltered: this.filterState.isFiltered,
+          activeFiltersCount: this.filterState.activeFilters.size,
+          filteredRowCount: this.filterState.filteredRowCount
+        });
+      }
+    } else {
+      // 필터 상태가 없으면 초기화
+      this.clearAllFilters();
+    }
+
     // Validation 오류 복원
     if (prevState.validationErrors && typeof prevState.validationErrors === 'object') {
       // ValidationManager 타이머 정리
@@ -501,6 +524,29 @@ export class StoreBridge {
     }
 
     this.enhancedManager.saveData(nextState);
+
+    // 필터 상태 복원 (핵심 추가)
+    if (nextState.filterState) {
+      this.filterState.activeFilters = new Map(nextState.filterState.activeFilters || []);
+      this.filterState.isFiltered = nextState.filterState.isFiltered || false;
+      this.filterState.filteredRowCount = nextState.filterState.filteredRowCount || 0;
+      this.filterState.originalRowCount = nextState.filterState.originalRowCount || 0;
+      this.filterState.lastAppliedAt = nextState.filterState.lastAppliedAt || null;
+      
+      // 필터된 행 재계산
+      this._updateFilteredRows();
+      
+      if (this.debug) {
+        console.log('[StoreBridge] 필터 상태 복원 완료:', {
+          isFiltered: this.filterState.isFiltered,
+          activeFiltersCount: this.filterState.activeFilters.size,
+          filteredRowCount: this.filterState.filteredRowCount
+        });
+      }
+    } else {
+      // 필터 상태가 없으면 초기화
+      this.clearAllFilters();
+    }
 
     // Validation 오류 복원
     if (nextState.validationErrors && typeof nextState.validationErrors === 'object') {
@@ -1893,19 +1939,39 @@ export class StoreBridge {
       }
     }
     
+    // 필터 상태 포함 (핵심 수정)
+    const filterState = {
+      activeFilters: Array.from(this.filterState.activeFilters.entries()),
+      isFiltered: this.filterState.isFiltered,
+      filteredRowCount: this.filterState.filteredRowCount,
+      originalRowCount: this.filterState.originalRowCount,
+      lastAppliedAt: this.filterState.lastAppliedAt
+    };
+    
     const cloned = JSON.parse(JSON.stringify({
       headers: this.legacyStore.state.headers,
       rows: this.legacyStore.state.rows,
       settings: {
-        isIndividualExposureColumnVisible: this.legacyStore.state.isIndividualExposureColumnVisible
+        isIndividualExposureColumnVisible: this.legacyStore.state.isIndividualExposureColumnVisible,
+        isConfirmedCaseColumnVisible: this.legacyStore.state.isConfirmedCaseColumnVisible
       },
       validationErrors,
-      validationSchemaVersion: this.legacyStore.state.validationState?.version ?? 0
+      validationSchemaVersion: this.legacyStore.state.validationState?.version ?? 0,
+      filterState  // 필터 상태 추가
     }));
+    
     this.history.saveSnapshot(cloned, action, meta);
     
     // 스냅샷 저장 후 상태 업데이트
     this._updateUndoRedoState();
+    
+    if (this.debug) {
+      console.log(`[StoreBridge] 스냅샷 캡처 완료: ${action}`, {
+        hasFilterState: !!cloned.filterState,
+        filterIsFiltered: cloned.filterState?.isFiltered,
+        filterCount: cloned.filterState?.activeFilters?.length || 0
+      });
+    }
   }
   
   /**
@@ -2011,7 +2077,7 @@ export class StoreBridge {
    * @param {string} value - '1' 또는 '0'
    */
   togglePatientFilter(value) {
-    console.log('[Filter] togglePatientFilter 호출:', { value });
+
     
     const colIndex = 1; // 환자여부 컬럼 인덱스
     const currentFilter = this.filterState.activeFilters.get(colIndex);
@@ -2272,21 +2338,17 @@ export class StoreBridge {
    * @param {Object} filterConfig - 필터 설정
    */
   applyFilter(colIndex, filterConfig) {
-    console.log('[Filter] applyFilter 호출:', { 
-      colIndex, 
-      filterConfig: JSON.stringify(filterConfig),
-      filterConfigValues: filterConfig.values,
-      filterConfigValuesString: JSON.stringify(filterConfig.values)
+    // 변경 전 스냅샷 캡처
+    this._captureSnapshot('filter_apply', {
+      colIndex,
+      filterType: filterConfig.type,
+      filterValues: filterConfig.values,
+      columnType: filterConfig.columnType
     });
     
     this.filterState.activeFilters.set(colIndex, {
       ...filterConfig,
       appliedAt: Date.now()
-    });
-    
-    console.log('[Filter] 필터 저장 후 상태:', {
-      activeFiltersSize: this.filterState.activeFilters.size,
-      savedFilter: JSON.stringify(this.filterState.activeFilters.get(colIndex))
     });
     
     this._updateFilteredRows();
@@ -2297,6 +2359,11 @@ export class StoreBridge {
    * 모든 필터 해제
    */
   clearAllFilters() {
+    // 변경 전 스냅샷 캡처
+    this._captureSnapshot('filter_clear_all', {
+      clearedFilters: Array.from(this.filterState.activeFilters.entries())
+    });
+    
     this.filterState.activeFilters.clear();
     this.filterState.isFiltered = false;
     this.filterState.filteredRowCount = 0;
@@ -2305,7 +2372,6 @@ export class StoreBridge {
     this._originalToFilteredMapping.clear();
     
     this._saveFilterState();
-    console.log('[Filter] 모든 필터 해제됨');
   }
 
   /**
@@ -2313,6 +2379,12 @@ export class StoreBridge {
    * @param {number} colIndex - 컬럼 인덱스
    */
   removeFilter(colIndex) {
+    // 변경 전 스냅샷 캡처
+    this._captureSnapshot('filter_remove', {
+      colIndex,
+      removedFilter: this.filterState.activeFilters.get(colIndex)
+    });
+    
     this.filterState.activeFilters.delete(colIndex);
     
     if (this.filterState.activeFilters.size === 0) {
@@ -2327,28 +2399,18 @@ export class StoreBridge {
    * 필터된 행 업데이트
    */
   _updateFilteredRows() {
-    console.log('[Filter] _updateFilteredRows 호출됨');
-    
     if (!this.legacyStore) {
-      console.log('[Filter] legacyStore 없음 - 종료');
       return;
     }
     
     const rows = this.legacyStore.state.rows;
     this.filterState.originalRowCount = rows.length;
     
-    console.log('[Filter] 필터 상태 확인:', {
-      activeFiltersSize: this.filterState.activeFilters.size,
-      isFiltered: this.filterState.isFiltered,
-      rowsLength: rows.length
-    });
-    
     if (this.filterState.activeFilters.size === 0) {
       this.filterState.isFiltered = false;
       this.filterState.filteredRowCount = rows.length;
       this._filteredRowMapping.clear();
       this._originalToFilteredMapping.clear();
-      console.log('[Filter] 필터 없음 - 모든 행 표시');
       return;
     }
     
@@ -2363,13 +2425,6 @@ export class StoreBridge {
     this.filterState.filteredRowCount = filteredIndices.length;
     this.filterState.isFiltered = true;
     
-    console.log('[Filter] 필터링 완료:', {
-      originalCount: rows.length,
-      filteredCount: filteredIndices.length,
-      filteredIndices,
-      isFiltered: this.filterState.isFiltered
-    });
-    
     // 매핑 업데이트
     this._filteredRowMapping.clear();
     this._originalToFilteredMapping.clear();
@@ -2377,13 +2432,6 @@ export class StoreBridge {
     filteredIndices.forEach((originalIndex, filteredIndex) => {
       this._filteredRowMapping.set(filteredIndex, originalIndex);
       this._originalToFilteredMapping.set(originalIndex, filteredIndex);
-    });
-    
-    const filteredRowMappingSize = this._filteredRowMapping.size;
-    const originalToFilteredMappingSize = this._originalToFilteredMapping.size;
-    console.log('[Filter] 매핑 완료:', {
-      filteredRowMappingSize,
-      originalToFilteredMappingSize
     });
   }
 
@@ -2409,66 +2457,34 @@ export class StoreBridge {
    * @returns {boolean} 매칭 여부
    */
   _matchesFilter(row, colIndex, filterConfig) {
-    console.log('[Filter] _matchesFilter 호출:', { 
-      colIndex, 
-      filterConfig: JSON.stringify(filterConfig), 
-      row: JSON.stringify(row) 
-    });
+
     
     // 환자여부 컬럼 처리
     if (colIndex === 1 && filterConfig.columnType === 'isPatient') {
       const cellValue = String(row.isPatient ?? '');
-      console.log('[Filter] 환자여부 필터링:', { 
-        cellValue, 
-        filterValues: filterConfig.values,
-        filterValuesType: typeof filterConfig.values,
-        filterValuesLength: filterConfig.values?.length,
-        filterValuesString: JSON.stringify(filterConfig.values)
-      });
+
       
       // 'empty'가 포함된 경우 빈 값도 허용
       const allowEmpty = filterConfig.values.includes('empty');
       if (allowEmpty && (cellValue === '' || cellValue === 'null' || cellValue === 'undefined')) {
-        console.log('[Filter] 빈 값 허용됨');
         return true;
       }
       
       const matches = filterConfig.values.includes(cellValue);
-      console.log('[Filter] 값 매칭 결과:', { 
-        cellValue, 
-        matches,
-        includesCheck: filterConfig.values.includes(cellValue),
-        valuesCheck: filterConfig.values
-      });
       return matches;
     }
     
     // 확진여부 컬럼 처리
     if (filterConfig.columnType === 'isConfirmedCase') {
       const cellValue = String(row.isConfirmedCase ?? '');
-      console.log('[Filter] 확진여부 필터링:', { 
-        colIndex,
-        cellValue, 
-        filterValues: filterConfig.values,
-        filterValuesType: typeof filterConfig.values,
-        filterValuesLength: filterConfig.values?.length,
-        filterValuesString: JSON.stringify(filterConfig.values)
-      });
       
       // 'empty'가 포함된 경우 빈 값도 허용
       const allowEmpty = filterConfig.values.includes('empty');
       if (allowEmpty && (cellValue === '' || cellValue === 'null' || cellValue === 'undefined')) {
-        console.log('[Filter] 빈 값 허용됨');
         return true;
       }
       
       const matches = filterConfig.values.includes(cellValue);
-      console.log('[Filter] 확진여부 값 매칭 결과:', { 
-        cellValue, 
-        matches,
-        includesCheck: filterConfig.values.includes(cellValue),
-        valuesCheck: filterConfig.values
-      });
       return matches;
     }
     
@@ -2476,14 +2492,10 @@ export class StoreBridge {
     if (filterConfig.columnType === 'clinicalSymptoms') {
       // 컬럼 메타데이터에서 해당 컬럼의 cellIndex 찾기
       const columnMeta = this.columnMetas?.find(c => c.colIndex === colIndex);
-      console.log('[Filter] 임상증상 컬럼 메타데이터 검색:', { 
-        colIndex, 
-        columnMeta,
-        allColumnMetas: this.columnMetas?.map(c => ({ colIndex: c.colIndex, type: c.type, cellIndex: c.cellIndex }))
-      });
+
       
       if (!columnMeta) {
-        console.log('[Filter] 임상증상 컬럼 메타데이터 없음:', { colIndex, columnMeta });
+        // 메타데이터 없음 - 필터링 건너뜀
         return true;
       }
       

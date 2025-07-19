@@ -1237,7 +1237,8 @@ const exportChart = async () => {
 <style scoped>
 .app {
   background-color: #f0f0f0;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 .app-header {
   display: flex;
@@ -1260,9 +1261,11 @@ const exportChart = async () => {
   display: flex;
   flex-direction: column;
   width: 97%;
-  margin: 20px auto;
+  margin: 20px auto 37px auto;
   background-color: #f0f0f0;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  height: calc(100vh - 131px); /* 헤더(37px) + 상하여백(20px+37px) + 탭(37px) */
+  overflow: hidden;
 }
 .summary-bar {
   height: 40px;
@@ -1306,6 +1309,8 @@ const exportChart = async () => {
   flex-direction: column;
   gap: 30px;
   margin: 20px 30px 30px 30px;
+  flex: 1;
+  overflow: auto;
 }
 .output-row {
   display: flex;

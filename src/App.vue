@@ -98,6 +98,8 @@ import CaseControl from './components/CaseControl.vue';
 import CohortStudy from './components/CohortStudy.vue';
 import HomePage from './components/HomePage.vue';
 import ClinicalSymptoms from './components/ClinicalSymptoms.vue';
+import CaseSeries from './components/CaseSeries.vue';
+import ReportWriter from './components/ReportWriter.vue';
 import ToastContainer from './components/DataInputVirtualScroll/parts/ToastContainer.vue';
 import AuthScreen from './components/AuthScreen.vue';
 import AdminPanel from './components/AdminPanel.vue';
@@ -115,6 +117,8 @@ export default {
     CohortStudy,
     HomePage,
     ClinicalSymptoms,
+    CaseSeries,
+    ReportWriter,
     ToastContainer,
     AuthScreen,
     AdminPanel
@@ -163,6 +167,16 @@ export default {
           component: 'CohortStudy'
         },
         {
+          name: 'CaseSeries',
+          label: '사례군조사',
+          component: 'CaseSeries'
+        },
+        {
+          name: 'ReportWriter',
+          label: '보고서 작성',
+          component: 'ReportWriter'
+        },
+        {
           name: 'HomePage',
           label: '웹페이지 정보',
           component: 'HomePage'
@@ -192,7 +206,7 @@ export default {
     },
     
     contentClass() {
-      if (this.currentView === 'DataInputVirtual') {
+      if (this.currentView === 'DataInputVirtual' || this.currentView === 'ReportWriter' || this.currentView === 'ClinicalSymptoms') {
         return 'content no-scroll';
       }
       return 'content scrollable';
@@ -448,6 +462,7 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  min-height: 600px; /* 최소 높이 설정으로 기본 사용성 보장 */
 }
 
 

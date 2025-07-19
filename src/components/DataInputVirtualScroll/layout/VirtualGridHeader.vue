@@ -28,11 +28,7 @@
               @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, group.startColIndex)"
             >
               <span v-html="getHeaderText(group)"></span>
-              <span v-if="isColumnFiltered(group.startColIndex)" class="filter-icon" aria-hidden="true"
-                    @mouseenter="showFilterTooltip(group.startColIndex, $event)"
-                    @mouseleave="hideFilterTooltip"
-                    @click.stop="removeFilter(group.startColIndex)"
-                    :title="getFilterTooltipText(group.startColIndex)">
+              <span v-if="isColumnFiltered(group.startColIndex)" class="filter-icon" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
                 </svg>
@@ -89,11 +85,7 @@
               @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, column.colIndex)"
             >
               <span class="header-text">{{ column.headerText }}</span>
-              <span v-if="isColumnFiltered(column.colIndex)" class="filter-icon" aria-hidden="true"
-                    @mouseenter="showFilterTooltip(column.colIndex, $event)"
-                    @mouseleave="hideFilterTooltip"
-                    @click.stop="removeFilter(column.colIndex)"
-                    :title="getFilterTooltipText(column.colIndex)">
+              <span v-if="isColumnFiltered(column.colIndex)" class="filter-icon" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
                 </svg>
@@ -158,7 +150,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-column', 'delete-column', 'update:activeFilters']);
+defineEmits(['cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-column', 'delete-column']);
 
 const headerContainer = ref(null);
 
@@ -256,64 +248,6 @@ function hideTooltip() {
   activeTooltip.value = null;
 }
 
-// 필터 툴팁 표시 함수
-function showFilterTooltip(colIndex, event) {
-  const filterConfig = getFilterConfig(colIndex);
-  if (!filterConfig) return;
-  
-  const rect = event.currentTarget.getBoundingClientRect();
-  const tooltipText = formatFilterTooltip(colIndex, filterConfig);
-  
-  tooltipText.value = tooltipText;
-  tooltipStyle.left = `${rect.left + rect.width / 2}px`;
-  tooltipStyle.top = `${rect.bottom + 5}px`;
-  tooltipStyle.transform = 'translateX(-50%)';
-  activeTooltip.value = 'filter';
-}
-
-// 필터 툴팁 숨김 함수
-function hideFilterTooltip() {
-  if (activeTooltip.value === 'filter') {
-    activeTooltip.value = null;
-  }
-}
-
-// 필터 설정 가져오기
-function getFilterConfig(colIndex) {
-  if (props.activeFilters && props.activeFilters.has(colIndex)) {
-    return props.activeFilters.get(colIndex);
-  }
-  if (typeof window !== 'undefined' && window.storeBridge) {
-    return window.storeBridge.filterState.activeFilters?.get(colIndex);
-  }
-  if (store.state && store.state.filterState && store.state.filterState.activeFilters) {
-    return store.state.filterState.activeFilters.get(colIndex);
-  }
-  return null;
-}
-
-// 필터 툴팁 텍스트 포맷팅
-function formatFilterTooltip(colIndex, filterConfig) {
-  const columnName = getColumnName(colIndex);
-  const values = filterConfig.values;
-  
-  if (filterConfig.type === 'binary') {
-    const displayValues = values.map(v => v === 'empty' ? '빈 셀' : v).join(', ');
-    return `${columnName}: ${displayValues} 표시`;
-  } else if (filterConfig.type === 'text') {
-    const displayValues = values.map(v => v === 'empty' ? '빈 셀' : `"${v}"`).join(', ');
-    return `${columnName}: ${displayValues} 포함`;
-  }
-  
-  return `${columnName}: 필터 적용됨`;
-}
-
-// 컬럼 이름 가져오기
-function getColumnName(colIndex) {
-  const column = props.allColumnsMeta?.find(col => col.colIndex === colIndex);
-  return column?.headerText || `컬럼 ${colIndex}`;
-}
-
 // Expose the container for parent access
 defineExpose({ headerContainer });
 
@@ -344,21 +278,6 @@ function isColumnFiltered(colIndex) {
   return false;
 }
 
-// 필터 제거 함수
-function removeFilter(colIndex) {
-  if (props.activeFilters) {
-    props.activeFilters.delete(colIndex);
-    emit('update:activeFilters', props.activeFilters); // 부모 컴포넌트에 필터 상태 업데이트 알림
-  }
-}
-
-// 필터 툴팁 텍스트 가져오기
-function getFilterTooltipText(colIndex) {
-  if (props.activeFilters && props.activeFilters.has(colIndex)) {
-    return '필터 해제';
-  }
-  return '필터 적용';
-}
 </script>
 
 <style scoped>
@@ -628,21 +547,12 @@ th.allow-wrap {
   background-color: rgba(25, 118, 210, 0.1);
   border-radius: 2px;
   padding: 1px;
-  cursor: pointer; /* 클릭 가능함을 나타내는 커서 */
+  cursor: default; /* 클릭 불가능함을 나타내는 커서 */
   transition: all 0.2s ease;
   border: 1px solid transparent;
 }
 
-.filter-icon:hover {
-  background-color: rgba(25, 118, 210, 0.2);
-  border-color: rgba(25, 118, 210, 0.3);
-  transform: scale(1.1);
-}
-
-.filter-icon:active {
-  background-color: rgba(25, 118, 210, 0.3);
-  transform: scale(0.95);
-}
+/* active 상태 스타일 제거 */
 
 .filter-icon svg {
   width: 12px;

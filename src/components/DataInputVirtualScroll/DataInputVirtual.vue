@@ -194,9 +194,29 @@ const filterState = ref(storeBridge.filterState);
 
 // 필터 상태 변화 감지 - 단일 watch로 통합
 watch(() => storeBridge.filterState, (newState) => {
-  console.log('[Filter] 필터 상태 변화 감지:', newState);
-  filterState.value = newState;
-}, { deep: true, immediate: true });
+  // 새로운 상태와 현재 상태가 다른 경우에만 업데이트
+  if (JSON.stringify(newState) !== JSON.stringify(filterState.value)) {
+    filterState.value = { ...newState };
+    
+    // UI 강제 업데이트도 트리거
+    nextTick(() => {
+      const gridBody = gridBodyRef.value;
+      const gridHeader = gridHeaderRef.value;
+      
+      if (gridBody) {
+        gridBody.$forceUpdate();
+      }
+      
+      if (gridHeader) {
+        gridHeader.$forceUpdate();
+      }
+    });
+  }
+}, { 
+  deep: true, 
+  immediate: true,
+  flush: 'sync' // 동기적으로 즉시 실행
+});
 
 // StoreBridge에 ValidationManager 설정 (이미 생성자에서 전달했으므로 제거)
 // storeBridge.validationManager = validationManager;
@@ -204,6 +224,62 @@ watch(() => storeBridge.filterState, (newState) => {
 // 전역 Undo/Redo 키보드 단축키 활성화
 useUndoRedo(storeBridge);
 const cellInputState = useCellInputState();
+
+// === 필터 상태 포함한 스냅샷 캡처 헬퍼 ===
+function captureSnapshotWithFilter(actionType, metadata = {}) {
+  try {
+    // StoreBridge의 _captureSnapshot이 이제 자동으로 필터 상태를 포함하므로
+    // 단순히 _captureSnapshot을 호출하면 됩니다.
+    storeBridge._captureSnapshot(actionType, metadata);
+  } catch (error) {
+    console.error(`[Snapshot] 스냅샷 캡처 실패: ${actionType}`, error);
+  }
+}
+
+// === 히스토리 변경 후 동기화 함수 ===
+function syncFilterStateAfterHistoryChange() {
+  // StoreBridge에서 복원된 필터 상태를 로컬 상태와 동기화
+  const newFilterState = { ...storeBridge.filterState };
+  
+  // 필터 상태 강제 업데이트
+  filterState.value = newFilterState;
+  
+  // StoreBridge의 내부 필터 상태도 강제로 동기화
+  if (storeBridge.setFilterState) {
+    storeBridge.setFilterState(newFilterState);
+  }
+  
+  // 필터 상태 변경으로 인한 UI 업데이트
+  nextTick(() => {
+    // 필터링된 행 재계산 강제 실행 - 더 강력한 방법 사용
+    try {
+      // 1. VirtualGridBody 강제 업데이트
+      const gridBody = gridBodyRef.value;
+      if (gridBody) {
+        gridBody.$forceUpdate();
+      }
+      
+      // 2. VirtualGridHeader 강제 업데이트 (필터 아이콘 표시용)
+      const gridHeader = gridHeaderRef.value;
+      if (gridHeader) {
+        gridHeader.$forceUpdate();
+      }
+      
+      // 3. 메인 컴포넌트의 filteredRows computed 재계산 트리거
+      // filterState 값을 미세하게 변경하여 reactivity 트리거
+      const triggerValue = { ...newFilterState, _trigger: Date.now() };
+      filterState.value = triggerValue;
+      
+      // 4. 다시 정상 값으로 복원
+      setTimeout(() => {
+        filterState.value = newFilterState;
+      }, 10);
+      
+    } catch (error) {
+      console.error('[Filter-Undo] UI 업데이트 중 오류:', error);
+    }
+  });
+}
 
 // ValidationManager에서 사용할 수 있도록 전역 함수 등록
 if (typeof window !== 'undefined') {
@@ -625,35 +701,36 @@ const selectedCellInfo = computed(() => {
 
 // --- 필터된 행 계산 ---
 const filteredRows = computed(() => {
-  console.log('[Filter] ===== filteredRows computed 실행 시작 =====');
-  
-  // filterState ref 사용
+  // filterState ref와 storeBridge.filterState 모두 감시
   const currentFilterState = filterState.value;
-  const isFiltered = currentFilterState.isFiltered;
-  const activeFiltersSize = currentFilterState.activeFilters?.size || 0;
-  const filteredRowCount = currentFilterState.filteredRowCount;
-  const originalRowCount = currentFilterState.originalRowCount;
+  const bridgeFilterState = storeBridge.filterState;
   
-  console.log('[Filter] filterState.value:', {
-    isFiltered,
-    activeFiltersSize,
-    filteredRowCount,
-    originalRowCount
-  });
-  console.log('[Filter] rows.value.length:', rows.value.length);
+  // 필터 상태 동기화는 watch 함수에서 처리하므로 computed에서는 제거
+  // side effect 방지를 위해 computed는 순수하게 계산만 수행
+  // currentFilterState를 참조하여 filterState.value 변경에 대한 반응성 유지
+  const activeFiltersSize = bridgeFilterState.activeFilters?.size || 0;
   
-  if (!isFiltered) {
-    console.log('[Filter] 필터링 없음 - 전체 행 반환');
-    return rows.value;
+  // 개발 모드에서 두 상태의 동기화 여부 확인 (currentFilterState 사용)
+  if (import.meta.env?.MODE === 'development') {
+    const isStateSynced = JSON.stringify(currentFilterState) === JSON.stringify(bridgeFilterState);
+    console.log('[Filter] filteredRows computed 실행:', {
+      isFiltered: bridgeFilterState.isFiltered,
+      activeFiltersSize,
+      totalRowsLength: rows.value.length,
+      isStateSynced
+    });
   }
   
-  console.log('[Filter] 필터링 시작 - 직접 필터링 로직 사용');
+  // 실제 필터링은 bridgeFilterState 기준으로 수행
+  if (!bridgeFilterState.isFiltered || activeFiltersSize === 0) {
+    return rows.value;
+  }
   
   // 직접 필터링 로직 사용 - 원본 인덱스 정보 포함
   const filteredWithOriginalIndex = [];
   rows.value.forEach((row, originalIndex) => {
     // activeFilters를 배열로 변환하여 반응성 보장
-    const activeFiltersArray = Array.from(currentFilterState.activeFilters || []);
+    const activeFiltersArray = Array.from(bridgeFilterState.activeFilters || []);
     
     let shouldInclude = true;
     for (const [colIndex, filterConfig] of activeFiltersArray) {
@@ -674,11 +751,7 @@ const filteredRows = computed(() => {
     }
   });
   
-  console.log('[Filter] 필터링 결과:', {
-    originalCount: rows.value.length,
-    filteredCount: filteredWithOriginalIndex.length,
-    filteredRows: filteredWithOriginalIndex
-  });
+  // Debug log removed for performance
   
   return filteredWithOriginalIndex;
 });
@@ -757,11 +830,18 @@ async function onExcelFileSelected(file) {
     // 필터 초기화 (새로운 데이터 가져오기 시 필터 상태 리셋)
     console.log('[ExcelImport] 필터 초기화 시작');
     const wasFiltered = storeBridge.filterState.isFiltered;
+    const oldFilterState = wasFiltered ? { ...storeBridge.filterState } : null;
+    
     storeBridge.clearAllFilters();
     
-    // 필터가 활성화되어 있었다면 사용자에게 알림
-    if (wasFiltered) {
+    // 필터가 활성화되어 있었다면 사용자에게 알림 및 스냅샷 캡처
+    if (wasFiltered && oldFilterState) {
       showToast('새로운 데이터 가져오기로 필터가 초기화되었습니다.', 'info');
+      captureSnapshotWithFilter('excel_import_filter_reset', {
+        action: 'excel_import_filter_reset',
+        oldFilterState,
+        newFilterState: { ...storeBridge.filterState }
+      });
     }
     
     // 1단계: 엑셀 파일 파싱 (0% ~ 60%)
@@ -779,6 +859,27 @@ async function onExcelFileSelected(file) {
     
     // 2단계: 데이터 저장 및 설정 (60% ~ 70%)
     excelUploadProgress.value = 60;
+    
+    // 데이트피커가 열려있으면 닫기
+    if (dateTimePickerState.visible) {
+      console.log('[DataInputVirtual] Excel 업로드로 데이트피커 닫기');
+      closeDateTimePicker();
+    }
+    
+    // 데이트피커 모드에서는 편집 모드가 활성화되지 않았으므로 cellInputState 정리 불필요
+    // cellInputState.confirmEditing();
+    // selectionSystem.stopEditing(true);
+    
+    // 데이터 변경 전 스냅샷 캡처
+    captureSnapshotWithFilter('excel_import', {
+      action: 'excel_import',
+      fileName: file.name,
+      hasIndividualExposureTime: parsed.hasIndividualExposureTime,
+      hasConfirmedCase: parsed.hasConfirmedCase,
+      rowCount: parsed.rows.length,
+      columnCount: Object.keys(parsed.headers).reduce((sum, key) => sum + (parsed.headers[key]?.length || 0), 0)
+    });
+    
     storeBridge.dispatch('updateHeadersFromExcel', parsed.headers);
     storeBridge.dispatch('addRowsFromExcel', parsed.rows);
     
@@ -894,6 +995,13 @@ function onDeleteEmptyCols() {
   const beforeColCount = allColumnsMeta.value.length;
   const beforeColumnsMeta = [...allColumnsMeta.value]; // 삭제 전 열 메타 정보 백업
   
+  // 삭제 전 스냅샷 캡처
+  captureSnapshotWithFilter('delete_empty_columns', {
+    action: 'delete_empty_columns',
+    beforeColumnCount: beforeColCount,
+    beforeColumnsMeta
+  });
+  
   storeBridge.dispatch('deleteEmptyColumns');
   
   // 삭제된 열 개수 계산 (nextTick 후에 계산)
@@ -947,12 +1055,21 @@ async function onResetSheet() {
         
         // 필터 초기화
         const wasFiltered = storeBridge.filterState.isFiltered;
+        const oldFilterState = wasFiltered ? { ...storeBridge.filterState } : null;
+        
         storeBridge.clearAllFilters();
         
         // 필터가 활성화되어 있었다면 사용자에게 알림
         if (wasFiltered) {
           showToast('시트 초기화로 필터가 해제되었습니다.', 'info');
         }
+        
+        // 데이터 리셋 전 스냅샷 캡처
+        captureSnapshotWithFilter('sheet_reset', {
+          action: 'sheet_reset',
+          oldFilterState,
+          newFilterState: { ...storeBridge.filterState }
+        });
         
         storeBridge.dispatch('resetSheet');
         // selection / scroll reset
@@ -1595,7 +1712,21 @@ function onContextMenuSelect(action) {
       activeFilters: Array.from(storeBridge.filterState.activeFilters.entries())
     });
     
+    // 필터 변경 전 상태 백업
+    const oldFilterState = JSON.stringify(storeBridge.filterState);
+    
     storeBridge.togglePatientFilter(value);
+    
+    // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+    if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+      captureSnapshotWithFilter('filter_change', {
+        action,
+        filterType: 'patient',
+        value,
+        oldFilterState: JSON.parse(oldFilterState),
+        newFilterState: { ...storeBridge.filterState }
+      });
+    }
     
     console.log('[Filter] 필터 토글 후 상태:', {
       action,
@@ -1626,7 +1757,22 @@ function onContextMenuSelect(action) {
       currentFilterState: storeBridge.filterState
     });
     
+    // 필터 변경 전 상태 백업
+    const oldFilterState = JSON.stringify(storeBridge.filterState);
+    
     storeBridge.toggleConfirmedFilter(target.colIndex, value);
+    
+    // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+    if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+      captureSnapshotWithFilter('filter_change', {
+        action,
+        filterType: 'confirmed',
+        colIndex: target.colIndex,
+        value,
+        oldFilterState: JSON.parse(oldFilterState),
+        newFilterState: { ...storeBridge.filterState }
+      });
+    }
     
     console.log('[Filter] 확진여부 필터 토글 후 상태:', {
       action,
@@ -1657,7 +1803,22 @@ function onContextMenuSelect(action) {
       currentFilterState: storeBridge.filterState
     });
     
+    // 필터 변경 전 상태 백업
+    const oldFilterState = JSON.stringify(storeBridge.filterState);
+    
     storeBridge.toggleClinicalFilter(target.colIndex, value);
+    
+    // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+    if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+      captureSnapshotWithFilter('filter_change', {
+        action,
+        filterType: 'clinical',
+        colIndex: target.colIndex,
+        value,
+        oldFilterState: JSON.parse(oldFilterState),
+        newFilterState: { ...storeBridge.filterState }
+      });
+    }
     
     console.log('[Filter] 임상증상 필터 토글 후 상태:', {
       action,
@@ -1688,7 +1849,22 @@ function onContextMenuSelect(action) {
       currentFilterState: storeBridge.filterState
     });
     
+    // 필터 변경 전 상태 백업
+    const oldFilterState = JSON.stringify(storeBridge.filterState);
+    
     storeBridge.toggleDietFilter(target.colIndex, value);
+    
+    // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+    if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+      captureSnapshotWithFilter('filter_change', {
+        action,
+        filterType: 'diet',
+        colIndex: target.colIndex,
+        value,
+        oldFilterState: JSON.parse(oldFilterState),
+        newFilterState: { ...storeBridge.filterState }
+      });
+    }
     
     console.log('[Filter] 식단 필터 토글 후 상태:', {
       action,
@@ -1711,7 +1887,22 @@ function onContextMenuSelect(action) {
       currentFilterState: storeBridge.filterState
     });
     
+    // 필터 변경 전 상태 백업
+    const oldFilterState = JSON.stringify(storeBridge.filterState);
+    
     storeBridge.toggleBasicFilter(target.colIndex, 'empty');
+    
+    // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+    if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+      captureSnapshotWithFilter('filter_change', {
+        action,
+        filterType: 'basic',
+        colIndex: target.colIndex,
+        value: 'empty',
+        oldFilterState: JSON.parse(oldFilterState),
+        newFilterState: { ...storeBridge.filterState }
+      });
+    }
     
     // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
     filterState.value = { ...storeBridge.filterState };
@@ -1730,7 +1921,22 @@ function onContextMenuSelect(action) {
         currentFilterState: storeBridge.filterState
       });
       
+      // 필터 변경 전 상태 백업
+      const oldFilterState = JSON.stringify(storeBridge.filterState);
+      
       storeBridge.toggleBasicFilter(target.colIndex, value);
+      
+      // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+      if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+        captureSnapshotWithFilter('filter_change', {
+          action,
+          filterType: 'basic',
+          colIndex: target.colIndex,
+          value,
+          oldFilterState: JSON.parse(oldFilterState),
+          newFilterState: { ...storeBridge.filterState }
+        });
+      }
       
       // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
       filterState.value = { ...storeBridge.filterState };
@@ -1747,7 +1953,22 @@ function onContextMenuSelect(action) {
         currentFilterState: storeBridge.filterState
       });
       
+      // 필터 변경 전 상태 백업
+      const oldFilterState = JSON.stringify(storeBridge.filterState);
+      
       storeBridge.toggleDateTimeFilter(target.colIndex, dateValue);
+      
+      // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+      if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+        captureSnapshotWithFilter('filter_change', {
+          action,
+          filterType: 'datetime',
+          colIndex: target.colIndex,
+          value: dateValue,
+          oldFilterState: JSON.parse(oldFilterState),
+          newFilterState: { ...storeBridge.filterState }
+        });
+      }
       
       // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
       filterState.value = { ...storeBridge.filterState };
@@ -1757,12 +1978,24 @@ function onContextMenuSelect(action) {
     break;
   }
   case 'clear-all-filters': {
+    // 필터 변경 전 상태 백업
+    const oldFilterState = JSON.stringify(storeBridge.filterState);
+    
     storeBridge.clearAllFilters();
+    
+    // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+    if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+      captureSnapshotWithFilter('filter_clear_all', {
+        action: 'clear-all-filters',
+        oldFilterState: JSON.parse(oldFilterState),
+        newFilterState: { ...storeBridge.filterState }
+      });
+    }
     
     // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
     filterState.value = { ...storeBridge.filterState };
     
-    console.log('[Filter] 모든 필터 해제');
+    console.log('[Filter] 모든 필터 해제됨');
     break;
   }
   }
@@ -1863,7 +2096,9 @@ function createHandlerContext() {
     hideContextMenu,
     // 데이트피커 참조 및 상태 추가
     dateTimePickerRef,
-    dateTimePickerState
+    dateTimePickerState,
+    // 필터 상태 포함한 스냅샷 캡처 함수 추가
+    captureSnapshotWithFilter
   };
 }
 
@@ -2314,37 +2549,123 @@ function onClearSelection() {
 function onUndo() {
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
-    console.log('[DataInputVirtual] Undo로 데이트피커 닫기');
     closeDateTimePicker();
   }
 
   const success = storeBridge.undo();
+  
   if (success) {
+    
     // ValidationManager 타이머만 정리 (오류는 StoreBridge에서 복원됨)
     if (validationManager && typeof validationManager.onDataReset === 'function') {
       validationManager.onDataReset();
+    }
+    
+    // 필터 상태 동기화
+    syncFilterStateAfterHistoryChange();
+    
+    // 추가적인 필터 상태 확인 및 강제 동기화
+    nextTick(() => {
+      // 필터 상태가 여전히 불일치하면 강제 동기화
+      if (JSON.stringify(filterState.value) !== JSON.stringify(storeBridge.filterState)) {
+        filterState.value = { ...storeBridge.filterState };
+        
+        // 한번 더 UI 업데이트
+        setTimeout(() => {
+          const gridBody = gridBodyRef.value;
+          const gridHeader = gridHeaderRef.value;
+          if (gridBody) gridBody.$forceUpdate();
+          if (gridHeader) gridHeader.$forceUpdate();
+        }, 50);
+      }
+    });
+    
+    // 사용자에게 알림 (필터가 적용된 경우)
+    if (storeBridge.filterState.isFiltered) {
+      showToast('데이터와 필터 상태가 복원되었습니다.', 'info');
+    } else {
+      showToast('필터가 해제되었습니다.', 'info');
     }
   }
 }
 
 function onRedo() {
+  console.log('[Redo] ===== Redo 시작 =====');
+  console.log('[Redo] 현재 필터 상태:', filterState.value);
+  console.log('[Redo] StoreBridge 필터 상태:', storeBridge.filterState);
+  
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
-    console.log('[DataInputVirtual] Redo로 데이트피커 닫기');
+    console.log('[Redo] 데이트피커 닫기');
     closeDateTimePicker();
   }
 
   const success = storeBridge.redo();
+  console.log('[Redo] StoreBridge.redo() 결과:', success);
+  
   if (success) {
+    console.log('[Redo] Redo 성공 - 후처리 시작');
+    console.log('[Redo] Redo 후 StoreBridge 필터 상태:', storeBridge.filterState);
+    
     // ValidationManager 타이머만 정리 (오류는 StoreBridge에서 복원됨)
     if (validationManager && typeof validationManager.onDataReset === 'function') {
       validationManager.onDataReset();
     }
+    
+    // 필터 상태 동기화
+    syncFilterStateAfterHistoryChange();
+    
+    // 추가적인 필터 상태 확인 및 강제 동기화
+    nextTick(() => {
+      console.log('[Redo] 최종 필터 상태 확인:', {
+        filterStateValue: filterState.value,
+        storeBridgeFilterState: storeBridge.filterState,
+        isFiltered: storeBridge.filterState.isFiltered,
+        activeFiltersSize: storeBridge.filterState.activeFilters?.size || 0
+      });
+      
+      // 필터 상태가 여전히 불일치하면 강제 동기화
+      if (JSON.stringify(filterState.value) !== JSON.stringify(storeBridge.filterState)) {
+        console.warn('[Redo] 필터 상태 불일치 감지 - 강제 동기화 실행');
+        filterState.value = { ...storeBridge.filterState };
+        
+        // 한번 더 UI 업데이트
+        setTimeout(() => {
+          const gridBody = gridBodyRef.value;
+          const gridHeader = gridHeaderRef.value;
+          if (gridBody) gridBody.$forceUpdate();
+          if (gridHeader) gridHeader.$forceUpdate();
+        }, 50);
+      }
+    });
+    
+    // 사용자에게 알림 (필터가 적용된 경우)
+    if (storeBridge.filterState.isFiltered) {
+      showToast('데이터와 필터 상태가 복원되었습니다.', 'info');
+    } else {
+      showToast('필터가 해제되었습니다.', 'info');
+    }
+  } else {
+    console.log('[Redo] Redo 실패 또는 불가능');
   }
+  
+  console.log('[Redo] ===== Redo 완료 =====');
 }
 
 function onClearAllFilters() {
+  // 필터 변경 전 상태 백업
+  const oldFilterState = JSON.stringify(storeBridge.filterState);
+  
   storeBridge.clearAllFilters();
+  
+  // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
+  if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
+    captureSnapshotWithFilter('filter_clear_all', {
+      action: 'clear-all-filters',
+      oldFilterState: JSON.parse(oldFilterState),
+      newFilterState: { ...storeBridge.filterState }
+    });
+  }
   
   // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
   filterState.value = { ...storeBridge.filterState };

@@ -19,16 +19,56 @@
               <div class="suspected-food-input-wrapper">
                 <div class="suspected-food-title">
                   <span class="selected-variable-details__title-dot"></span>
-                  <span style="margin-left: 0.2em;">의심식단 입력</span>
+                  <span style="margin-left: 0.2em;">추정 감염원 선택</span>
                 </div>
-                <input
-                  id="suspected-food"
-                  v-model="suspectedFood"
-                  type="text"
-                  class="suspected-food-input"
-                  placeholder="의심식단을 입력하면 차트 하단에 표시됩니다"
-                  @input="onSuspectedFoodChange"
-                />
+                <div class="suspected-food-dropdown-container">
+                  <div class="suspected-food-dropdown-wrapper">
+                    <!-- 통합된 드롭다운과 입력란 -->
+                    <div class="unified-food-selector">
+                      <!-- 입력란 (드롭다운 트리거 역할도 함) -->
+                      <div class="input-dropdown-trigger" @click="toggleDropdown">
+                        <input
+                          v-model="suspectedFood"
+                          type="text"
+                          class="unified-food-input"
+                          placeholder="추정 감염원을 선택하거나 직접 입력하세요"
+                          @input="onSuspectedFoodChange"
+                          :disabled="!hasAnalysisResults"
+                        />
+                        <span class="dropdown-arrow">▼</span>
+                      </div>
+                      
+                      <!-- 체크박스 드롭다운 메뉴 -->
+                      <div v-if="isDropdownOpen" class="checkbox-dropdown-menu">
+                        <div class="dropdown-header">
+                          <span>추정 감염원 선택 (다중 선택 가능)</span>
+                        </div>
+                        <div 
+                          v-for="food in sortedFoodItems" 
+                          :key="food.item"
+                          class="checkbox-dropdown-item"
+                          @click="toggleFoodSelection(food.item)"
+                        >
+                          <input
+                            type="checkbox"
+                            :checked="isFoodSelected(food.item)"
+                            @click.stop
+                            @change="toggleFoodSelection(food.item)"
+                            class="food-checkbox"
+                          />
+                          <span class="food-name">{{ food.item }}</span>
+                          <span class="food-pvalue">
+                            p={{ food.pValue !== null ? (food.pValue < 0.001 ? '<0.001' : food.pValue.toFixed(3)) : 'N/A' }}
+                          </span>
+                        </div>
+                        <div class="dropdown-footer">
+                          <button @click="applySelectedFoods" class="apply-button">닫기</button>
+                          <button @click="closeDropdown" class="cancel-button">취소</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -185,9 +225,37 @@
                   <div v-if="activeTooltip === 'confirmedCaseLine'" class="control-tooltip">{{ tooltipText }}</div>
                 </div>
               </div>
+              <!-- 차트 설정 초기화 버튼 -->
+              <div class="control-group reset-button-group">
+                <button @click="resetEpiChartSettings" 
+                        class="control-button reset-text-button"
+                        @mouseenter="showTooltip('resetEpiChart', '유행곡선 차트 설정을 기본값으로 초기화합니다')" 
+                        @mouseleave="hideTooltip">
+                  초기화
+                </button>
+                <div v-if="activeTooltip === 'resetEpiChart'" class="control-tooltip">{{ tooltipText }}</div>
+              </div>
             </div>
             <div class="chart-container-wrapper epi-chart-wrapper">
               <div class="chart-buttons">
+                <div style="position: relative;">
+                  <button @click="saveChartForReport" :class="['export-chart-button', isChartSaved ? 'saved' : 'unsaved']">
+                    <span class="button-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                      </svg>
+                    </span>
+                    <span class="button-text">{{ isChartSaved ? '저장 완료' : '보고서 저장' }}</span>
+                  </button>
+                  <div v-if="showChartSavedTooltip" class="copy-tooltip check-tooltip">
+                    <svg width="32" height="32" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="12" fill="#1a73e8"/>
+                      <polyline points="7,13 11,17 17,9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
                 <div style="position: relative;">
                   <button @click="copyChartToClipboard" class="copy-chart-button">
                     <span class="button-icon">
@@ -205,16 +273,18 @@
                     </svg>
                   </div>
                 </div>
-                <button @click="exportChart" class="export-chart-button">
-                  <span class="button-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                  </span>
-                  <span class="button-text">차트 저장</span>
-                </button>
+                <div style="position: relative;">
+                  <button @click="exportChart" class="export-chart-button">
+                    <span class="button-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                      </svg>
+                    </span>
+                    <span class="button-text">차트 저장</span>
+                  </button>
+                </div>
               </div>
               <div ref="epiCurveChartContainer" class="chart-instance" :style="{ width: epiChartWidth + 'px' }"></div>
             </div>
@@ -391,9 +461,37 @@
                   <button @click="incubationChartDisplayMode = 'hhmm'" :class="{ 'chart-select-button--active': incubationChartDisplayMode === 'hhmm' }" class="chart-select-button">시:분 단위</button>
                 </div>
               </div>
+              <!-- 차트 설정 초기화 버튼 -->
+              <div class="control-group reset-button-group">
+                <button @click="resetIncubationChartSettings" 
+                        class="control-button reset-text-button"
+                        @mouseenter="showTooltip('resetIncubationChart', '잠복기 차트 설정을 기본값으로 초기화합니다')" 
+                        @mouseleave="hideTooltip">
+                  초기화
+                </button>
+                <div v-if="activeTooltip === 'resetIncubationChart'" class="control-tooltip">{{ tooltipText }}</div>
+              </div>
             </div>
             <div class="chart-container-wrapper incubation-chart-wrapper">
               <div class="chart-buttons">
+                <div style="position: relative;">
+                  <button @click="saveIncubationChartForReport" :class="['export-chart-button', isIncubationChartSaved ? 'saved' : 'unsaved']">
+                    <span class="button-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                      </svg>
+                    </span>
+                    <span class="button-text">{{ isIncubationChartSaved ? '저장 완료' : '보고서 저장' }}</span>
+                  </button>
+                  <div v-if="showIncubationChartSavedTooltip" class="copy-tooltip check-tooltip">
+                    <svg width="32" height="32" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="12" fill="#1a73e8"/>
+                      <polyline points="7,13 11,17 17,9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
                 <div style="position: relative;">
                   <button @click="copyIncubationChartToClipboard" class="copy-chart-button">
                     <span class="button-icon">
@@ -478,8 +576,42 @@ const isConfirmedCaseColumnVisible = computed(() => store.state.isConfirmedCaseC
 // 확진자 꺾은선 표시 여부 상태 추가
 const showConfirmedCaseLine = ref(true);
 
-// 의심식단 상태 추가
-const suspectedFood = ref('');
+// 추정 감염원 상태 추가
+const suspectedFood = ref(store.getters.getSelectedSuspectedFoods || '');
+
+// 분석 결과 가져오기
+const analysisResults = computed(() => {
+  const results = store.getters.getAnalysisResults;
+  // 현재 활성화된 분석 탭에 따라 결과 반환
+  // 실제로는 현재 탭 정보를 가져와야 하지만, 임시로 caseControl 결과 반환
+  return results.caseControl || results.cohort || [];
+});
+
+// 카이제곱 값이 낮은 순으로 정렬된 식단 목록
+const sortedFoodItems = computed(() => {
+  if (!analysisResults.value || analysisResults.value.length === 0) {
+    return [];
+  }
+  
+  return analysisResults.value
+    .filter(item => item.pValue !== null) // p-value가 있는 항목만
+    .sort((a, b) => {
+      // p-value가 낮은 순으로 정렬
+      if (a.pValue === null && b.pValue === null) return 0;
+      if (a.pValue === null) return 1;
+      if (b.pValue === null) return -1;
+      return a.pValue - b.pValue;
+    });
+});
+
+// 분석 결과가 있는지 확인
+const hasAnalysisResults = computed(() => {
+  return sortedFoodItems.value.length > 0;
+});
+
+// --- 커스텀 드롭다운 상태 ---
+const isDropdownOpen = ref(false);
+const selectedFoods = ref(new Set()); // 체크박스로 선택된 식단들
 
 // DateTimePicker 관련 상태
 const exposureDateTimePickerRef = ref(null);
@@ -520,11 +652,12 @@ const barColors = [
   '#ea7ccc' // 분홍색
 ];
 
-// 유행곡선 차트 상태
-const epiChartFontSize = ref(15);
-const epiChartWidth = ref(1100);
-const epiBarColor = ref('#1E88E5');
-const epiFontSizeButtonText = ref('작게');
+// 유행곡선 차트 상태 - store에서 설정 불러오기
+const chartSettings = computed(() => store.getters.getEpidemicCurveSettings);
+const epiChartFontSize = ref(chartSettings.value.fontSize || 15);
+const epiChartWidth = ref(chartSettings.value.chartWidth || 1100);
+const epiBarColor = ref(chartSettings.value.barColor || '#1E88E5');
+const epiFontSizeButtonText = ref(fontSizeLabels[fontSizes.indexOf(epiChartFontSize.value)] || '작게');
 const epiChartWidthButtonText = ref(`${epiChartWidth.value}px`);
 
 // 잠복기 차트 상태
@@ -535,7 +668,7 @@ const incubationFontSizeButtonText = ref('작게');
 const incubationChartWidthButtonText = ref(`${incubationChartWidth.value}px`);
 
 // --- 차트 표시 모드 설정 ---
-const chartDisplayMode = ref('time'); // 'time' | 'datetime'
+const chartDisplayMode = ref(chartSettings.value.displayMode || 'time'); // 'time' | 'datetime'
 const incubationChartDisplayMode = ref('hour'); // 'hour' | 'hhmm'
 
 const activeTooltip = ref(null);
@@ -744,14 +877,17 @@ const cycleEpiFontSize = () => {
   epiChartFontSize.value = getNextValue(epiChartFontSize.value, fontSizes);
   const currentIndex = fontSizes.indexOf(epiChartFontSize.value);
   epiFontSizeButtonText.value = fontSizeLabels[currentIndex];
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { fontSize: epiChartFontSize.value });
   nextTick(safeUpdateCharts);
 };
 const cycleEpiChartWidth = () => {
   epiChartWidth.value = getNextValue(epiChartWidth.value, chartWidths);
   epiChartWidthButtonText.value = `${epiChartWidth.value}px`;
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { chartWidth: epiChartWidth.value });
 };
 const cycleEpiBarColor = () => {
   epiBarColor.value = getNextValue(epiBarColor.value, barColors);
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { barColor: epiBarColor.value });
   nextTick(safeUpdateCharts);
 };
 
@@ -783,6 +919,7 @@ const cycleIncubationBarColor = () => {
 // --- 차트 표시 모드 선택 함수 ---
 const selectDisplayMode = (mode) => {
   chartDisplayMode.value = mode;
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { displayMode: mode });
   nextTick(safeUpdateCharts);
 };
 
@@ -1495,6 +1632,13 @@ const incubationChartContainer = ref(null);
 const epiCurveChartInstance = ref(null);
 const incubationChartInstance = ref(null);
 
+// ReportWriter에서 접근할 수 있도록 전역으로 노출
+const exposeChartInstance = () => {
+  if (epiCurveChartInstance.value) {
+    window.epidemicCurveChartInstance = epiCurveChartInstance.value;
+  }
+};
+
 // --- Chart Options Generation (에러 처리 강화) ---
 
 /**
@@ -1755,14 +1899,14 @@ const generateEpiCurveChartOptions = () => {
         textStyle: { fontSize: (epiChartFontSize.value || 15) + 4, fontWeight: 'bold' },
         top: 15
       },
-      // 의심식단 풋노트 추가
+      // 추정 감염원 풋노트 추가
       ...(suspectedFood.value.trim() && {
         graphic: [{
           type: 'text',
           left: '5%', // 적당한 위치로 조정
           bottom: '5%', // 차트 영역 하단
           style: {
-            text: `의심식단: ${suspectedFood.value}`,
+            text: `추정 감염원 : ${suspectedFood.value}`,
             fontSize: epiChartFontSize.value || 15,
             fill: '#333',
             fontWeight: 'normal'
@@ -1797,7 +1941,7 @@ const generateEpiCurveChartOptions = () => {
       grid: {
         left: getDynamicLeftMargin(), // 동적 여백 적용
         right: chartDisplayMode.value === 'datetime' ? 60 : '4%',
-        bottom: suspectedFood.value.trim() ? '15%' : '7%', // 의심식단이 있으면 하단 여백 증가
+        bottom: suspectedFood.value.trim() ? '15%' : '7%', // 추정 감염원이 있으면 하단 여백 증가
         top: 80, // 제목과 그래프 사이 간격 확보
         containLabel: true
       },
@@ -2002,14 +2146,14 @@ const generateIncubationChartOptions = () => {
         },
         top: 15
       },
-      // 의심식단 풋노트 추가
+      // 추정 감염원 풋노트 추가
       ...(suspectedFood.value.trim() && {
         graphic: [{
           type: 'text',
           left: '5%', // 적당한 위치로 조정
           bottom: '8%', // 차트 영역 하단 (간격 조정)
           style: {
-            text: `의심식단: ${suspectedFood.value}`,
+            text: `추정 감염원: ${suspectedFood.value}`,
             fontSize: incubationChartFontSize.value || 15,
             fill: '#333',
             fontWeight: 'normal'
@@ -2028,7 +2172,7 @@ const generateIncubationChartOptions = () => {
       grid: {
         left: incubationChartDisplayMode.value === 'hhmm' ? 60 : '3%',
         right: incubationChartDisplayMode.value === 'hhmm' ? 60 : '4%',
-        bottom: suspectedFood.value.trim() ? '15%' : '5%', // 의심식단이 있으면 하단 여백 증가
+        bottom: suspectedFood.value.trim() ? '15%' : '5%', // 추정 감염원이 있으면 하단 여백 증가
         top: 80,
         containLabel: true
       },
@@ -2162,6 +2306,8 @@ const updateCharts = () => {
             echarts.init(epiCurveChartContainer.value)
           );
           console.log('유행곡선 차트 인스턴스 생성됨');
+          // ReportWriter에서 접근할 수 있도록 전역으로 노출
+          exposeChartInstance();
         } else {
           console.warn('유행곡선 차트 컨테이너 크기가 0입니다:', rect);
           return;
@@ -2173,6 +2319,13 @@ const updateCharts = () => {
       if (epiOptions && typeof epiOptions === 'object') {
         epiCurveChartInstance.value.setOption(epiOptions, true); // notMerge: true로 완전 덮어쓰기
         console.log('유행곡선 차트 업데이트 완료');
+        // ReportWriter에서 접근할 수 있도록 전역으로 노출 (업데이트 후)
+        exposeChartInstance();
+        
+        // 차트 인스턴스를 전역에 더 안전하게 저장
+        window.currentEpidemicChartInstance = epiCurveChartInstance.value;
+        
+
       } else {
         console.warn('유행곡선 차트 옵션이 유효하지 않음');
       }
@@ -2596,7 +2749,7 @@ const onExposureDateTimeCancel = () => {
   exposureDateTimePickerState.value.visible = false;
 };
 
-// 의심식단 변경 핸들러
+// 추정 감염원 변경 핸들러
 const onSuspectedFoodChange = () => {
   // 차트 업데이트 트리거
   nextTick(() => {
@@ -2605,6 +2758,78 @@ const onSuspectedFoodChange = () => {
     }
   });
 };
+
+// 추정 감염원 변경 시 차트 업데이트
+watch(suspectedFood, () => {
+  nextTick(() => {
+    if (hasValidPatientData.value) {
+      safeUpdateCharts();
+    }
+  });
+  
+  // Vuex에도 저장하여 보고서 탭에서 사용
+  store.commit('SET_SELECTED_SUSPECTED_FOODS', suspectedFood.value);
+});
+
+// 커스텀 드롭다운 토글
+const toggleDropdown = () => {
+  if (hasAnalysisResults.value) {
+    isDropdownOpen.value = !isDropdownOpen.value;
+    
+    // 드롭다운이 열릴 때 현재 입력된 추정 감염원들을 체크박스에 반영
+    if (isDropdownOpen.value) {
+      const currentFoods = suspectedFood.value.split(',').map(f => f.trim()).filter(f => f);
+      selectedFoods.value = new Set(currentFoods);
+    }
+  }
+};
+
+// 체크박스로 추정 감염원 선택/해제
+const toggleFoodSelection = (foodItem) => {
+  if (selectedFoods.value.has(foodItem)) {
+    selectedFoods.value.delete(foodItem);
+  } else {
+    selectedFoods.value.add(foodItem);
+  }
+  
+  // 즉시 입력란에 반영
+  const selectedArray = Array.from(selectedFoods.value);
+  suspectedFood.value = selectedArray.join(', ');
+  
+  // 차트 업데이트 트리거
+  nextTick(() => {
+    if (hasValidPatientData.value) {
+      safeUpdateCharts();
+    }
+  });
+};
+
+// 추정 감염원이 선택되었는지 확인
+const isFoodSelected = (foodItem) => {
+  return selectedFoods.value.has(foodItem);
+};
+
+// 선택된 추정 감염원들을 입력란에 적용 (드롭다운 닫기)
+const applySelectedFoods = () => {
+  isDropdownOpen.value = false;
+};
+
+// 드롭다운 외부 클릭 시 닫기
+const closeDropdown = () => {
+  isDropdownOpen.value = false;
+};
+
+// 컴포넌트 마운트 시 외부 클릭 이벤트 리스너 추가
+onMounted(() => {
+  document.addEventListener('click', (event) => {
+    const dropdown = document.querySelector('.unified-food-selector');
+    if (dropdown && !dropdown.contains(event.target)) {
+      closeDropdown();
+    }
+  });
+});
+
+
 
 // 잠복기 차트 내보내기 함수 추가
 const exportIncubationChart = async () => {
@@ -2652,6 +2877,222 @@ const exportIncubationChart = async () => {
   }
 };
 
+
+
+// 시간 간격 변경 시 차트 설정에 저장
+watch(selectedSymptomInterval, (newValue) => {
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { timeInterval: newValue });
+});
+
+// store 설정 변경 시 로컬 상태 동기화
+watch(chartSettings, (newSettings) => {
+  if (newSettings.fontSize !== epiChartFontSize.value) {
+    epiChartFontSize.value = newSettings.fontSize || 15;
+    epiFontSizeButtonText.value = fontSizeLabels[fontSizes.indexOf(epiChartFontSize.value)] || '작게';
+  }
+  if (newSettings.chartWidth !== epiChartWidth.value) {
+    epiChartWidth.value = newSettings.chartWidth || 1100;
+    epiChartWidthButtonText.value = `${epiChartWidth.value}px`;
+  }
+  if (newSettings.barColor !== epiBarColor.value) {
+    epiBarColor.value = newSettings.barColor || '#1E88E5';
+  }
+  if (newSettings.displayMode !== chartDisplayMode.value) {
+    chartDisplayMode.value = newSettings.displayMode || 'time';
+  }
+}, { deep: true });
+
+// --- 보고서 저장 상태 관리 ---
+const isChartSaved = ref(false);
+const showChartSavedTooltip = ref(false);
+
+// 차트 옵션이 바뀌면 저장되지 않은 상태로 표시
+watch([
+  epiChartFontSize,
+  epiChartWidth,
+  epiBarColor,
+  chartDisplayMode,
+  selectedSymptomInterval,
+  showConfirmedCaseLine
+], () => {
+  isChartSaved.value = false;
+});
+
+// 저장 버튼으로 보고서용 차트 이미지를 Vuex에 저장
+const saveChartForReport = async () => {
+  const instance = epiCurveChartInstance.value;
+  if (!instance || typeof instance.getDataURL !== 'function') {
+    alert('차트를 먼저 생성한 뒤에 저장해주세요.');
+    return;
+  }
+
+  try {
+    // 차트가 완전히 렌더링될 때까지 대기
+    // ECharts의 finishLoading 이벤트를 기다리거나 최소 1초 대기
+    await new Promise(resolve => {
+      if (instance.isLoading && instance.isLoading()) {
+        // 차트가 로딩 중이면 finishLoading 이벤트를 기다림
+        instance.on('finishLoading', () => {
+          setTimeout(resolve, 200); // 추가 안정성을 위한 200ms 대기
+        });
+      } else {
+        // 이미 로딩이 완료되었으면 1초 대기
+        setTimeout(resolve, 1000);
+      }
+    });
+    
+    const dataUrl = instance.getDataURL({
+      type: 'bmp',
+      pixelRatio: 1,
+      backgroundColor: '#ffffff'
+    });
+
+    if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
+      store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { 
+        reportChartDataUrl: dataUrl,
+        reportChartWidth: epiChartWidth.value
+      });
+      window.currentEpidemicChartInstance = instance; // 최신 인스턴스 보존 (선택)
+      isChartSaved.value = true;
+      showChartSavedTooltip.value = true;
+      
+      // 저장 완료 툴팁을 1.5초 후에 자동으로 숨김
+      setTimeout(() => {
+        showChartSavedTooltip.value = false;
+      }, 1500);
+      
+      console.log('보고서용 차트 이미지가 저장되었습니다!');
+    } else {
+      throw new Error('이미지 데이터가 유효하지 않습니다.');
+    }
+  } catch (error) {
+    console.error('차트 이미지 저장 실패:', error);
+    alert(`차트 이미지 저장 실패: ${error.message}`);
+  }
+};
+
+// 잠복기 차트 보고서 저장 상태 관리
+const isIncubationChartSaved = ref(false);
+const showIncubationChartSavedTooltip = ref(false);
+
+// 잠복기 차트 옵션 변경 시 저장되지 않은 상태로 표시
+watch([
+  incubationChartFontSize,
+  incubationChartWidth,
+  incubationBarColor,
+  incubationChartDisplayMode,
+  selectedIncubationInterval
+], () => {
+  isIncubationChartSaved.value = false;
+});
+
+// 잠복기 차트 저장 버튼 (보고서용)
+const saveIncubationChartForReport = async () => {
+  const instance = incubationChartInstance.value;
+  if (!instance || typeof instance.getDataURL !== 'function') {
+    alert('잠복기 차트를 먼저 생성한 뒤에 저장해주세요.');
+    return;
+  }
+
+  try {
+    // 차트가 완전히 렌더링될 때까지 대기
+    // ECharts의 finishLoading 이벤트를 기다리거나 최소 1초 대기
+    await new Promise(resolve => {
+      if (instance.isLoading && instance.isLoading()) {
+        // 차트가 로딩 중이면 finishLoading 이벤트를 기다림
+        instance.on('finishLoading', () => {
+          setTimeout(resolve, 200); // 추가 안정성을 위한 200ms 대기
+        });
+      } else {
+        // 이미 로딩이 완료되었으면 1초 대기
+        setTimeout(resolve, 1000);
+      }
+    });
+    
+    const dataUrl = instance.getDataURL({
+      type: 'bmp',
+      pixelRatio: 1,
+      backgroundColor: '#ffffff'
+    });
+
+    if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
+      store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', { 
+        reportIncubationChartDataUrl: dataUrl,
+        reportIncubationChartWidth: incubationChartWidth.value
+      });
+      isIncubationChartSaved.value = true;
+      showIncubationChartSavedTooltip.value = true;
+      
+      // 저장 완료 툴팁을 1.5초 후에 자동으로 숨김
+      setTimeout(() => {
+        showIncubationChartSavedTooltip.value = false;
+      }, 1500);
+      
+      console.log('잠복기 차트 이미지가 보고서용으로 저장되었습니다!');
+    } else {
+      throw new Error('이미지 데이터가 유효하지 않습니다.');
+    }
+  } catch (error) {
+    console.error('잠복기 차트 이미지 저장 실패:', error);
+    alert(`잠복기 차트 이미지 저장 실패: ${error.message}`);
+  }
+};
+
+// 차트 설정 초기화 함수들
+// 유행곡선 차트 설정 초기화
+const resetEpiChartSettings = () => {
+  // 기본값으로 초기화
+  epiChartFontSize.value = 15;
+  epiChartWidth.value = 1100;
+  epiBarColor.value = '#1E88E5';
+  chartDisplayMode.value = 'time';
+  showConfirmedCaseLine.value = true;
+  
+  // 버튼 텍스트 업데이트
+  epiFontSizeButtonText.value = '작게';
+  epiChartWidthButtonText.value = '1100px';
+  
+  // Vuex store 업데이트
+  store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', {
+    fontSize: 15,
+    chartWidth: 1100,
+    barColor: '#1E88E5',
+    displayMode: 'time'
+  });
+  
+  // 저장 상태 초기화
+  isChartSaved.value = false;
+  
+  // 차트 업데이트
+  nextTick(() => {
+    safeUpdateCharts();
+  });
+  
+  console.log('유행곡선 차트 설정이 기본값으로 초기화되었습니다.');
+};
+
+// 잠복기 차트 설정 초기화
+const resetIncubationChartSettings = () => {
+  // 기본값으로 초기화
+  incubationChartFontSize.value = 15;
+  incubationChartWidth.value = 1100;
+  incubationBarColor.value = '#91cc75';
+  incubationChartDisplayMode.value = 'hour';
+  
+  // 버튼 텍스트 업데이트
+  incubationFontSizeButtonText.value = '작게';
+  incubationChartWidthButtonText.value = '1100px';
+  
+  // 저장 상태 초기화
+  isIncubationChartSaved.value = false;
+  
+  // 차트 업데이트
+  nextTick(() => {
+    safeUpdateCharts();
+  });
+  
+  console.log('잠복기 차트 설정이 기본값으로 초기화되었습니다.');
+};
 
 </script>
 
@@ -2824,6 +3265,33 @@ const exportIncubationChart = async () => {
   border-color: #4285f4;
   opacity: 0.85;
   transform: scale(1.05);
+}
+
+.reset-button-group {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.reset-text-button {
+  min-width: 60px;
+  height: 28px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  padding: 4px 8px;
+  background-color: #f8f9fa;
+  color: #666;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: "Noto Sans KR", sans-serif;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.reset-text-button:hover {
+  border-color: #1a73e8;
+  background-color: #1a73e8;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
 }
 
 
@@ -3068,12 +3536,10 @@ const exportIncubationChart = async () => {
 
 /* --- 차트 버튼 스타일 --- */
 .chart-buttons {
-  align-self: flex-end;
   display: flex;
   gap: 8px;
-  z-index: 10;
-  margin-bottom: 10px;
-  margin-top: 5px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* --- 차트 인스턴스 스타일 --- */
@@ -3291,7 +3757,7 @@ const exportIncubationChart = async () => {
   color: #202124;
 }
 
-/* --- 의심식단 입력 필드 스타일 --- */
+/* --- 추정 감염원 입력 필드 스타일 --- */
 .suspected-food-input-container {
   padding: 20px 20px 10px 20px;
   background-color: #fff;
@@ -3302,6 +3768,195 @@ const exportIncubationChart = async () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.suspected-food-dropdown-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suspected-food-dropdown-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suspected-food-dropdown {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: "Noto Sans KR", sans-serif;
+  background-color: #fff;
+  color: #333;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.suspected-food-dropdown:hover:not(:disabled) {
+  border-color: #1a73e8;
+  box-shadow: 0 2px 6px rgba(26, 115, 232, 0.15);
+}
+
+.suspected-food-dropdown:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+/* 통합된 드롭다운과 입력란 스타일 */
+.unified-food-selector {
+  position: relative;
+  width: 100%;
+}
+
+.input-dropdown-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.unified-food-input {
+  width: 100%;
+  padding: 8px 12px;
+  padding-right: 30px; /* 화살표 공간 확보 */
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: "Noto Sans KR", sans-serif;
+  background-color: #fff;
+  color: #333;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.unified-food-input:hover:not(:disabled) {
+  border-color: #1a73e8;
+  box-shadow: 0 2px 6px rgba(26, 115, 232, 0.15);
+}
+
+.unified-food-input:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.unified-food-input:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.dropdown-arrow {
+  position: absolute;
+  right: 8px;
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.dropdown-open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.checkbox-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdown-header {
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.checkbox-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  gap: 8px;
+}
+
+.checkbox-dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.food-checkbox {
+  margin: 0;
+  cursor: pointer;
+}
+
+.food-name {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  text-align: left;
+}
+
+.food-pvalue {
+  font-size: 12px;
+  color: #666;
+  text-align: right;
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.dropdown-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+.apply-button, .cancel-button {
+  padding: 6px 12px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-button {
+  background-color: #1a73e8;
+  color: white;
+  border-color: #1a73e8;
+}
+
+.apply-button:hover {
+  background-color: #1557b0;
+}
+
+.cancel-button {
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+.cancel-button:hover {
+  background-color: #e8eaed;
+}
+
+.suspected-food-multi-input {
+  margin-top: 4px;
 }
 
 .suspected-food-title {
@@ -3340,5 +3995,16 @@ const exportIncubationChart = async () => {
 .suspected-food-input::placeholder {
   color: #999;
   font-style: italic;
+}
+
+.export-chart-button.saved {
+  background-color: #1a73e8;
+  color: #fff;
+}
+.export-chart-button.unsaved {
+  background-color: transparent;
+  color: #1a73e8;
+  border: 2px solid #1a73e8;
+  border-radius: 4px;
 }
 </style>

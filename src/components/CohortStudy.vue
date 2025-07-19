@@ -163,7 +163,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useStore } from 'vuex';
 import { jStat } from 'jstat';
 
@@ -739,6 +739,26 @@ const factorial = (n) => {
   }
   return result;
 };
+
+// --- Vuex: 분석 요약 업데이트 ---
+watch([cohortAnalysisResults, useYatesCorrection], () => {
+  const fisherUsed = cohortAnalysisResults.value.some(r => r.adj_chi === null && r.pValue !== null);
+  const yatesUsed = useYatesCorrection.value;
+  let statMethod = 'chi-square';
+  if (fisherUsed && yatesUsed) statMethod = 'yates-fisher';
+  else if (fisherUsed && !yatesUsed) statMethod = 'chi-fisher';
+  else if (!fisherUsed && yatesUsed) statMethod = 'yates';
+
+  const haldaneCorrectionUsed = cohortAnalysisResults.value.some(r => r.hasCorrection);
+  store.commit('SET_ANALYSIS_OPTIONS', { statMethod, haldaneCorrection: haldaneCorrectionUsed });
+  
+  // 분석 결과를 store에 저장 (의심식단 드롭다운용)
+  store.commit('SET_ANALYSIS_RESULTS', { 
+    type: 'cohort', 
+    results: cohortAnalysisResults.value 
+  });
+}, { immediate: true });
+
 </script>
 
 <style scoped>
