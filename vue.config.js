@@ -36,6 +36,11 @@ module.exports = defineConfig({
           'Pragma': 'no-cache',
           'Expires': '0'
         };
+        // Cloudflare Pages 호환성을 위한 추가 설정
+        args[0].templateParameters = {
+          ...args[0].templateParameters,
+          BASE_URL: '/'
+        };
         return args;
       });
 
