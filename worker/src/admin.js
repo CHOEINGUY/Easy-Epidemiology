@@ -6,6 +6,21 @@ import {
   corsHeaders
 } from './utils.js';
 
+// 로깅 유틸리티
+const logger = {
+  info: (...args) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[INFO]', ...args);
+    }
+  },
+  error: (...args) => {
+    console.error('[ERROR]', ...args);
+  },
+  warn: (...args) => {
+    console.warn('[WARN]', ...args);
+  }
+};
+
 // 관리자 권한 확인
 async function checkAdminAuth(request, env) {
   const authHeader = request.headers.get("Authorization");
@@ -30,7 +45,7 @@ async function checkAdminAuth(request, env) {
         try {
           user = JSON.parse(userStr);
         } catch (parseError) {
-          console.error(`JSON parse failed for admin auth ${key.name}:`, parseError);
+          logger.error(`JSON parse failed for admin auth ${key.name}:`, parseError);
           continue; // 이 사용자는 건너뛰고 다음 사용자로
         }
         
@@ -39,7 +54,7 @@ async function checkAdminAuth(request, env) {
           break;
         }
       } catch (userError) {
-        console.error(`Error processing user ${key.name} for admin auth:`, userError);
+        logger.error(`Error processing user ${key.name} for admin auth:`, userError);
         continue;
       }
     }
@@ -50,7 +65,7 @@ async function checkAdminAuth(request, env) {
     
     return { isAdmin: true, user: userData };
   } catch (error) {
-    console.error("Admin auth error:", error);
+    logger.error("Admin auth error:", error);
     return { isAdmin: false, error: "권한 확인 중 오류가 발생했습니다." };
   }
 }
@@ -77,7 +92,7 @@ export async function handleGetPendingUsers(request, env) {
         try {
           user = JSON.parse(userStr);
         } catch (parseError) {
-          console.error(`JSON parse failed for pending user ${key.name}:`, parseError);
+          logger.error(`JSON parse failed for pending user ${key.name}:`, parseError);
           continue; // 이 사용자는 건너뛰고 다음 사용자로
         }
         
@@ -93,14 +108,14 @@ export async function handleGetPendingUsers(request, env) {
           affiliationType: user.affiliationType
         });
       } catch (userError) {
-        console.error(`Error processing pending user ${key.name}:`, userError);
+        logger.error(`Error processing pending user ${key.name}:`, userError);
         continue;
       }
     }
     
     return successResponse({ users }, "승인 대기 사용자 목록 조회 성공");
   } catch (error) {
-    console.error("Get pending users error:", error);
+    logger.error("Get pending users error:", error);
     return errorResponse("사용자 목록 조회 중 오류가 발생했습니다.", 500);
   }
 }
@@ -154,7 +169,7 @@ export async function handleApproveUser(request, env) {
     }, '사용자 승인이 완료되었습니다.');
 
   } catch (error) {
-    console.error('Approve user error:', error);
+    logger.error('Approve user error:', error);
     return errorResponse('사용자 승인 중 오류가 발생했습니다.', 500);
   }
 }
@@ -196,7 +211,7 @@ export async function handleRejectUser(request, env) {
     );
 
   } catch (error) {
-    console.error('Reject user error:', error);
+    logger.error('Reject user error:', error);
     return errorResponse('사용자 거부 중 오류가 발생했습니다.', 500);
   }
 }
@@ -243,7 +258,7 @@ export async function handleBulkApproveUsers(request, env) {
         try {
           pendingUser = JSON.parse(pendingUserStr);
         } catch (parseError) {
-          console.log('JSON parse failed for bulk approve, trying manual parse...');
+          logger.info('JSON parse failed for bulk approve, trying manual parse...');
           const cleanDataStr = pendingUserStr.replace(/^'|'$/g, '');
           const matches = cleanDataStr.match(/(\w+):([^,}]+)/g);
           pendingUser = {};
@@ -268,7 +283,7 @@ export async function handleBulkApproveUsers(request, env) {
 
         results.approved.push(userId);
       } catch (error) {
-        console.error(`Bulk approve error for user ${userId}:`, error);
+        logger.error(`Bulk approve error for user ${userId}:`, error);
         results.failed.push(userId);
         results.errors.push(`사용자 ID ${userId}: ${error.message}`);
       }
@@ -282,7 +297,7 @@ export async function handleBulkApproveUsers(request, env) {
     }, `${results.approved.length}명의 사용자가 승인되었습니다.`);
 
   } catch (error) {
-    console.error('Bulk approve users error:', error);
+    logger.error('Bulk approve users error:', error);
     return errorResponse('일괄 승인 중 오류가 발생했습니다.', 500);
   }
 }
@@ -329,7 +344,7 @@ export async function handleBulkRejectUsers(request, env) {
         try {
           pendingUser = JSON.parse(pendingUserStr);
         } catch (parseError) {
-          console.log('JSON parse failed for bulk reject, trying manual parse...');
+          logger.info('JSON parse failed for bulk reject, trying manual parse...');
           const cleanDataStr = pendingUserStr.replace(/^'|'$/g, '');
           const matches = cleanDataStr.match(/(\w+):([^,}]+)/g);
           pendingUser = {};
@@ -346,7 +361,7 @@ export async function handleBulkRejectUsers(request, env) {
 
         results.rejected.push(userId);
       } catch (error) {
-        console.error(`Bulk reject error for user ${userId}:`, error);
+        logger.error(`Bulk reject error for user ${userId}:`, error);
         results.failed.push(userId);
         results.errors.push(`사용자 ID ${userId}: ${error.message}`);
       }
@@ -360,7 +375,7 @@ export async function handleBulkRejectUsers(request, env) {
     }, `${results.rejected.length}명의 사용자가 거부되었습니다.`);
 
   } catch (error) {
-    console.error('Bulk reject users error:', error);
+    logger.error('Bulk reject users error:', error);
     return errorResponse('일괄 거부 중 오류가 발생했습니다.', 500);
   }
 }
@@ -387,7 +402,7 @@ export async function handleGetAllUsers(request, env) {
         try {
           user = JSON.parse(userStr);
         } catch (parseError) {
-          console.error(`JSON parse failed for all users ${key.name}:`, parseError);
+          logger.error(`JSON parse failed for all users ${key.name}:`, parseError);
           continue; // 이 사용자는 건너뛰고 다음 사용자로
         }
         

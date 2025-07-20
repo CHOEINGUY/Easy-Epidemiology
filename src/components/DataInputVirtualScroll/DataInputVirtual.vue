@@ -156,7 +156,7 @@ import ValidationManager from '../../validation/ValidationManager.js';
 import { createProcessingOptions } from '../../utils/environmentUtils.js';
 import ValidationProgress from './parts/ValidationProgress.vue';
 // Logger
-import { createComponentLogger } from '../../utils/logger.js';
+import { logger, devLog } from '../../utils/logger.js';
 
 // --- 상수 (기존 컴포넌트에서 가져옴) ---
 import {
@@ -173,7 +173,6 @@ import {
 } from './constants/index.js';
 
 // --- Logger 초기화 ---
-const logger = createComponentLogger('DataInputVirtual');
 
 const COL_TYPE_INDIVIDUAL_EXPOSURE = 'individualExposureTime';
 
@@ -1144,8 +1143,8 @@ function onToggleExposureColumn() {
   
   // 재활성화 시: 백업된 데이터에 대해서만 유효성검사 수행
   if (isAdding && individualExposureBackupData.value.length > 0) {
-    console.log('백업된 데이터가 있음 - 검증 실행');
-    console.log('백업된 데이터:', individualExposureBackupData.value);
+    devLog('백업된 데이터가 있음 - 검증 실행');
+    devLog('백업된 데이터:', individualExposureBackupData.value);
     
     // 새로 추가된 개별 노출시간 열의 실제 인덱스 찾기
     nextTick(() => {
@@ -1154,7 +1153,7 @@ function onToggleExposureColumn() {
         (col.dataKey === 'individualExposureTime' && col.cellIndex === 0)
       );
       
-      console.log('찾은 새 열 인덱스:', newIndividualExposureColumnIndex);
+      devLog('찾은 새 열 인덱스:', newIndividualExposureColumnIndex);
       
       if (newIndividualExposureColumnIndex >= 0) {
         // 개별 노출시간 열 전용 검증 메서드 사용
@@ -1218,7 +1217,7 @@ function onToggleConfirmedCaseColumn() {
       return { rowIndex, value };
     }).filter(item => item.value !== '' && item.value !== null && item.value !== undefined);
     
-    console.log(`[SpecialColumn] 확진여부 데이터 백업 완료: ${confirmedCaseBackupData.value.length}개 항목`);
+    devLog(`[SpecialColumn] 확진여부 데이터 백업 완료: ${confirmedCaseBackupData.value.length}개 항목`);
   }
   
   // 변경 전 컬럼 메타 저장
@@ -1230,21 +1229,21 @@ function onToggleConfirmedCaseColumn() {
   // 변경 후 컬럼 메타와 비교하여 에러 재매핑
   nextTick(() => {
     try {
-      console.log('[ContextMenu] nextTick 콜백 시작');
+      devLog('[ContextMenu] nextTick 콜백 시작');
       
       const newColumnsMeta = allColumnsMeta.value;
-      console.log('[ContextMenu] allColumnsMeta.value 가져옴:', newColumnsMeta?.length);
+      devLog('[ContextMenu] allColumnsMeta.value 가져옴:', newColumnsMeta?.length);
       
-      console.log('[ContextMenu] 에러 재매핑 조건 확인:', {
+      devLog('[ContextMenu] 에러 재매핑 조건 확인:', {
         hasValidationManager: !!validationManager,
         oldColumnsLength: oldColumnsMeta.length,
         newColumnsLength: newColumnsMeta.length,
         lengthChanged: oldColumnsMeta.length !== newColumnsMeta.length
       });
       
-      console.log('[ContextMenu] 조건 상세 체크 준비 중...');
+      devLog('[ContextMenu] 조건 상세 체크 준비 중...');
       
-      console.log('[ContextMenu] 조건 상세 체크:', {
+      devLog('[ContextMenu] 조건 상세 체크:', {
         validationManager,
         validationManagerType: typeof validationManager,
         condition1: !!validationManager,
@@ -1253,37 +1252,37 @@ function onToggleConfirmedCaseColumn() {
       });
       
       if (validationManager && oldColumnsMeta.length !== newColumnsMeta.length) {
-        console.log(`[ContextMenu] 열 구조 변경 감지: ${oldColumnsMeta.length} -> ${newColumnsMeta.length}, 에러 재매핑 시작`);
+        devLog(`[ContextMenu] 열 구조 변경 감지: ${oldColumnsMeta.length} -> ${newColumnsMeta.length}, 에러 재매핑 시작`);
         
         try {
-          console.log('[ContextMenu] ValidationManager columnMetas 업데이트 시작');
+          devLog('[ContextMenu] ValidationManager columnMetas 업데이트 시작');
           // ValidationManager의 columnMetas 업데이트
           validationManager.updateColumnMetas(newColumnsMeta);
-          console.log('[ContextMenu] ValidationManager columnMetas 업데이트 완료');
+          devLog('[ContextMenu] ValidationManager columnMetas 업데이트 완료');
           
-          console.log('[ContextMenu] 에러 재매핑 함수 호출 시작');
+          devLog('[ContextMenu] 에러 재매핑 함수 호출 시작');
           // 에러 재매핑 수행
           validationManager.remapValidationErrorsByColumnIdentity(oldColumnsMeta, newColumnsMeta);
-          console.log('[ContextMenu] 에러 재매핑 함수 호출 완료');
+          devLog('[ContextMenu] 에러 재매핑 함수 호출 완료');
           
-          console.log('[ContextMenu] 에러 재매핑 완료');
+          devLog('[ContextMenu] 에러 재매핑 완료');
         } catch (error) {
-          console.error('[ContextMenu] 에러 재매핑 중 오류 발생:', error);
+          logger.error('[ContextMenu] 에러 재매핑 중 오류 발생:', error);
         }
       } else {
-        console.log('[ContextMenu] 에러 재매핑 건너뜀 - 조건 미충족');
+        devLog('[ContextMenu] 에러 재매핑 건너뜀 - 조건 미충족');
       }
       
-      console.log('[ContextMenu] nextTick 콜백 완료');
+      devLog('[ContextMenu] nextTick 콜백 완료');
     } catch (error) {
-      console.error('[ContextMenu] nextTick 콜백에서 오류 발생:', error);
-      console.error('[ContextMenu] 오류 스택:', error.stack);
+      logger.error('[ContextMenu] nextTick 콜백에서 오류 발생:', error);
+      logger.error('[ContextMenu] 오류 스택:', error.stack);
     }
   });
   
   // 재활성화 시: 백업된 데이터에 대해서만 유효성검사 수행
   if (isAdding && confirmedCaseBackupData.value.length > 0) {
-    console.log(`[SpecialColumn] 백업 데이터 기반 검증 시작: ${confirmedCaseBackupData.value.length}개 셀`);
+    devLog(`[SpecialColumn] 백업 데이터 기반 검증 시작: ${confirmedCaseBackupData.value.length}개 셀`);
     
     // 새로 추가된 확진자 여부 열의 실제 인덱스 찾기
     nextTick(() => {
@@ -1292,7 +1291,7 @@ function onToggleConfirmedCaseColumn() {
         (col.dataKey === 'isConfirmedCase' && col.cellIndex === null)
       );
       
-      console.log(`[SpecialColumn] 새로운 확진여부 열 인덱스: ${newConfirmedCaseColumnIndex}`);
+      devLog(`[SpecialColumn] 새로운 확진여부 열 인덱스: ${newConfirmedCaseColumnIndex}`);
       
       if (newConfirmedCaseColumnIndex >= 0) {
         // 확진자 여부 열 전용 검증 메서드 사용
@@ -1307,7 +1306,7 @@ function onToggleConfirmedCaseColumn() {
           }
         );
         
-        console.log('[SpecialColumn] 확진여부 열 검증 완료');
+        devLog('[SpecialColumn] 확진여부 열 검증 완료');
       } else {
         logger.error('새로운 확진자 여부 열 인덱스를 찾을 수 없습니다!');
       }
@@ -1346,7 +1345,7 @@ function updateHeaderPadding() {
   
   if (newScrollbarWidth !== scrollbarWidth.value) {
     scrollbarWidth.value = newScrollbarWidth;
-    console.log(`[Scrollbar] Width updated: ${scrollbarWidth.value}px`);
+    devLog(`[Scrollbar] Width updated: ${scrollbarWidth.value}px`);
     
     // 헤더 컨테이너에 패딩 적용
     nextTick(() => {
@@ -1381,7 +1380,7 @@ function handleGridScroll(event) {
 // --- 핸들러 래퍼 및 컨텍스트 ---
 
 function onContextMenu(event, virtualRowIndex, colIndex) {
-  console.log('[DataInputVirtual] 컨텍스트 메뉴 이벤트:', {
+  devLog('[DataInputVirtual] 컨텍스트 메뉴 이벤트:', {
     virtualRowIndex,
     colIndex,
     clientX: event.clientX,
@@ -1396,7 +1395,7 @@ function onContextMenuSelect(action) {
   const { target } = contextMenuState; // `target` holds { rowIndex, colIndex }
   const { selectedRange, selectedRowsIndividual, selectedCellsIndividual } = selectionSystem.state;
   
-  console.log('[DataInputVirtual] 컨텍스트 메뉴 선택:', {
+  devLog('[DataInputVirtual] 컨텍스트 메뉴 선택:', {
     action,
     target,
     selectedRange,
@@ -1550,7 +1549,7 @@ function onContextMenuSelect(action) {
       insertAtIndex = leftmostColumn ? leftmostColumn.cellIndex : 0;
     }
 
-    console.log(`[ContextMenu] 열 추가 시작: ${action}, 타입: ${targetColumn.type}, 개수: ${colSelection.count}, 위치: ${insertAtIndex}`);
+    devLog(`[ContextMenu] 열 추가 시작: ${action}, 타입: ${targetColumn.type}, 개수: ${colSelection.count}, 위치: ${insertAtIndex}`);
     
     // 데이터 변경 수행
     storeBridge.dispatch('insertMultipleColumnsAt', {
@@ -1563,7 +1562,7 @@ function onContextMenuSelect(action) {
     nextTick(() => {
       const newColumnsMeta = allColumnsMeta.value;
       
-      console.log('[ContextMenu] 에러 재매핑 조건 확인:', {
+      devLog('[ContextMenu] 에러 재매핑 조건 확인:', {
         hasValidationManager: !!validationManager,
         oldColumnsLength: oldColumnsMeta.length,
         newColumnsLength: newColumnsMeta.length,
@@ -1571,7 +1570,7 @@ function onContextMenuSelect(action) {
       });
       
       if (validationManager && oldColumnsMeta.length !== newColumnsMeta.length) {
-        console.log(`[ContextMenu] 열 구조 변경 감지: ${oldColumnsMeta.length} -> ${newColumnsMeta.length}, 에러 재매핑 시작`);
+        devLog(`[ContextMenu] 열 구조 변경 감지: ${oldColumnsMeta.length} -> ${newColumnsMeta.length}, 에러 재매핑 시작`);
         
         // ValidationManager의 columnMetas 업데이트
         validationManager.updateColumnMetas(newColumnsMeta);
@@ -1579,7 +1578,7 @@ function onContextMenuSelect(action) {
         // 에러 재매핑 수행
         validationManager.remapValidationErrorsByColumnIdentity(oldColumnsMeta, newColumnsMeta);
         
-        console.log('[ContextMenu] 에러 재매핑 완료');
+        devLog('[ContextMenu] 에러 재매핑 완료');
 
         // 추가: dietInfo / clinicalSymptoms 등 배열 기반 열은 cellIndex 이동 시
         // 일부 오류가 누락될 수 있으므로 전체 타입 열을 다시 검증한다.
@@ -1591,11 +1590,11 @@ function onContextMenuSelect(action) {
               .map(meta => meta.colIndex);
             const rowsData = storeBridge.state.rows;
             validationManager.revalidateColumns(colIndices, rowsData, newColumnsMeta);
-            console.log(`[ContextMenu] ${affectedType} 열 재검증 완료`);
+            devLog(`[ContextMenu] ${affectedType} 열 재검증 완료`);
           }
         }
       } else {
-        console.log('[ContextMenu] 에러 재매핑 건너뜀 - 조건 미충족');
+        devLog('[ContextMenu] 에러 재매핑 건너뜀 - 조건 미충족');
       }
     });
     break;
@@ -1640,16 +1639,16 @@ function onContextMenuSelect(action) {
     }
 
     if (columnsToDelete.length > 0) {
-      console.log(`[ContextMenu] 열 삭제 시작: ${columnsToDelete.length}개 열 삭제`);
-      console.log('[ContextMenu] 삭제할 열들:', columnsToDelete.map(c => `${c.type}[${c.index}]`).join(', '));
+      devLog(`[ContextMenu] 열 삭제 시작: ${columnsToDelete.length}개 열 삭제`);
+      devLog('[ContextMenu] 삭제할 열들:', columnsToDelete.map(c => `${c.type}[${c.index}]`).join(', '));
       
       // 데이터 변경 수행
       storeBridge.dispatch('deleteMultipleColumnsByIndex', { columns: columnsToDelete });
       
       // StoreBridge에서 이미 에러 재매핑을 처리하므로 여기서는 건너뜀
-      console.log('[ContextMenu] 열 삭제 완료 - StoreBridge에서 에러 재매핑 처리됨');
+      devLog('[ContextMenu] 열 삭제 완료 - StoreBridge에서 에러 재매핑 처리됨');
     } else {
-      console.log('[ContextMenu] 삭제할 수 있는 열이 없음 (최소 1개 열 유지 규칙)');
+      devLog('[ContextMenu] 삭제할 수 있는 열이 없음 (최소 1개 열 유지 규칙)');
     }
     break;
   }
@@ -1708,7 +1707,7 @@ function onContextMenuSelect(action) {
     else if (action === 'filter-patient-0') value = '0';
     else value = 'empty';
     
-    console.log('[Filter] 필터 토글 전 상태:', {
+    devLog('[Filter] 필터 토글 전 상태:', {
       action,
       value,
       currentFilterState: storeBridge.filterState,
@@ -1731,7 +1730,7 @@ function onContextMenuSelect(action) {
       });
     }
     
-    console.log('[Filter] 필터 토글 후 상태:', {
+    devLog('[Filter] 필터 토글 후 상태:', {
       action,
       value,
       currentFilterState: storeBridge.filterState,
@@ -1741,8 +1740,8 @@ function onContextMenuSelect(action) {
     // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
     filterState.value = { ...storeBridge.filterState };
     
-    console.log('[Filter] filterState.value 강제 업데이트 완료');
-    console.log(`[Filter] 환자여부 필터 토글: ${value}`);
+    devLog('[Filter] filterState.value 강제 업데이트 완료');
+    devLog(`[Filter] 환자여부 필터 토글: ${value}`);
     break;
   }
   case 'filter-confirmed-1':
@@ -1753,7 +1752,7 @@ function onContextMenuSelect(action) {
     else if (action === 'filter-confirmed-0') value = '0';
     else value = 'empty';
     
-    console.log('[Filter] 확진여부 필터 토글 전 상태:', {
+    devLog('[Filter] 확진여부 필터 토글 전 상태:', {
       action,
       value,
       colIndex: target.colIndex,
@@ -1777,7 +1776,7 @@ function onContextMenuSelect(action) {
       });
     }
     
-    console.log('[Filter] 확진여부 필터 토글 후 상태:', {
+    devLog('[Filter] 확진여부 필터 토글 후 상태:', {
       action,
       value,
       colIndex: target.colIndex,
@@ -1787,8 +1786,8 @@ function onContextMenuSelect(action) {
     // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
     filterState.value = { ...storeBridge.filterState };
     
-    console.log('[Filter] filterState.value 강제 업데이트 완료');
-    console.log(`[Filter] 확진여부 필터 토글: ${value}`);
+    devLog('[Filter] filterState.value 강제 업데이트 완료');
+    devLog(`[Filter] 확진여부 필터 토글: ${value}`);
     break;
   }
   case 'filter-clinical-1':
@@ -1799,7 +1798,7 @@ function onContextMenuSelect(action) {
     else if (action === 'filter-clinical-0') value = '0';
     else value = 'empty';
     
-    console.log('[Filter] 임상증상 필터 토글 전 상태:', {
+    devLog('[Filter] 임상증상 필터 토글 전 상태:', {
       action,
       value,
       colIndex: target.colIndex,
@@ -1823,7 +1822,7 @@ function onContextMenuSelect(action) {
       });
     }
     
-    console.log('[Filter] 임상증상 필터 토글 후 상태:', {
+    devLog('[Filter] 임상증상 필터 토글 후 상태:', {
       action,
       value,
       colIndex: target.colIndex,
@@ -1833,8 +1832,8 @@ function onContextMenuSelect(action) {
     // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
     filterState.value = { ...storeBridge.filterState };
     
-    console.log('[Filter] filterState.value 강제 업데이트 완료');
-    console.log(`[Filter] 임상증상 필터 토글: ${value}`);
+    devLog('[Filter] filterState.value 강제 업데이트 완료');
+    devLog(`[Filter] 임상증상 필터 토글: ${value}`);
     break;
   }
   case 'filter-diet-1':
@@ -1845,7 +1844,7 @@ function onContextMenuSelect(action) {
     else if (action === 'filter-diet-0') value = '0';
     else value = 'empty';
     
-    console.log('[Filter] 식단 필터 토글 전 상태:', {
+    devLog('[Filter] 식단 필터 토글 전 상태:', {
       action,
       value,
       colIndex: target.colIndex,
@@ -1869,7 +1868,7 @@ function onContextMenuSelect(action) {
       });
     }
     
-    console.log('[Filter] 식단 필터 토글 후 상태:', {
+    devLog('[Filter] 식단 필터 토글 후 상태:', {
       action,
       value,
       colIndex: target.colIndex,
@@ -1879,12 +1878,12 @@ function onContextMenuSelect(action) {
     // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
     filterState.value = { ...storeBridge.filterState };
     
-    console.log('[Filter] filterState.value 강제 업데이트 완료');
-    console.log(`[Filter] 식단 필터 토글: ${value}`);
+    devLog('[Filter] filterState.value 강제 업데이트 완료');
+    devLog(`[Filter] 식단 필터 토글: ${value}`);
     break;
   }
   case 'filter-basic-empty': {
-    console.log('[Filter] 기본정보 빈 셀 필터:', {
+    devLog('[Filter] 기본정보 빈 셀 필터:', {
       action,
       colIndex: target.colIndex,
       currentFilterState: storeBridge.filterState
@@ -1910,14 +1909,14 @@ function onContextMenuSelect(action) {
     // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
     filterState.value = { ...storeBridge.filterState };
     
-    console.log('[Filter] 기본정보 빈 셀 필터 적용');
+    devLog('[Filter] 기본정보 빈 셀 필터 적용');
     break;
   }
   default: {
     // 기본정보 값 필터 (동적 액션 처리)
     if (action.startsWith('filter-basic-')) {
       const value = action.replace('filter-basic-', '');
-      console.log('[Filter] 기본정보 값 필터:', {
+      devLog('[Filter] 기본정보 값 필터:', {
         action,
         value,
         colIndex: target.colIndex,
@@ -1944,12 +1943,12 @@ function onContextMenuSelect(action) {
       // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
       filterState.value = { ...storeBridge.filterState };
       
-      console.log('[Filter] 기본정보 값 필터 적용:', value);
+      devLog('[Filter] 기본정보 값 필터 적용:', value);
     }
     // 날짜/시간 필터 (동적 액션 처리)
     else if (action.startsWith('filter-datetime-')) {
       const dateValue = action.replace('filter-datetime-', '');
-      console.log('[Filter] 날짜/시간 필터:', {
+      devLog('[Filter] 날짜/시간 필터:', {
         action,
         dateValue,
         colIndex: target.colIndex,
@@ -1976,7 +1975,7 @@ function onContextMenuSelect(action) {
       // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
       filterState.value = { ...storeBridge.filterState };
       
-      console.log('[Filter] 날짜/시간 필터 적용:', dateValue);
+      devLog('[Filter] 날짜/시간 필터 적용:', dateValue);
     }
     break;
   }
@@ -1998,7 +1997,7 @@ function onContextMenuSelect(action) {
     // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
     filterState.value = { ...storeBridge.filterState };
     
-    console.log('[Filter] 모든 필터 해제됨');
+    devLog('[Filter] 모든 필터 해제됨');
     break;
   }
   }
@@ -2113,12 +2112,12 @@ function onCellMouseDown(virtualRowIndex, colIndex, event) {
   if (dateTimePickerState.visible) {
     const currentEdit = dateTimePickerState.currentEdit;
     if (currentEdit && (currentEdit.rowIndex !== originalRowIndex || currentEdit.colIndex !== colIndex)) {
-      console.log('[DataInputVirtual] 다른 셀 클릭으로 데이트피커 닫기');
+      devLog('[DataInputVirtual] 다른 셀 클릭으로 데이트피커 닫기');
       closeDateTimePicker();
       // return 제거: 데이트피커를 닫고 계속해서 셀 클릭 동작 수행
     } else if (currentEdit && currentEdit.rowIndex === originalRowIndex && currentEdit.colIndex === colIndex) {
       // 같은 셀을 클릭한 경우 데이트피커는 그대로 유지
-      console.log('[DataInputVirtual] 같은 셀 클릭 - 데이트피커 유지');
+      devLog('[DataInputVirtual] 같은 셀 클릭 - 데이트피커 유지');
       return; // 다른 동작 중단
     }
   }
@@ -2129,7 +2128,7 @@ function onCellMouseDown(virtualRowIndex, colIndex, event) {
     selectionSystem.state.editingCell.rowIndex === originalRowIndex &&
     selectionSystem.state.editingCell.colIndex === colIndex
   ) {
-    console.log('[DataInputVirtual] 편집 모드에서 같은 셀 클릭 - 텍스트 커서 이동만 허용');
+    devLog('[DataInputVirtual] 편집 모드에서 같은 셀 클릭 - 텍스트 커서 이동만 허용');
     return; // 아무것도 하지 않고 함수 종료
   }
 
@@ -2147,7 +2146,7 @@ function onCellMouseDown(virtualRowIndex, colIndex, event) {
     
     if (tempValue !== null && columnMeta) {
       storeBridge.saveCellValue(editRow, editCol, tempValue, columnMeta);
-      console.log(`[DataInputVirtual] 다른 셀 클릭으로 편집 완료: ${editRow}, ${editCol} = ${tempValue}`);
+      devLog(`[DataInputVirtual] 다른 셀 클릭으로 편집 완료: ${editRow}, ${editCol} = ${tempValue}`);
       // 검증 호출
       validationManager.validateCell(editRow, editCol, tempValue, columnMeta.type);
     }
@@ -2243,8 +2242,8 @@ function onCellInput(event, rowIndex, colIndex) {
   const newValue = event.target.textContent;
 
   // rowIndex는 이미 원본 인덱스로 전달됨 (VirtualGridBody에서 변환됨)
-  console.log(`[CellInput] 셀 입력: 원본 행 ${rowIndex}, 열 ${colIndex}, 값 "${newValue}"`);
-  console.log('[CellInput] 필터 상태:', {
+  devLog(`[CellInput] 셀 입력: 원본 행 ${rowIndex}, 열 ${colIndex}, 값 "${newValue}"`);
+  devLog('[CellInput] 필터 상태:', {
     isFiltered: storeBridge.filterState.isFiltered,
     filteredRowsCount: filteredRows.value.length,
     originalRowsCount: rows.value.length
@@ -2270,9 +2269,9 @@ function onCellEditComplete(rowIndex, colIndex, shouldSave = true) {
     if (columnMeta) {
       // 헤더 셀과 바디 셀 모두 동일한 방식으로 처리
       storeBridge.saveCellValue(rowIndex, colIndex, tempValue, columnMeta);
-      console.log(`[DataInputVirtual] Validation 호출: row=${rowIndex}, col=${colIndex}, value="${tempValue}", type="${columnMeta.type}"`);
-      console.log('[DataInputVirtual] validationManager:', validationManager);
-      console.log('[DataInputVirtual] validationManager.validateCell:', validationManager.validateCell);
+      devLog(`[DataInputVirtual] Validation 호출: row=${rowIndex}, col=${colIndex}, value="${tempValue}", type="${columnMeta.type}"`);
+      devLog('[DataInputVirtual] validationManager:', validationManager);
+      devLog('[DataInputVirtual] validationManager.validateCell:', validationManager.validateCell);
       validationManager.validateCell(rowIndex, colIndex, tempValue, columnMeta.type);
     }
   }
@@ -2343,7 +2342,7 @@ onMounted(() => {
   window.storeBridge = storeBridge;
   
   // 필터 상태 초기화 (임시)
-  console.log('[Filter] 컴포넌트 마운트 시 필터 초기화');
+  devLog('[Filter] 컴포넌트 마운트 시 필터 초기화');
   storeBridge.clearAllFilters();
   
   if (gridContainerRef.value) {
@@ -2419,7 +2418,7 @@ function mapGroupTypeToMetaType(groupType) {
 function onAddColumn(groupType) {
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
-    console.log('[DataInputVirtual] 열 추가로 데이트피커 닫기');
+    devLog('[DataInputVirtual] 열 추가로 데이트피커 닫기');
     closeDateTimePicker();
   }
 
@@ -2429,7 +2428,7 @@ function onAddColumn(groupType) {
   const insertIndex = arr.length; // append to end
   const metaType = mapGroupTypeToMetaType(groupType);
   
-  console.log(`[HeaderButton] 열 추가 시작: 그룹타입 ${groupType}, 메타타입 ${metaType}, 위치 ${insertIndex}`);
+  devLog(`[HeaderButton] 열 추가 시작: 그룹타입 ${groupType}, 메타타입 ${metaType}, 위치 ${insertIndex}`);
   
   // 데이터 변경 수행
   storeBridge.dispatch('insertMultipleColumnsAt', {
@@ -2443,7 +2442,7 @@ function onAddColumn(groupType) {
     const newColumnsMeta = allColumnsMeta.value;
     
     if (validationManager && oldColumnsMeta.length !== newColumnsMeta.length) {
-      console.log(`[HeaderButton] 열 구조 변경 감지: ${oldColumnsMeta.length} -> ${newColumnsMeta.length}, 에러 재매핑 시작`);
+      devLog(`[HeaderButton] 열 구조 변경 감지: ${oldColumnsMeta.length} -> ${newColumnsMeta.length}, 에러 재매핑 시작`);
       
       // ValidationManager의 columnMetas 업데이트
       validationManager.updateColumnMetas(newColumnsMeta);
@@ -2451,9 +2450,9 @@ function onAddColumn(groupType) {
       // 에러 재매핑 수행
       validationManager.remapValidationErrorsByColumnIdentity(oldColumnsMeta, newColumnsMeta);
       
-      console.log('[HeaderButton] 에러 재매핑 완료');
+      devLog('[HeaderButton] 에러 재매핑 완료');
     } else {
-      console.log('[HeaderButton] 열 구조 변경 없음 또는 ValidationManager 없음');
+      devLog('[HeaderButton] 열 구조 변경 없음 또는 ValidationManager 없음');
     }
   });
 
@@ -2467,7 +2466,7 @@ function onAddColumn(groupType) {
 function onDeleteColumn(groupType) {
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
-    console.log('[DataInputVirtual] 열 삭제로 데이트피커 닫기');
+    devLog('[DataInputVirtual] 열 삭제로 데이트피커 닫기');
     closeDateTimePicker();
   }
 
@@ -2476,14 +2475,14 @@ function onDeleteColumn(groupType) {
   const arr = getHeaderArrayByType(groupType);
   
   if (arr.length <= 1) {
-    console.log(`[HeaderButton] 열 삭제 불가: 최소 1개 열 유지 규칙 (현재 ${arr.length}개)`);
+    devLog(`[HeaderButton] 열 삭제 불가: 최소 1개 열 유지 규칙 (현재 ${arr.length}개)`);
     return;
   }
   
   const deleteIndex = arr.length - 1; // last column
   const metaType = mapGroupTypeToMetaType(groupType);
   
-  console.log(`[HeaderButton] 열 삭제 시작: 그룹타입 ${groupType}, 메타타입 ${metaType}, 위치 ${deleteIndex}`);
+  devLog(`[HeaderButton] 열 삭제 시작: 그룹타입 ${groupType}, 메타타입 ${metaType}, 위치 ${deleteIndex}`);
   
   // 데이터 변경 수행
   storeBridge.dispatch('deleteMultipleColumnsByIndex', {
@@ -2491,7 +2490,7 @@ function onDeleteColumn(groupType) {
   });
 
   // StoreBridge에서 이미 에러 재매핑을 처리하므로 여기서는 건너뜀
-  console.log('[HeaderButton] 열 삭제 완료 - StoreBridge에서 에러 재매핑 처리됨');
+  devLog('[HeaderButton] 열 삭제 완료 - StoreBridge에서 에러 재매핑 처리됨');
 
   selectionSystem.clearSelection();
   nextTick(() => focusGrid());
@@ -2514,7 +2513,7 @@ function getHeaderArrayByType(type) {
 function onDeleteEmptyRows() {
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
-    console.log('[DataInputVirtual] 빈 행 삭제로 데이트피커 닫기');
+    devLog('[DataInputVirtual] 빈 행 삭제로 데이트피커 닫기');
     closeDateTimePicker();
   }
 
@@ -2526,7 +2525,7 @@ function onDeleteEmptyRows() {
 function onAddRows(count) {
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
-    console.log('[DataInputVirtual] 행 추가로 데이트피커 닫기');
+    devLog('[DataInputVirtual] 행 추가로 데이트피커 닫기');
     closeDateTimePicker();
   }
 
@@ -2541,7 +2540,7 @@ function onAddRows(count) {
 function onClearSelection() {
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
-    console.log('[DataInputVirtual] 선택 영역 초기화로 데이트피커 닫기');
+    devLog('[DataInputVirtual] 선택 영역 초기화로 데이트피커 닫기');
     closeDateTimePicker();
   }
 
@@ -2593,22 +2592,22 @@ function onUndo() {
 }
 
 function onRedo() {
-  console.log('[Redo] ===== Redo 시작 =====');
-  console.log('[Redo] 현재 필터 상태:', filterState.value);
-  console.log('[Redo] StoreBridge 필터 상태:', storeBridge.filterState);
+  devLog('[Redo] ===== Redo 시작 =====');
+  devLog('[Redo] 현재 필터 상태:', filterState.value);
+  devLog('[Redo] StoreBridge 필터 상태:', storeBridge.filterState);
   
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
-    console.log('[Redo] 데이트피커 닫기');
+    devLog('[Redo] 데이트피커 닫기');
     closeDateTimePicker();
   }
 
   const success = storeBridge.redo();
-  console.log('[Redo] StoreBridge.redo() 결과:', success);
+  devLog('[Redo] StoreBridge.redo() 결과:', success);
   
   if (success) {
-    console.log('[Redo] Redo 성공 - 후처리 시작');
-    console.log('[Redo] Redo 후 StoreBridge 필터 상태:', storeBridge.filterState);
+    devLog('[Redo] Redo 성공 - 후처리 시작');
+    devLog('[Redo] Redo 후 StoreBridge 필터 상태:', storeBridge.filterState);
     
     // ValidationManager 타이머만 정리 (오류는 StoreBridge에서 복원됨)
     if (validationManager && typeof validationManager.onDataReset === 'function') {
@@ -2620,7 +2619,7 @@ function onRedo() {
     
     // 추가적인 필터 상태 확인 및 강제 동기화
     nextTick(() => {
-      console.log('[Redo] 최종 필터 상태 확인:', {
+      devLog('[Redo] 최종 필터 상태 확인:', {
         filterStateValue: filterState.value,
         storeBridgeFilterState: storeBridge.filterState,
         isFiltered: storeBridge.filterState.isFiltered,
@@ -2629,7 +2628,7 @@ function onRedo() {
       
       // 필터 상태가 여전히 불일치하면 강제 동기화
       if (JSON.stringify(filterState.value) !== JSON.stringify(storeBridge.filterState)) {
-        console.warn('[Redo] 필터 상태 불일치 감지 - 강제 동기화 실행');
+        logger.warn('[Redo] 필터 상태 불일치 감지 - 강제 동기화 실행');
         filterState.value = { ...storeBridge.filterState };
         
         // 한번 더 UI 업데이트
@@ -2649,10 +2648,10 @@ function onRedo() {
       showToast('필터가 해제되었습니다.', 'info');
     }
   } else {
-    console.log('[Redo] Redo 실패 또는 불가능');
+    devLog('[Redo] Redo 실패 또는 불가능');
   }
   
-  console.log('[Redo] ===== Redo 완료 =====');
+  devLog('[Redo] ===== Redo 완료 =====');
 }
 
 function onClearAllFilters() {
@@ -2673,12 +2672,12 @@ function onClearAllFilters() {
   // 강제로 filterState 업데이트하여 filteredRows computed가 재실행되도록 함
   filterState.value = { ...storeBridge.filterState };
   
-  console.log('[Filter] 모든 필터 해제됨');
+  devLog('[Filter] 모든 필터 해제됨');
 }
 
 function onUpdateActiveFilters(activeFilters) {
   // 개별 필터 제거 처리
-  console.log('[Filter] 개별 필터 제거:', activeFilters);
+  devLog('[Filter] 개별 필터 제거:', activeFilters);
   
   // StoreBridge의 필터 상태와 동기화
   storeBridge.filterState.activeFilters = new Map(activeFilters);
@@ -2702,7 +2701,7 @@ function handleFocusFirstError() {
   });
   
   if (!columnMeta) {
-    console.warn('[FocusFirstError] Column meta not found for unique key:', uniqueKey);
+    logger.warn('[FocusFirstError] Column meta not found for unique key:', uniqueKey);
     return;
   }
   
@@ -2719,7 +2718,7 @@ function handleFocusFirstError() {
     }
   }
   
-  console.log('[FocusFirstError] Focusing error cell:', {
+  devLog('[FocusFirstError] Focusing error cell:', {
     originalRowIndex,
     targetRowIndex,
     colIndex,
@@ -2734,12 +2733,12 @@ function handleFocusFirstError() {
 
 // --- DateTimePicker 이벤트 핸들러 ---
 async function onDateTimeConfirm(dateTimeObject) {
-  console.log('[DateTimePicker] Date confirmed:', dateTimeObject);
+  devLog('[DateTimePicker] Date confirmed:', dateTimeObject);
   
   // 현재 편집 중인 셀 정보 가져오기
   const editInfo = dateTimePickerState.currentEdit;
   if (!editInfo) {
-    console.warn('[DateTimePicker] No edit info found');
+    logger.warn('[DateTimePicker] No edit info found');
     dateTimePickerState.visible = false;
     return;
   }
@@ -2750,7 +2749,7 @@ async function onDateTimeConfirm(dateTimeObject) {
     // 날짜/시간 포맷팅
     const { formatDateTime } = await import('./utils/dateTimeUtils.js');
     const formattedValue = formatDateTime(dateTimeObject);
-    console.log(`[DateTimePicker] Formatted value: ${formattedValue} for cell: ${rowIndex}, ${colIndex}`);
+    devLog(`[DateTimePicker] Formatted value: ${formattedValue} for cell: ${rowIndex}, ${colIndex}`);
     
     // 값 저장
     storeBridge.saveCellValue(rowIndex, colIndex, formattedValue, columnMeta);
@@ -2762,9 +2761,9 @@ async function onDateTimeConfirm(dateTimeObject) {
     // 유효성 검사 실행
     validationManager.validateCell(rowIndex, colIndex, formattedValue, columnMeta.type);
     
-    console.log(`[DateTimePicker] Successfully saved date: ${formattedValue}`);
+    devLog(`[DateTimePicker] Successfully saved date: ${formattedValue}`);
   } catch (error) {
-    console.error('[DateTimePicker] Error saving date:', error);
+    logger.error('[DateTimePicker] Error saving date:', error);
     // 오류 발생 시 편집 취소
     // cellInputState.cancelEditing();
     // selectionSystem.stopEditing(false);
@@ -2782,7 +2781,7 @@ async function onDateTimeConfirm(dateTimeObject) {
 
 // 데이트피커를 닫는 공통 함수
 function closeDateTimePicker() {
-  console.log('[DateTimePicker] Closing date picker');
+  devLog('[DateTimePicker] Closing date picker');
   
   // 데이트피커 모드에서는 편집 모드가 활성화되지 않았으므로 정리 불필요
   // if (dateTimePickerState.currentEdit) {
@@ -2801,7 +2800,7 @@ function closeDateTimePicker() {
 }
 
 function onDateTimeCancel() {
-  console.log('[DateTimePicker] Date selection cancelled');
+  devLog('[DateTimePicker] Date selection cancelled');
   closeDateTimePicker();
 }
 
@@ -2825,7 +2824,7 @@ function handleGlobalClick(event) {
       }
       
       if (!isInsidePicker) {
-        console.log('[DataInputVirtual] 외부 클릭으로 데이트피커 닫기');
+        devLog('[DataInputVirtual] 외부 클릭으로 데이트피커 닫기');
         closeDateTimePicker();
       }
     }

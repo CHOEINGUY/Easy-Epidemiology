@@ -6,6 +6,9 @@
  */
 
 import { getColumnUniqueKey, getErrorKey } from './validationUtils.js';
+import { createComponentLogger } from '../../../utils/logger.js';
+
+const logger = createComponentLogger('FilterValidationUtils');
 
 /**
  * 필터된 상태에서의 인덱스 매핑과 유효성 검사 관리를 위한 클래스
@@ -202,7 +205,7 @@ export class FilteredValidationManager {
    * 디버깅 정보 출력
    */
   debugInfo() {
-    console.log('[FilteredValidationManager] 디버깅 정보:', {
+    logger.debug('[FilteredValidationManager] 디버깅 정보:', {
       isFiltered: this.isFiltered,
       filteredRowsCount: this.filteredRows.length,
       validationErrorsCount: this.validationErrors.size,
@@ -268,7 +271,7 @@ export class FilterCSSUpdater {
       
       // DOM 강제 업데이트를 위한 추가 틱
       nextTick(() => {
-        console.log('[FilterCSSUpdater] 유효성 에러 CSS 업데이트 완료');
+        logger.debug('[FilterCSSUpdater] 유효성 에러 CSS 업데이트 완료');
       });
     });
   }
@@ -282,7 +285,7 @@ export class FilterCSSUpdater {
    */
   static handleFilterStateChange(newIsFiltered, oldIsFiltered, store, nextTick) {
     if (newIsFiltered !== oldIsFiltered) {
-      console.log('[FilterCSSUpdater] 필터 상태 변경 감지:', { newIsFiltered, oldIsFiltered });
+      logger.debug('[FilterCSSUpdater] 필터 상태 변경 감지:', { newIsFiltered, oldIsFiltered });
       this.forceCSSUpdate(store, nextTick);
     }
   }

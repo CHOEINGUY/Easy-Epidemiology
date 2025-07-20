@@ -1,3 +1,5 @@
+import { createComponentLogger } from '../utils/logger.js';
+const logger = createComponentLogger('AuthManager');
 /**
  * 인증 관리자 클래스
  * 사용자 등록, 로그인, 로그아웃, 세션 관리를 담당합니다.
@@ -130,7 +132,7 @@ export class AuthManager {
 
       return true;
     } catch (error) {
-      console.error('자동 로그인 체크 실패:', error);
+      logger.error('자동 로그인 체크 실패:', error);
       this.clearSession();
       return false;
     }

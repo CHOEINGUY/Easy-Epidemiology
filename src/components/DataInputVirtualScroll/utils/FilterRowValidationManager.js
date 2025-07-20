@@ -4,6 +4,11 @@
  * 필터 기능과 행 삭제/추가에 따른 CSS 위치 변경 로직을 통합하여 관리하는 클래스
  * 열 변경 관련 로직은 전혀 건드리지 않고, 필터와 행 변경만 통합하여 관리 복잡성을 줄임
  */
+import { createComponentLogger } from '../../../utils/logger.js';
+
+// Logger 초기화
+const logger = createComponentLogger('FilterRowValidationManager');
+
 export class FilterRowValidationManager {
   constructor() {
     // 필터 관련 상태
@@ -39,7 +44,7 @@ export class FilterRowValidationManager {
     this._updateCombinedMappings();
     
     if (this.debug) {
-      console.log('[FilterRowValidationManager] 필터 상태 업데이트:', {
+      logger.debug('[FilterRowValidationManager] 필터 상태 업데이트:', {
         isFiltered,
         filteredRowsCount: this.filteredRows.length,
         validationErrorsCount: this.validationErrors.size
@@ -60,7 +65,7 @@ export class FilterRowValidationManager {
     this._updateCombinedMappings();
     
     if (this.debug) {
-      console.log('[FilterRowValidationManager] 행 변경 처리:', {
+      logger.debug('[FilterRowValidationManager] 행 변경 처리:', {
         deletedRowIndices: this.deletedRowIndices,
         addedRowIndices: this.addedRowIndices
       });
@@ -114,7 +119,7 @@ export class FilterRowValidationManager {
       const originalRowIndex = parseInt(rowIndexStr, 10);
       
       if (this.debug) {
-        console.log('[FilterRowValidationManager] 에러 처리:', {
+        logger.debug('[FilterRowValidationManager] 에러 처리:', {
           key,
           originalRowIndex,
           uniqueKey,
@@ -128,7 +133,7 @@ export class FilterRowValidationManager {
       
       if (actualRowIndex === null) {
         if (this.debug) {
-          console.log('[FilterRowValidationManager] 삭제된 행의 에러 제외:', key);
+          logger.debug('[FilterRowValidationManager] 삭제된 행의 에러 제외:', key);
         }
         return; // 삭제된 행의 에러는 제외
       }
@@ -141,7 +146,7 @@ export class FilterRowValidationManager {
         
         if (!isInFilteredRows) {
           if (this.debug) {
-            console.log('[FilterRowValidationManager] 필터에서 제외된 행의 에러 제외:', key);
+            logger.debug('[FilterRowValidationManager] 필터에서 제외된 행의 에러 제외:', key);
           }
           return; // 필터에서 제외된 행의 에러는 제외
         }
@@ -153,7 +158,7 @@ export class FilterRowValidationManager {
       visibleErrors.set(newKey, error);
       
       if (this.debug) {
-        console.log('[FilterRowValidationManager] 에러 추가:', {
+        logger.debug('[FilterRowValidationManager] 에러 추가:', {
           oldKey: key,
           newKey,
           error
@@ -162,7 +167,7 @@ export class FilterRowValidationManager {
     });
     
     if (this.debug) {
-      console.log('[FilterRowValidationManager] 보이는 에러 계산:', {
+      logger.debug('[FilterRowValidationManager] 보이는 에러 계산:', {
         totalErrors: this.validationErrors.size,
         visibleErrors: visibleErrors.size
       });
@@ -219,7 +224,7 @@ export class FilterRowValidationManager {
     });
     
     if (this.debug) {
-      console.log('[FilterRowValidationManager] 에러 재매핑:', {
+      logger.debug('[FilterRowValidationManager] 에러 재매핑:', {
         originalErrors: currentErrors.size,
         remappedErrors: remappedErrors.size
       });
@@ -403,7 +408,7 @@ export class FilterCSSUpdater {
    */
   static handleFilterStateChange(newIsFiltered, oldIsFiltered, store, nextTick) {
     if (newIsFiltered !== oldIsFiltered) {
-      console.log('[FilterCSSUpdater] 필터 상태 변경 감지:', {
+      logger.debug('[FilterCSSUpdater] 필터 상태 변경 감지:', {
         oldIsFiltered,
         newIsFiltered
       });

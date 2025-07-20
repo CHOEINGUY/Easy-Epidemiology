@@ -1,95 +1,99 @@
 /**
- * 통합 로깅 시스템
- * 개발/프로덕션 환경에 따른 로깅 레벨 관리
+ * 환경별 로깅 유틸리티
+ * 배포 환경에서는 불필요한 로그를 제거하여 성능 최적화
  */
 
 const LOG_LEVELS = {
-  ERROR: 0,
-  WARN: 1,
-  INFO: 2,
-  DEBUG: 3
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3
 };
 
-// 환경별 로그 레벨 결정
-function getLogLevel() {
-  const envLevel = import.meta.env?.VITE_LOG_LEVEL || import.meta.env?.VUE_APP_LOG_LEVEL;
-  const isDev = import.meta.env?.MODE === 'development' || import.meta.env?.NODE_ENV === 'development';
+// 현재 환경의 로그 레벨 가져오기
+const getCurrentLogLevel = () => {
+  const envLogLevel = process.env.VUE_APP_LOG_LEVEL || 'INFO';
+  return LOG_LEVELS[envLogLevel.toUpperCase()] || LOG_LEVELS.INFO;
+};
+
+// 로그 레벨 확인
+const shouldLog = (level) => {
+  const currentLevel = getCurrentLogLevel();
+  return level >= currentLevel;
+};
+
+// 로깅 함수들
+export const logger = {
+  debug: (...args) => {
+    if (shouldLog(LOG_LEVELS.DEBUG)) {
+      console.log('[DEBUG]', ...args);
+    }
+  },
   
-  if (envLevel && LOG_LEVELS[envLevel] !== undefined) {
-    return LOG_LEVELS[envLevel];
-  }
+  info: (...args) => {
+    if (shouldLog(LOG_LEVELS.INFO)) {
+      console.log('[INFO]', ...args);
+    }
+  },
   
-  return isDev ? LOG_LEVELS.DEBUG : LOG_LEVELS.ERROR;
-}
-
-class Logger {
-  constructor(prefix = '[App]', options = {}) {
-    this.prefix = prefix;
-    this.level = options.level || getLogLevel();
-    this.enabled = options.enabled !== false;
-  }
-
-  error(message, ...args) {
-    if (this.enabled && this.level >= LOG_LEVELS.ERROR) {
-      console.error(`${this.prefix} [ERROR]`, message, ...args);
+  warn: (...args) => {
+    if (shouldLog(LOG_LEVELS.WARN)) {
+      console.warn('[WARN]', ...args);
+    }
+  },
+  
+  error: (...args) => {
+    if (shouldLog(LOG_LEVELS.ERROR)) {
+      console.error('[ERROR]', ...args);
     }
   }
+};
 
-  warn(message, ...args) {
-    if (this.enabled && this.level >= LOG_LEVELS.WARN) {
-      console.warn(`${this.prefix} [WARN]`, message, ...args);
+// 개발 환경에서만 실행되는 로그
+export const devLog = (...args) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DEV]', ...args);
+  }
+};
+
+// 성능 측정용 로그 (배포 환경에서 제거)
+export const perfLog = (label, fn) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.time(`[PERF] ${label}`);
+    const result = fn();
+    console.timeEnd(`[PERF] ${label}`);
+    return result;
+  }
+  return fn();
+};
+
+// 컴포넌트별 로거 생성 (기존 호환성 유지)
+export const createComponentLogger = (componentName) => {
+  return {
+    debug: (...args) => {
+      if (shouldLog(LOG_LEVELS.DEBUG)) {
+        console.log(`[${componentName}] [DEBUG]`, ...args);
+      }
+    },
+    
+    info: (...args) => {
+      if (shouldLog(LOG_LEVELS.INFO)) {
+        console.log(`[${componentName}] [INFO]`, ...args);
+      }
+    },
+    
+    warn: (...args) => {
+      if (shouldLog(LOG_LEVELS.WARN)) {
+        console.warn(`[${componentName}] [WARN]`, ...args);
+      }
+    },
+    
+    error: (...args) => {
+      if (shouldLog(LOG_LEVELS.ERROR)) {
+        console.error(`[${componentName}] [ERROR]`, ...args);
+      }
     }
-  }
-
-  info(message, ...args) {
-    if (this.enabled && this.level >= LOG_LEVELS.INFO) {
-      console.info(`${this.prefix} [INFO]`, message, ...args);
-    }
-  }
-
-  debug(message, ...args) {
-    if (this.enabled && this.level >= LOG_LEVELS.DEBUG) {
-      console.log(`${this.prefix} [DEBUG]`, message, ...args);
-    }
-  }
-
-  // 컴포넌트별 로거 생성
-  createLogger(component) {
-    return new Logger(`[${component}]`, {
-      level: this.level,
-      enabled: this.enabled
-    });
-  }
-
-  // 로깅 비활성화
-  disable() {
-    this.enabled = false;
-  }
-
-  // 로깅 활성화
-  enable() {
-    this.enabled = true;
-  }
-
-  // 로그 레벨 설정
-  setLevel(level) {
-    if (LOG_LEVELS[level] !== undefined) {
-      this.level = LOG_LEVELS[level];
-    }
-  }
-}
-
-// 전역 로거 인스턴스
-export const logger = new Logger();
-
-// 컴포넌트별 로거 팩토리
-export function createComponentLogger(componentName) {
-  return logger.createLogger(componentName);
-}
-
-// 개발 모드에서만 로그 레벨 정보 출력
-if (import.meta.env?.MODE === 'development') {
-  logger.info(`Logger initialized with level: ${getLogLevel()}`);
-}
+  };
+};
 
 export default logger; 

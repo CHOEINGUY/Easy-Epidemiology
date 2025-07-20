@@ -1,3 +1,5 @@
+import { createComponentLogger } from '../utils/logger.js';
+const logger = createComponentLogger('UserManager');
 /**
  * 사용자 데이터 관리자 클래스
  * 사용자별 데이터 격리와 관리를 담당합니다.
@@ -18,7 +20,7 @@ export class UserManager {
       users[userData.username] = userData;
       localStorage.setItem(this.usersKey, JSON.stringify(users));
     } catch (error) {
-      console.error('사용자 저장 실패:', error);
+      logger.error('사용자 저장 실패:', error);
       throw new Error('사용자 정보 저장에 실패했습니다');
     }
   }
@@ -33,7 +35,7 @@ export class UserManager {
       const users = this.getUsers();
       return users[username] || null;
     } catch (error) {
-      console.error('사용자 로드 실패:', error);
+      logger.error('사용자 로드 실패:', error);
       return null;
     }
   }
@@ -47,7 +49,7 @@ export class UserManager {
       const users = localStorage.getItem(this.usersKey);
       return users ? JSON.parse(users) : {};
     } catch (error) {
-      console.error('사용자 목록 로드 실패:', error);
+      logger.error('사용자 목록 로드 실패:', error);
       return {};
     }
   }
@@ -65,7 +67,7 @@ export class UserManager {
       // 사용자별 데이터도 삭제
       this.deleteUserData(username);
     } catch (error) {
-      console.error('사용자 삭제 실패:', error);
+      logger.error('사용자 삭제 실패:', error);
       throw new Error('사용자 삭제에 실패했습니다');
     }
   }
@@ -94,7 +96,7 @@ export class UserManager {
       };
       localStorage.setItem(key, JSON.stringify(saveData));
     } catch (error) {
-      console.error('사용자 데이터 저장 실패:', error);
+      logger.error('사용자 데이터 저장 실패:', error);
       throw new Error('데이터 저장에 실패했습니다');
     }
   }
@@ -110,7 +112,7 @@ export class UserManager {
       const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('사용자 데이터 로드 실패:', error);
+      logger.error('사용자 데이터 로드 실패:', error);
       return null;
     }
   }
@@ -124,7 +126,7 @@ export class UserManager {
       const key = this.getUserDataKey(username);
       localStorage.removeItem(key);
     } catch (error) {
-      console.error('사용자 데이터 삭제 실패:', error);
+      logger.error('사용자 데이터 삭제 실패:', error);
     }
   }
 
@@ -194,9 +196,9 @@ export class UserManager {
       // 기존 데이터 삭제
       localStorage.removeItem('epidemiology_data');
 
-      console.log('기존 데이터 마이그레이션 완료');
+      logger.log('기존 데이터 마이그레이션 완료');
     } catch (error) {
-      console.error('데이터 마이그레이션 실패:', error);
+      logger.error('데이터 마이그레이션 실패:', error);
     }
   }
 
@@ -216,7 +218,7 @@ export class UserManager {
         backupTime: Date.now()
       };
     } catch (error) {
-      console.error('사용자 데이터 백업 실패:', error);
+      logger.error('사용자 데이터 백업 실패:', error);
       throw new Error('백업에 실패했습니다');
     }
   }
@@ -235,7 +237,7 @@ export class UserManager {
         this.saveUserData(username, backupData.data);
       }
     } catch (error) {
-      console.error('사용자 데이터 복원 실패:', error);
+      logger.error('사용자 데이터 복원 실패:', error);
       throw new Error('복원에 실패했습니다');
     }
   }
@@ -258,7 +260,7 @@ export class UserManager {
 
       return backup;
     } catch (error) {
-      console.error('전체 데이터 백업 실패:', error);
+      logger.error('전체 데이터 백업 실패:', error);
       throw new Error('전체 백업에 실패했습니다');
     }
   }
@@ -295,7 +297,7 @@ export class UserManager {
         lastUpdated: Date.now()
       };
     } catch (error) {
-      console.error('통계 정보 조회 실패:', error);
+      logger.error('통계 정보 조회 실패:', error);
       return { userCount: 0, totalDataSize: 0, lastUpdated: Date.now() };
     }
   }
