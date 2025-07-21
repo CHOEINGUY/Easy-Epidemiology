@@ -196,30 +196,31 @@ const storeBridge = useStoreBridge(store, validationManager, {
 // 필터 상태를 reactive하게 만들기
 const filterState = ref(storeBridge.filterState);
 
-// 필터 상태 변화 감지 - 단일 watch로 통합
+// 필터 상태 변화 감지 - 안전한 방식으로 개선
 watch(() => storeBridge.filterState, (newState) => {
   // 새로운 상태와 현재 상태가 다른 경우에만 업데이트
   if (JSON.stringify(newState) !== JSON.stringify(filterState.value)) {
     filterState.value = { ...newState };
     
-    // UI 강제 업데이트도 트리거
+    // UI 업데이트는 nextTick을 통해 안전하게 처리
     nextTick(() => {
-      const gridBody = gridBodyRef.value;
-      const gridHeader = gridHeaderRef.value;
-      
-      if (gridBody) {
-        gridBody.$forceUpdate();
-      }
-      
-      if (gridHeader) {
-        gridHeader.$forceUpdate();
+      // 강제 업데이트 대신 자연스러운 반응성 활용
+      // 필요한 경우에만 최소한의 강제 업데이트 수행
+      if (gridBodyRef.value && gridHeaderRef.value) {
+        // 필터 상태가 실제로 변경된 경우에만 업데이트
+        if (newState.isFiltered !== filterState.value.isFiltered || 
+            newState.activeFilters?.size !== filterState.value.activeFilters?.size) {
+          // 최소한의 강제 업데이트만 수행
+          gridBodyRef.value.$forceUpdate();
+          gridHeaderRef.value.$forceUpdate();
+        }
       }
     });
   }
 }, { 
   deep: true, 
-  immediate: true,
-  flush: 'sync' // 동기적으로 즉시 실행
+  immediate: true
+  // flush: 'sync' 제거 - 기본값인 'pre' 사용으로 안전성 확보
 });
 
 // StoreBridge에 ValidationManager 설정 (이미 생성자에서 전달했으므로 제거)
@@ -245,59 +246,55 @@ function syncFilterStateAfterHistoryChange() {
   // StoreBridge에서 복원된 필터 상태를 로컬 상태와 동기화
   const newFilterState = { ...storeBridge.filterState };
   
-  // 필터 상태 강제 업데이트
+  // 필터 상태 업데이트 - 자연스러운 반응성 활용
   filterState.value = newFilterState;
   
-  // StoreBridge의 내부 필터 상태도 강제로 동기화
+  // StoreBridge의 내부 필터 상태도 동기화 (필요한 경우에만)
   if (storeBridge.setFilterState) {
     storeBridge.setFilterState(newFilterState);
   }
   
-  // 필터 상태 변경으로 인한 UI 업데이트
+  // UI 업데이트는 자연스러운 반응성 시스템에 맡김
+  // 필요한 경우에만 최소한의 강제 업데이트 수행
   nextTick(() => {
-    // 필터링된 행 재계산 강제 실행 - 더 강력한 방법 사용
     try {
-      // 1. VirtualGridBody 강제 업데이트
+      // 필터 상태가 실제로 변경된 경우에만 UI 업데이트
       const gridBody = gridBodyRef.value;
-      if (gridBody) {
-        gridBody.$forceUpdate();
-      }
-      
-      // 2. VirtualGridHeader 강제 업데이트 (필터 아이콘 표시용)
       const gridHeader = gridHeaderRef.value;
-      if (gridHeader) {
-        gridHeader.$forceUpdate();
+      
+      if (gridBody && gridHeader) {
+        // 필터 상태 변화가 있을 때만 강제 업데이트
+        if (newFilterState.isFiltered !== filterState.value.isFiltered || 
+            newFilterState.activeFilters?.size !== filterState.value.activeFilters?.size) {
+          gridBody.$forceUpdate();
+          gridHeader.$forceUpdate();
+        }
       }
-      
-      // 3. 메인 컴포넌트의 filteredRows computed 재계산 트리거
-      // filterState 값을 미세하게 변경하여 reactivity 트리거
-      const triggerValue = { ...newFilterState, _trigger: Date.now() };
-      filterState.value = triggerValue;
-      
-      // 4. 다시 정상 값으로 복원
-      setTimeout(() => {
-        filterState.value = newFilterState;
-      }, 10);
-      
     } catch (error) {
       logger.error('UI 업데이트 중 오류:', error);
     }
   });
 }
 
+// 전역 함수 관리 시스템 사용
+import { useGlobalFunctions } from '../../hooks/useGlobalFunctions.js';
+
+// 전역 함수 관리 훅 사용
+const { registerFunction } = useGlobalFunctions();
+
 // ValidationManager에서 사용할 수 있도록 전역 함수 등록
 if (typeof window !== 'undefined') {
-  window.showToast = showToast;
-  window.updateValidationProgress = (progress, processed, total, errors) => {
+  registerFunction('showToast', showToast);
+  registerFunction('updateValidationProgress', (progress, processed, total, errors) => {
     isValidationProgressVisible.value = true;
     validationProgress.value = progress;
     validationProcessed.value = processed;
     validationTotal.value = total;
     validationErrorCount.value = errors;
-  };
-  window.hideValidationProgress = () => {
+  });
+  registerFunction('hideValidationProgress', () => {
     isValidationProgressVisible.value = false;
-  };
+  });
 }
 
 // --- Undo/Redo 상태 ---
@@ -2339,7 +2336,7 @@ function getCellValue(row, columnMeta, rowIndex = null) {
 // --- 라이프사이클 훅 ---
 onMounted(() => {
   // storeBridge를 전역으로 설정하여 유효성 검사 오류 자동 저장
-  window.storeBridge = storeBridge;
+  registerFunction('storeBridge', storeBridge);
   
   // 필터 상태 초기화 (임시)
   devLog('[Filter] 컴포넌트 마운트 시 필터 초기화');
@@ -2566,19 +2563,20 @@ function onUndo() {
     // 필터 상태 동기화
     syncFilterStateAfterHistoryChange();
     
-    // 추가적인 필터 상태 확인 및 강제 동기화
+    // 추가적인 필터 상태 확인 및 동기화
     nextTick(() => {
-      // 필터 상태가 여전히 불일치하면 강제 동기화
+      // 필터 상태가 여전히 불일치하면 동기화
       if (JSON.stringify(filterState.value) !== JSON.stringify(storeBridge.filterState)) {
         filterState.value = { ...storeBridge.filterState };
         
-        // 한번 더 UI 업데이트
-        setTimeout(() => {
-          const gridBody = gridBodyRef.value;
-          const gridHeader = gridHeaderRef.value;
-          if (gridBody) gridBody.$forceUpdate();
-          if (gridHeader) gridHeader.$forceUpdate();
-        }, 50);
+        // 자연스러운 반응성 시스템 활용
+        // 필요한 경우에만 최소한의 강제 업데이트 수행
+        const gridBody = gridBodyRef.value;
+        const gridHeader = gridHeaderRef.value;
+        if (gridBody && gridHeader) {
+          gridBody.$forceUpdate();
+          gridHeader.$forceUpdate();
+        }
       }
     });
     
@@ -2617,7 +2615,7 @@ function onRedo() {
     // 필터 상태 동기화
     syncFilterStateAfterHistoryChange();
     
-    // 추가적인 필터 상태 확인 및 강제 동기화
+    // 추가적인 필터 상태 확인 및 동기화
     nextTick(() => {
       devLog('[Redo] 최종 필터 상태 확인:', {
         filterStateValue: filterState.value,
@@ -2626,18 +2624,19 @@ function onRedo() {
         activeFiltersSize: storeBridge.filterState.activeFilters?.size || 0
       });
       
-      // 필터 상태가 여전히 불일치하면 강제 동기화
+      // 필터 상태가 여전히 불일치하면 동기화
       if (JSON.stringify(filterState.value) !== JSON.stringify(storeBridge.filterState)) {
-        logger.warn('[Redo] 필터 상태 불일치 감지 - 강제 동기화 실행');
+        logger.warn('[Redo] 필터 상태 불일치 감지 - 동기화 실행');
         filterState.value = { ...storeBridge.filterState };
         
-        // 한번 더 UI 업데이트
-        setTimeout(() => {
-          const gridBody = gridBodyRef.value;
-          const gridHeader = gridHeaderRef.value;
-          if (gridBody) gridBody.$forceUpdate();
-          if (gridHeader) gridHeader.$forceUpdate();
-        }, 50);
+        // 자연스러운 반응성 시스템 활용
+        // 필요한 경우에만 최소한의 강제 업데이트 수행
+        const gridBody = gridBodyRef.value;
+        const gridHeader = gridHeaderRef.value;
+        if (gridBody && gridHeader) {
+          gridBody.$forceUpdate();
+          gridHeader.$forceUpdate();
+        }
       }
     });
     

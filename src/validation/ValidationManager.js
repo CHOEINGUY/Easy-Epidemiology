@@ -930,7 +930,11 @@ export class ValidationManager {
     if (typeof window !== 'undefined' && window.showToast) {
       const message = `붙여넣기 완료: ${totalCells}개 셀 중 ${errorCount}개 오류 발견 (${errorRate}%)`;
       const type = errorCount > 0 ? 'warning' : 'success';
-      window.showToast(message, type);
+      try {
+        window.showToast(message, type);
+      } catch (error) {
+        console.warn('[ValidationManager] showToast 호출 실패:', error);
+      }
     }
   }
 

@@ -1092,13 +1092,26 @@ async function handleClearSelectedData(context) {
 
   const queueHeaderClear = (colIdx) => {
     const meta = allColumnsMeta.find(c => c.colIndex === colIdx);
-    if (!meta || !meta.isEditable) return;
+    if (!meta) return;
+    
+    // 헤더 셀의 경우 isEditable 조건을 제거하여 모든 헤더 셀에서 delete/backspace 동작
+    
+    // 타입 매핑 (saveHeaderValue와 동일한 매핑 적용)
+    const typeMap = {
+      basic: 'basic',
+      clinical: 'clinical',
+      clinicalSymptoms: 'clinical',
+      diet: 'diet',
+      dietInfo: 'diet'
+    };
+    const headerType = typeMap[meta.type] || meta.type;
+    
     if (meta.cellIndex !== null && meta.cellIndex !== undefined) {
-      headerUpdates.push({ headerType: meta.type, index: meta.cellIndex, text: '' });
-      changedCells.push({ type: 'header', headerType: meta.type, index: meta.cellIndex, before: context.storeBridge.state.headers[meta.type]?.[meta.cellIndex] || '', after: '' });
+      headerUpdates.push({ headerType, index: meta.cellIndex, text: '' });
+      changedCells.push({ type: 'header', headerType, index: meta.cellIndex, before: context.storeBridge.state.headers[headerType]?.[meta.cellIndex] || '', after: '' });
     } else {
-      singleHeaderUpdates.push({ headerType: meta.type, text: '' });
-      changedCells.push({ type: 'singleHeader', headerType: meta.type, before: context.storeBridge.state.headers[meta.type] || '', after: '' });
+      singleHeaderUpdates.push({ headerType, text: '' });
+      changedCells.push({ type: 'singleHeader', headerType, before: context.storeBridge.state.headers[headerType] || '', after: '' });
     }
   };
 
