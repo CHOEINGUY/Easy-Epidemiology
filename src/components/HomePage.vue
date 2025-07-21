@@ -3,10 +3,10 @@
     <!-- Hero Section -->
     <div class="hero-section">
       <div class="hero-content">
-        <div class="hero-badge">감염병 역학조사 전문 플랫폼</div>
-        <h1 class="hero-title">Easy-Epidemiology<br/>Web v1.0</h1>
+        <div class="hero-badge">{{ config.basic.subtitle }}</div>
+        <h1 class="hero-title">{{ config.basic.title }}</h1>
         <p class="hero-description">
-          집단발생 사례 분석과 역학조사를 위한 통합 웹 기반 분석 솔루션
+          {{ config.basic.description }}
         </p>
       </div>
     </div>
@@ -16,35 +16,14 @@
       <div class="container">
         <h2 class="section-title">핵심 분석 기능</h2>
         <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">📊</div>
-            <h3 class="feature-title">데이터 입력 & 검증</h3>
-            <p class="feature-description">실시간 유효성 검증과 함께 다차원 역학조사 데이터를 효율적으로 입력</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">👥</div>
-            <h3 class="feature-title">대상자 특성 분석</h3>
-            <p class="feature-description">동적 시각화와 라벨 매핑을 통한 대상자 분포 분석 및 패턴 발견</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🩺</div>
-            <h3 class="feature-title">임상증상 분석</h3>
-            <p class="feature-description">증상별 빈도 분석과 인터랙티브 차트로 임상 패턴 파악</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">📈</div>
-            <h3 class="feature-title">유행곡선 생성</h3>
-            <p class="feature-description">시간대별 발병 패턴 분석과 잠복기 통계로 전파 양상 추적</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🔬</div>
-            <h3 class="feature-title">환자대조군 연구</h3>
-            <p class="feature-description">오즈비(OR) 계산과 95% 신뢰구간으로 위험요인 통계분석</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">📋</div>
-            <h3 class="feature-title">코호트 연구</h3>
-            <p class="feature-description">상대위험도(RR) 분석으로 전향적 연구 결과 해석</p>
+          <div 
+            v-for="feature in config.features" 
+            :key="feature.title"
+            class="feature-card"
+          >
+            <div class="feature-icon">{{ feature.icon }}</div>
+            <h3 class="feature-title">{{ feature.title }}</h3>
+            <p class="feature-description">{{ feature.description }}</p>
           </div>
         </div>
       </div>
@@ -63,14 +42,14 @@
                 <div class="highlight-icon">📅</div>
                 <div class="highlight-content">
                   <div class="highlight-label">버전</div>
-                  <div class="highlight-value">v1.0</div>
+                  <div class="highlight-value">{{ config.basic.version }}</div>
                 </div>
               </div>
               <div class="highlight-item">
                 <div class="highlight-icon">🔄</div>
                 <div class="highlight-content">
                   <div class="highlight-label">최종 업데이트</div>
-                  <div class="highlight-value">2025년 7월 7일</div>
+                  <div class="highlight-value">{{ config.basic.lastUpdate }}</div>
                 </div>
               </div>
               <div class="highlight-item">
@@ -84,7 +63,7 @@
                 <div class="highlight-icon">💻</div>
                 <div class="highlight-content">
                   <div class="highlight-label">플랫폼</div>
-                  <div class="highlight-value">웹 기반 (크로스 플랫폼)</div>
+                  <div class="highlight-value">{{ config.basic.platform }}</div>
                 </div>
               </div>
             </div>
@@ -94,11 +73,7 @@
             <div class="info-description">
               <h3 class="info-desc-title">시스템 특징</h3>
               <ul class="info-desc-list">
-                <li>실시간 데이터 입력 및 유효성 검증</li>
-                <li>직관적인 차트 기반 시각화</li>
-                <li>통계분석 자동화 (OR, RR, 95% CI)</li>
-                <li>다양한 형식의 데이터 내보내기</li>
-                <li>브라우저 기반 접근성</li>
+                <li v-for="feature in config.systemFeatures" :key="feature">{{ feature }}</li>
               </ul>
             </div>
           </div>
@@ -113,14 +88,13 @@
             </div>
             <div class="detail-content">
               <div class="user-tags">
-                <div class="user-tag gov">질병관리청</div>
-                <div class="user-tag gov">시·도 보건당국</div>
-                <div class="user-tag local">시·군·구 감염병 대응팀</div>
-                <div class="user-tag local">보건소</div>
-                <div class="user-tag expert">역학조사관</div>
-                <div class="user-tag expert">FETP 교육생</div>
-                <div class="user-tag research">대학 연구기관</div>
-                <div class="user-tag research">역학조사 실무진</div>
+                <div 
+                  v-for="user in config.targetUsers" 
+                  :key="user.name"
+                  :class="['user-tag', user.type]"
+                >
+                  {{ user.name }}
+                </div>
               </div>
             </div>
           </div>
@@ -132,23 +106,20 @@
             </div>
             <div class="detail-content">
               <div class="education-timeline">
-                <div class="timeline-item">
+                <div 
+                  v-for="item in config.education.timeline" 
+                  :key="item.title"
+                  class="timeline-item"
+                >
                   <div class="timeline-dot"></div>
                   <div class="timeline-content">
-                    <div class="timeline-title">2025년 광주전남 감염병 대응 실무자 교육</div>
-                    <div class="timeline-subtitle">FETP-F (Field Epidemiology Training Program)</div>
-                  </div>
-                </div>
-                <div class="timeline-item">
-                  <div class="timeline-dot"></div>
-                  <div class="timeline-content">
-                    <div class="timeline-title">질병관리청 역학조사 표준교육과정</div>
-                    <div class="timeline-subtitle">연계 실습도구</div>
+                    <div class="timeline-title">{{ item.title }}</div>
+                    <div class="timeline-subtitle">{{ item.subtitle }}</div>
                   </div>
                 </div>
               </div>
               <div class="education-highlight">
-                💡 실무 중심의 hands-on 교육을 통한 역학조사 역량 강화
+                {{ config.education.highlight }}
               </div>
             </div>
           </div>
@@ -163,19 +134,19 @@
                 <div class="org-main-info">
                   <div class="org-logo">🏥</div>
                   <div class="org-details">
-                    <div class="org-name">전남대학교 의과대학</div>
-                    <div class="org-dept">예방의학교실</div>
-                    <div class="org-center">감염병 역학조사 및 현장 대응 연구센터</div>
+                    <div class="org-name">{{ config.organization.name }}</div>
+                    <div class="org-dept">{{ config.organization.department }}</div>
+                    <div class="org-center">{{ config.organization.center }}</div>
                   </div>
                 </div>
                 <div class="team-cards">
-                  <div class="team-card">
-                    <div class="team-role">책임개발자</div>
-                    <div class="team-name">양정호</div>
-                  </div>
-                  <div class="team-card">
-                    <div class="team-role">기술개발자</div>
-                    <div class="team-name">최인규</div>
+                  <div 
+                    v-for="member in config.organization.team" 
+                    :key="member.role"
+                    class="team-card"
+                  >
+                    <div class="team-role">{{ member.role }}</div>
+                    <div class="team-name">{{ member.name }}</div>
                   </div>
                 </div>
               </div>
@@ -190,39 +161,15 @@
       <div class="container">
         <h2 class="section-title">빠른 시작 가이드</h2>
         <div class="guide-steps">
-          <div class="step-item">
-            <div class="step-number">1</div>
+          <div 
+            v-for="step in config.quickGuide" 
+            :key="step.step"
+            class="step-item"
+          >
+            <div class="step-number">{{ step.step }}</div>
             <div class="step-content">
-              <h4 class="step-title">데이터 입력</h4>
-              <p class="step-description">조사대상자 기본정보 및 임상증상 데이터 입력</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-number">2</div>
-            <div class="step-content">
-              <h4 class="step-title">특성 분석</h4>
-              <p class="step-description">대상자 특성별 분포 분석 및 시각화</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-number">3</div>
-            <div class="step-content">
-              <h4 class="step-title">패턴 분석</h4>
-              <p class="step-description">유행곡선 생성 및 시간대별 발병 패턴 파악</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-number">4</div>
-            <div class="step-content">
-              <h4 class="step-title">통계 분석</h4>
-              <p class="step-description">환자대조군/코호트 연구 통계분석 수행</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-number">5</div>
-            <div class="step-content">
-              <h4 class="step-title">결과 활용</h4>
-              <p class="step-description">분석 결과 내보내기 및 보고서 작성</p>
+              <h4 class="step-title">{{ step.title }}</h4>
+              <p class="step-description">{{ step.description }}</p>
             </div>
           </div>
         </div>
@@ -254,9 +201,9 @@
             <div class="contact-icon-prof-wrapper">
                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
             </div>
-            <h4 class="contact-item-title-prof">운영 기관</h4>
-            <p class="contact-item-text-prof">전남대학교 의과대학</p>
-            <p class="contact-item-text-prof sub">예방의학교실</p>
+            <h4 class="contact-item-title-prof">{{ config.contact.title }}</h4>
+            <p class="contact-item-text-prof">{{ config.contact.organization }}</p>
+            <p class="contact-item-text-prof sub">{{ config.contact.department }}</p>
           </div>
         </div>
       </div>
@@ -266,8 +213,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { loadSiteConfig } from '@/config/siteConfig';
 
 const currentDate = ref('');
+const config = ref(loadSiteConfig());
 
 onMounted(() => {
   const today = new Date();

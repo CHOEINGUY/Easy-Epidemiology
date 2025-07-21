@@ -1,7 +1,5 @@
 <template>
   <div class="admin-panel">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    
     <!-- Fixed Header -->
     <div class="admin-header">
       <div class="header-content">
@@ -77,6 +75,14 @@
           >
             <span class="material-icons">group</span>
             전체 사용자 ({{ allUsers.length }})
+          </button>
+          <button 
+            @click="activeTab = 'settings'" 
+            :class="{ active: activeTab === 'settings' }"
+            class="tab-btn"
+          >
+            <span class="material-icons">settings</span>
+            사이트 설정
           </button>
         </div>
         <button @click="refreshData" class="refresh-btn">
@@ -268,6 +274,147 @@
           </table>
         </div>
       </div>
+
+      <!-- 사이트 설정 관리 탭 -->
+      <div v-if="activeTab === 'settings'" class="settings-tab">
+        <div class="settings-container">
+          <div class="settings-header">
+            <h2>사이트 설정 관리</h2>
+            <p>홈페이지의 정보를 동적으로 관리할 수 있습니다.</p>
+          </div>
+          
+          <div class="settings-content">
+            <!-- 기본 정보 설정 -->
+            <div class="settings-section">
+              <h3>기본 정보</h3>
+              <div class="settings-grid">
+                <div class="setting-item">
+                  <label>제목</label>
+                  <input v-model="siteConfig.basic.title" type="text" class="setting-input">
+                </div>
+                <div class="setting-item">
+                  <label>부제목</label>
+                  <input v-model="siteConfig.basic.subtitle" type="text" class="setting-input">
+                </div>
+                <div class="setting-item">
+                  <label>설명</label>
+                  <textarea v-model="siteConfig.basic.description" class="setting-textarea"></textarea>
+                </div>
+                <div class="setting-item">
+                  <label>버전</label>
+                  <input v-model="siteConfig.basic.version" type="text" class="setting-input">
+                </div>
+                <div class="setting-item">
+                  <label>최종 업데이트</label>
+                  <input v-model="siteConfig.basic.lastUpdate" type="text" class="setting-input">
+                </div>
+                <div class="setting-item">
+                  <label>플랫폼</label>
+                  <input v-model="siteConfig.basic.platform" type="text" class="setting-input">
+                </div>
+              </div>
+            </div>
+
+            <!-- 조직 정보 설정 -->
+            <div class="settings-section">
+              <h3>조직 정보</h3>
+              <div class="settings-grid">
+                <div class="setting-item">
+                  <label>기관명</label>
+                  <input v-model="siteConfig.organization.name" type="text" class="setting-input">
+                </div>
+                <div class="setting-item">
+                  <label>부서</label>
+                  <input v-model="siteConfig.organization.department" type="text" class="setting-input">
+                </div>
+                <div class="setting-item">
+                  <label>센터명</label>
+                  <input v-model="siteConfig.organization.center" type="text" class="setting-input">
+                </div>
+              </div>
+              
+              <h4>팀원 정보</h4>
+              <div class="team-members">
+                <div 
+                  v-for="(member, index) in siteConfig.organization.team" 
+                  :key="index"
+                  class="team-member"
+                >
+                  <div class="member-inputs">
+                    <input v-model="member.role" type="text" placeholder="역할" class="setting-input">
+                    <input v-model="member.name" type="text" placeholder="이름" class="setting-input">
+                    <button @click="removeTeamMember(index)" class="remove-btn">
+                      <span class="material-icons">delete</span>
+                    </button>
+                  </div>
+                </div>
+                <button @click="addTeamMember" class="add-btn">
+                  <span class="material-icons">add</span>
+                  팀원 추가
+                </button>
+              </div>
+            </div>
+
+            <!-- 기능 카드 설정 -->
+            <div class="settings-section">
+              <h3>기능 카드</h3>
+              <div class="feature-cards">
+                <div 
+                  v-for="(feature, index) in siteConfig.features" 
+                  :key="index"
+                  class="feature-card-edit"
+                >
+                  <div class="feature-inputs">
+                    <input v-model="feature.icon" type="text" placeholder="아이콘 (이모지)" class="setting-input">
+                    <input v-model="feature.title" type="text" placeholder="제목" class="setting-input">
+                    <textarea v-model="feature.description" placeholder="설명" class="setting-textarea"></textarea>
+                    <button @click="removeFeature(index)" class="remove-btn">
+                      <span class="material-icons">delete</span>
+                    </button>
+                  </div>
+                </div>
+                <button @click="addFeature" class="add-btn">
+                  <span class="material-icons">add</span>
+                  기능 카드 추가
+                </button>
+              </div>
+            </div>
+
+            <!-- 시스템 특징 설정 -->
+            <div class="settings-section">
+              <h3>시스템 특징</h3>
+              <div class="system-features">
+                <div 
+                  v-for="(feature, index) in siteConfig.systemFeatures" 
+                  :key="index"
+                  class="feature-item"
+                >
+                  <input v-model="siteConfig.systemFeatures[index]" type="text" class="setting-input">
+                  <button @click="removeSystemFeature(index)" class="remove-btn">
+                    <span class="material-icons">delete</span>
+                  </button>
+                </div>
+                <button @click="addSystemFeature" class="add-btn">
+                  <span class="material-icons">add</span>
+                  특징 추가
+                </button>
+              </div>
+            </div>
+
+            <!-- 저장 버튼 -->
+            <div class="settings-actions">
+              <button @click="saveSettings" class="save-btn">
+                <span class="material-icons">save</span>
+                설정 저장
+              </button>
+              <button @click="resetSettings" class="reset-btn">
+                <span class="material-icons">restore</span>
+                기본값으로 복원
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Notification -->
@@ -282,6 +429,7 @@
 
 <script>
 import { adminApi, userManager } from '../services/authApi.js';
+import { loadSiteConfig, updateSiteConfig, resetSiteConfig, siteConfig as defaultConfig } from '../config/siteConfig.js';
 
 export default {
   name: 'AdminPanel',
@@ -296,6 +444,7 @@ export default {
       selectedUsers: [],
       searchQuery: '',
       searchTimeout: null,
+      siteConfig: loadSiteConfig(),
       filters: {
         affiliationType: '',
         affiliation: '', // 소속 필터
@@ -826,6 +975,59 @@ export default {
           this.$emit('logout');
         });
       }
+    },
+
+    // 사이트 설정 관리 메서드들
+    saveSettings() {
+      try {
+        updateSiteConfig(this.siteConfig);
+        this.showMessage('설정이 성공적으로 저장되었습니다.', 'success');
+      } catch (error) {
+        this.showMessage(`설정 저장에 실패했습니다: ${error.message}`, 'error');
+      }
+    },
+
+    resetSettings() {
+      if (confirm('정말로 기본값으로 복원하시겠습니까? 현재 설정이 모두 사라집니다.')) {
+        try {
+          resetSiteConfig();
+          this.siteConfig = JSON.parse(JSON.stringify(defaultConfig));
+          this.showMessage('설정이 기본값으로 복원되었습니다.', 'success');
+        } catch (error) {
+          this.showMessage(`설정 복원에 실패했습니다: ${error.message}`, 'error');
+        }
+      }
+    },
+
+    addTeamMember() {
+      this.siteConfig.organization.team.push({
+        role: '',
+        name: ''
+      });
+    },
+
+    removeTeamMember(index) {
+      this.siteConfig.organization.team.splice(index, 1);
+    },
+
+    addFeature() {
+      this.siteConfig.features.push({
+        icon: '',
+        title: '',
+        description: ''
+      });
+    },
+
+    removeFeature(index) {
+      this.siteConfig.features.splice(index, 1);
+    },
+
+    addSystemFeature() {
+      this.siteConfig.systemFeatures.push('');
+    },
+
+    removeSystemFeature(index) {
+      this.siteConfig.systemFeatures.splice(index, 1);
     }
   }
 };
@@ -2073,5 +2275,243 @@ export default {
 }
 .fade-enter, .fade-leave-to {
   opacity: 0;
+}
+
+/* 사이트 설정 관리 스타일 */
+.settings-tab {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+
+.settings-container {
+  padding: 24px;
+}
+
+.settings-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.settings-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #202124;
+  margin: 0 0 8px 0;
+}
+
+.settings-header p {
+  color: #5f6368;
+  margin: 0;
+}
+
+.settings-section {
+  margin-bottom: 32px;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.settings-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #202124;
+  margin: 0 0 16px 0;
+}
+
+.settings-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #202124;
+  margin: 24px 0 16px 0;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-item label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5f6368;
+}
+
+.setting-input {
+  padding: 12px;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.setting-input:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.1);
+}
+
+.setting-textarea {
+  padding: 12px;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  font-size: 14px;
+  min-height: 80px;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.setting-textarea:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.1);
+}
+
+.team-members {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.team-member {
+  background: white;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.member-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.feature-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feature-card-edit {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.feature-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.system-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.feature-item .setting-input {
+  flex: 1;
+}
+
+.add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #e8f0fe;
+  color: #4285f4;
+  border: 1px solid #4285f4;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-btn:hover {
+  background: #d2e3fc;
+}
+
+.remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #fce8e6;
+  color: #c5221f;
+  border: 1px solid #c5221f;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.remove-btn:hover {
+  background: #fad2cf;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.save-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.save-btn:hover {
+  background: #3367d6;
+}
+
+.reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #f8f9fa;
+  color: #5f6368;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reset-btn:hover {
+  background: #e8eaed;
 }
 </style> 

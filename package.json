@@ -15,7 +15,9 @@
     "lint": "vue-cli-service lint",
     "test": "jest",
     "test:auth": "node test-modes.js auth",
-    "test:noauth": "node test-modes.js noauth"
+    "test:noauth": "node test-modes.js noauth",
+    "download-icons": "node scripts/download-material-icons.js",
+    "postinstall": "npm run download-icons"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",

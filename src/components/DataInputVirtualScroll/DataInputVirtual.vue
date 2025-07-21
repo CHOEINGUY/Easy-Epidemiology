@@ -151,6 +151,7 @@ import { useDataExport } from './logic/useDataExport.js';
 import { useDragDrop } from './logic/dragDrop.js';
 import { showToast, showConfirmToast } from './logic/toast.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
+import { useOperationGuard } from '../../hooks/useOperationGuard.js';
 // Validation
 import ValidationManager from '../../validation/ValidationManager.js';
 import { createProcessingOptions } from '../../utils/environmentUtils.js';
@@ -296,6 +297,9 @@ if (typeof window !== 'undefined') {
     isValidationProgressVisible.value = false;
   });
 }
+
+// --- 작업 가드 시스템 ---
+const { tryStartOperation, endOperation } = useOperationGuard();
 
 // --- Undo/Redo 상태 ---
 const canUndo = computed(() => storeBridge.canUndo);
@@ -821,7 +825,10 @@ watch(() => storeBridge.filterState.isFiltered, (newIsFiltered, oldIsFiltered) =
 }, { immediate: false });
 
 async function onExcelFileSelected(file) {
-  if (isUploadingExcel.value) return;
+  if (!tryStartOperation('excel_upload', { blocking: true, timeout: 60000 })) {
+    return;
+  }
+  
   isUploadingExcel.value = true;
   excelUploadProgress.value = 0;
   try {
@@ -881,28 +888,28 @@ async function onExcelFileSelected(file) {
       columnCount: Object.keys(parsed.headers).reduce((sum, key) => sum + (parsed.headers[key]?.length || 0), 0)
     });
     
-    storeBridge.dispatch('updateHeadersFromExcel', parsed.headers);
-    storeBridge.dispatch('addRowsFromExcel', parsed.rows);
+    await storeBridge.dispatch('updateHeadersFromExcel', parsed.headers);
+    await storeBridge.dispatch('addRowsFromExcel', parsed.rows);
     
     // '의심원 노출시간' 열 가시성 토글
     if (parsed.hasIndividualExposureTime) {
       if (!storeBridge.state.isIndividualExposureColumnVisible) {
-        storeBridge.dispatch('setIndividualExposureColumnVisibility', true);
+        await storeBridge.dispatch('setIndividualExposureColumnVisibility', true);
       }
     } else {
       if (storeBridge.state.isIndividualExposureColumnVisible) {
-        storeBridge.dispatch('setIndividualExposureColumnVisibility', false);
+        await storeBridge.dispatch('setIndividualExposureColumnVisibility', false);
       }
     }
     
     // '확진자 여부' 열 가시성 토글
     if (parsed.hasConfirmedCase) {
       if (!storeBridge.state.isConfirmedCaseColumnVisible) {
-        storeBridge.dispatch('setConfirmedCaseColumnVisibility', true);
+        await storeBridge.dispatch('setConfirmedCaseColumnVisibility', true);
       }
     } else {
       if (storeBridge.state.isConfirmedCaseColumnVisible) {
-        storeBridge.dispatch('setConfirmedCaseColumnVisibility', false);
+        await storeBridge.dispatch('setConfirmedCaseColumnVisibility', false);
       }
     }
     
@@ -935,6 +942,7 @@ async function onExcelFileSelected(file) {
   } finally {
     isUploadingExcel.value = false;
     excelUploadProgress.value = 0;
+    endOperation('excel_upload');
   }
 }
 
@@ -992,7 +1000,11 @@ async function onCopyEntireData() {
   }
 }
 
-function onDeleteEmptyCols() {
+async function onDeleteEmptyCols() {
+  if (!tryStartOperation('delete_empty_columns', { blocking: true, timeout: 10000 })) {
+    return;
+  }
+  
   const beforeColCount = allColumnsMeta.value.length;
   const beforeColumnsMeta = [...allColumnsMeta.value]; // 삭제 전 열 메타 정보 백업
   
@@ -1003,7 +1015,7 @@ function onDeleteEmptyCols() {
     beforeColumnsMeta
   });
   
-  storeBridge.dispatch('deleteEmptyColumns');
+  await storeBridge.dispatch('deleteEmptyColumns');
   
   // 삭제된 열 개수 계산 (nextTick 후에 계산)
   nextTick(() => {
@@ -1043,10 +1055,17 @@ function onDeleteEmptyCols() {
     // 메타 / 선택 영역 리프레시
     selectionSystem.clearSelection();
     focusGrid();
+    
+    // 작업 완료
+    endOperation('delete_empty_columns');
   });
 }
 
 async function onResetSheet() {
+  if (!tryStartOperation('reset_sheet', { blocking: true, timeout: 10000 })) {
+    return;
+  }
+  
   showConfirmToast(
     '모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
     async () => {
@@ -1072,7 +1091,7 @@ async function onResetSheet() {
           newFilterState: { ...storeBridge.filterState }
         });
         
-        storeBridge.dispatch('resetSheet');
+        await storeBridge.dispatch('resetSheet');
         // selection / scroll reset
         selectionSystem.clearSelection();
         await nextTick();
@@ -1085,12 +1104,14 @@ async function onResetSheet() {
       } catch (err) {
         logger.error('reset sheet failed', err);
         showToast('시트 초기화 중 오류가 발생했습니다.', 'error');
+      } finally {
+        endOperation('reset_sheet');
       }
     }
   );
 }
 
-function onToggleExposureColumn() {
+async function onToggleExposureColumn() {
   const current = storeBridge.state.isIndividualExposureColumnVisible;
   const isAdding = !current; // 열을 추가하는지 여부
   
@@ -1127,7 +1148,13 @@ function onToggleExposureColumn() {
   const oldColumnsMeta = [...allColumnsMeta.value];
   
   // StoreBridge에서 유효성 검사 오류 인덱스 재조정도 함께 처리됨
-  storeBridge.setIndividualExposureColumnVisibility(!current);
+  try {
+    await storeBridge.setIndividualExposureColumnVisibility(!current);
+  } catch (error) {
+    logger.error('개별 노출시간 열 가시성 변경 실패:', error);
+    showToast('개별 노출시간 열 가시성 변경 중 오류가 발생했습니다.', 'error');
+    return;
+  }
   
   // 변경 후 컬럼 메타와 비교하여 에러 재매핑
   nextTick(() => {
@@ -1193,7 +1220,7 @@ function onToggleExposureColumn() {
   });
 }
 
-function onToggleConfirmedCaseColumn() {
+async function onToggleConfirmedCaseColumn() {
   const current = storeBridge.state.isConfirmedCaseColumnVisible;
   const isAdding = !current;
   
@@ -1221,7 +1248,13 @@ function onToggleConfirmedCaseColumn() {
   const oldColumnsMeta = [...allColumnsMeta.value];
   
   // StoreBridge에서 유효성 검사 오류 인덱스 재조정도 함께 처리됨
-  storeBridge.setConfirmedCaseColumnVisibility(!current);
+  try {
+    await storeBridge.setConfirmedCaseColumnVisibility(!current);
+  } catch (error) {
+    logger.error('확진자 여부 열 가시성 변경 실패:', error);
+    showToast('확진자 여부 열 가시성 변경 중 오류가 발생했습니다.', 'error');
+    return;
+  }
   
   // 변경 후 컬럼 메타와 비교하여 에러 재매핑
   nextTick(() => {
@@ -1388,7 +1421,7 @@ function onContextMenu(event, virtualRowIndex, colIndex) {
   handleContextMenu(event, virtualRowIndex, colIndex, context);
 }
 
-function onContextMenuSelect(action) {
+async function onContextMenuSelect(action) {
   const { target } = contextMenuState; // `target` holds { rowIndex, colIndex }
   const { selectedRange, selectedRowsIndividual, selectedCellsIndividual } = selectionSystem.state;
   
@@ -1466,25 +1499,25 @@ function onContextMenuSelect(action) {
   case 'clear-cell-data': {
     // 개별 셀 선택이 있는 경우 선택된 모든 셀의 데이터 삭제
     if (selectedCellsIndividual.size > 0) {
-      selectedCellsIndividual.forEach(cellKey => {
+      for (const cellKey of selectedCellsIndividual) {
         const [rowStr, colStr] = cellKey.split('_');
         const rowIndex = parseInt(rowStr, 10);
         const colIndex = parseInt(colStr, 10);
         const columnMeta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
         
         if (columnMeta) {
-          storeBridge.dispatch('clearCellData', {
+          await storeBridge.dispatch('clearCellData', {
             rowIndex,
             colIndex,
             type: columnMeta.type
           });
         }
-      });
+      }
     } else {
       // 개별 선택이 없는 경우 우클릭한 셀의 데이터만 삭제
       const columnMeta = allColumnsMeta.value.find(c => c.colIndex === target.colIndex);
       if (columnMeta) {
-        storeBridge.dispatch('clearCellData', {
+        await storeBridge.dispatch('clearCellData', {
           rowIndex: target.rowIndex,
           colIndex: target.colIndex,
           type: columnMeta.type
@@ -1495,7 +1528,7 @@ function onContextMenuSelect(action) {
   }
   case 'add-row-above': {
     const rowSelection = getEffectiveRowSelection();
-    storeBridge.dispatch('insertRowAt', {
+    await storeBridge.dispatch('insertRowAt', {
       index: rowSelection.startRow,
       count: rowSelection.count
     });
@@ -1503,7 +1536,7 @@ function onContextMenuSelect(action) {
   }
   case 'add-row-below': {
     const rowSelection = getEffectiveRowSelection();
-    storeBridge.dispatch('insertRowAt', {
+    await storeBridge.dispatch('insertRowAt', {
       index: rowSelection.endRow + 1,
       count: rowSelection.count
     });
@@ -1515,13 +1548,13 @@ function onContextMenuSelect(action) {
       // 개별 선택된 행들을 역순으로 삭제 (인덱스 변화 방지)
       const sortedRows = rowSelection.rows.sort((a, b) => b - a);
       for (const rowIndex of sortedRows) {
-        storeBridge.dispatch('deleteMultipleRows', {
+        await storeBridge.dispatch('deleteMultipleRows', {
           startRow: rowIndex,
           endRow: rowIndex
         });
       }
     } else {
-      storeBridge.dispatch('deleteMultipleRows', {
+      await storeBridge.dispatch('deleteMultipleRows', {
         startRow: rowSelection.startRow,
         endRow: rowSelection.endRow
       });
@@ -1549,7 +1582,7 @@ function onContextMenuSelect(action) {
     devLog(`[ContextMenu] 열 추가 시작: ${action}, 타입: ${targetColumn.type}, 개수: ${colSelection.count}, 위치: ${insertAtIndex}`);
     
     // 데이터 변경 수행
-    storeBridge.dispatch('insertMultipleColumnsAt', {
+    await storeBridge.dispatch('insertMultipleColumnsAt', {
       type: targetColumn.type,
       count: colSelection.count,
       index: insertAtIndex
@@ -1640,7 +1673,7 @@ function onContextMenuSelect(action) {
       devLog('[ContextMenu] 삭제할 열들:', columnsToDelete.map(c => `${c.type}[${c.index}]`).join(', '));
       
       // 데이터 변경 수행
-      storeBridge.dispatch('deleteMultipleColumnsByIndex', { columns: columnsToDelete });
+      await storeBridge.dispatch('deleteMultipleColumnsByIndex', { columns: columnsToDelete });
       
       // StoreBridge에서 이미 에러 재매핑을 처리하므로 여기서는 건너뜀
       devLog('[ContextMenu] 열 삭제 완료 - StoreBridge에서 에러 재매핑 처리됨');
@@ -1650,20 +1683,20 @@ function onContextMenuSelect(action) {
     break;
   }
   case 'delete-empty-rows':
-    storeBridge.dispatch('deleteEmptyRows');
+    await storeBridge.dispatch('deleteEmptyRows');
     break;
   case 'clear-rows-data': {
     const rowSelection = getEffectiveRowSelection();
     if (rowSelection.type === 'individual') {
       // 개별 선택된 행들의 데이터 삭제
       for (const rowIndex of rowSelection.rows) {
-        storeBridge.dispatch('clearMultipleRowsData', {
+        await storeBridge.dispatch('clearMultipleRowsData', {
           startRow: rowIndex,
           endRow: rowIndex
         });
       }
     } else {
-      storeBridge.dispatch('clearMultipleRowsData', {
+      await storeBridge.dispatch('clearMultipleRowsData', {
         startRow: rowSelection.startRow,
         endRow: rowSelection.endRow
       });
@@ -1683,17 +1716,17 @@ function onContextMenuSelect(action) {
       
     const fixedColumnTypes = [COL_TYPE_IS_PATIENT, COL_TYPE_CONFIRMED_CASE, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE];
 
-    columnsToClear.forEach(col => {
+    for (const col of columnsToClear) {
       if (fixedColumnTypes.includes(col.type)) {
-        storeBridge.dispatch('clearFixedColumnData', { type: col.type });
+        await storeBridge.dispatch('clearFixedColumnData', { type: col.type });
       } else if (col.type && col.cellIndex !== null && col.cellIndex !== undefined) {
         // 올바른 파라미터로 clearColumnData 호출
-        storeBridge.dispatch('clearColumnData', {
+        await storeBridge.dispatch('clearColumnData', {
           type: col.type,
           index: col.cellIndex
         });
       }
-    });
+    }
     break;
   }
   case 'filter-patient-1':
@@ -1714,7 +1747,7 @@ function onContextMenuSelect(action) {
     // 필터 변경 전 상태 백업
     const oldFilterState = JSON.stringify(storeBridge.filterState);
     
-    storeBridge.togglePatientFilter(value);
+    await storeBridge.togglePatientFilter(value);
     
     // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
     if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
@@ -1759,7 +1792,7 @@ function onContextMenuSelect(action) {
     // 필터 변경 전 상태 백업
     const oldFilterState = JSON.stringify(storeBridge.filterState);
     
-    storeBridge.toggleConfirmedFilter(target.colIndex, value);
+    await storeBridge.toggleConfirmedFilter(target.colIndex, value);
     
     // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
     if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
@@ -1805,7 +1838,7 @@ function onContextMenuSelect(action) {
     // 필터 변경 전 상태 백업
     const oldFilterState = JSON.stringify(storeBridge.filterState);
     
-    storeBridge.toggleClinicalFilter(target.colIndex, value);
+    await storeBridge.toggleClinicalFilter(target.colIndex, value);
     
     // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
     if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
@@ -1851,7 +1884,7 @@ function onContextMenuSelect(action) {
     // 필터 변경 전 상태 백업
     const oldFilterState = JSON.stringify(storeBridge.filterState);
     
-    storeBridge.toggleDietFilter(target.colIndex, value);
+    await storeBridge.toggleDietFilter(target.colIndex, value);
     
     // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
     if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
@@ -1889,7 +1922,7 @@ function onContextMenuSelect(action) {
     // 필터 변경 전 상태 백업
     const oldFilterState = JSON.stringify(storeBridge.filterState);
     
-    storeBridge.toggleBasicFilter(target.colIndex, 'empty');
+    await storeBridge.toggleBasicFilter(target.colIndex, 'empty');
     
     // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
     if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
@@ -1923,7 +1956,7 @@ function onContextMenuSelect(action) {
       // 필터 변경 전 상태 백업
       const oldFilterState = JSON.stringify(storeBridge.filterState);
       
-      storeBridge.toggleBasicFilter(target.colIndex, value);
+      await storeBridge.toggleBasicFilter(target.colIndex, value);
       
       // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
       if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
@@ -1955,7 +1988,7 @@ function onContextMenuSelect(action) {
       // 필터 변경 전 상태 백업
       const oldFilterState = JSON.stringify(storeBridge.filterState);
       
-      storeBridge.toggleDateTimeFilter(target.colIndex, dateValue);
+      await storeBridge.toggleDateTimeFilter(target.colIndex, dateValue);
       
       // 필터 상태가 실제로 변경된 경우에만 스냅샷 캡처
       if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
@@ -2413,6 +2446,10 @@ function mapGroupTypeToMetaType(groupType) {
 }
 
 function onAddColumn(groupType) {
+  if (!tryStartOperation('add_column', { blocking: true, timeout: 5000 })) {
+    return;
+  }
+  
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
     devLog('[DataInputVirtual] 열 추가로 데이트피커 닫기');
@@ -2458,9 +2495,15 @@ function onAddColumn(groupType) {
   nextTick(() => {
     focusGrid();
   });
+  
+  endOperation('add_column');
 }
 
 function onDeleteColumn(groupType) {
+  if (!tryStartOperation('delete_column', { blocking: true, timeout: 5000 })) {
+    return;
+  }
+  
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
     devLog('[DataInputVirtual] 열 삭제로 데이트피커 닫기');
@@ -2491,6 +2534,8 @@ function onDeleteColumn(groupType) {
 
   selectionSystem.clearSelection();
   nextTick(() => focusGrid());
+  
+  endOperation('delete_column');
 }
 
 // Helper to map group type to header array
@@ -2508,6 +2553,10 @@ function getHeaderArrayByType(type) {
 }
 
 function onDeleteEmptyRows() {
+  if (!tryStartOperation('delete_empty_rows', { blocking: true, timeout: 10000 })) {
+    return;
+  }
+  
   // 데이트피커가 열려있으면 닫기
   if (dateTimePickerState.visible) {
     devLog('[DataInputVirtual] 빈 행 삭제로 데이트피커 닫기');
@@ -2517,6 +2566,8 @@ function onDeleteEmptyRows() {
   storeBridge.dispatch('deleteEmptyRows');
   selectionSystem.clearSelection();
   showToast('빈 행이 삭제되었습니다.', 'success');
+  
+  endOperation('delete_empty_rows');
 }
 
 function onAddRows(count) {

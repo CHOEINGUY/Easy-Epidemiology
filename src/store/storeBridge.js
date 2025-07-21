@@ -199,9 +199,14 @@ export class StoreBridge {
    * 행 추가
    * @param {number} count - 추가할 행 수
    */
-  addRows(count) {
+  async addRows(count) {
+    // 변경 전 스냅샷 캡처
     this._captureSnapshot('addRows', { count });
-    const result = this.legacyStore.dispatch('addRows', count);
+    
+    // 비동기 작업 완료 대기
+    const result = await this.legacyStore.dispatch('addRows', count);
+    
+    // 작업 완료 후 상태 저장
     this.saveCurrentState();
     
     // 검증 처리
@@ -222,9 +227,14 @@ export class StoreBridge {
    * 열 추가
    * @param {string} type - 열 타입
    */
-  addColumn(type) {
+  async addColumn(type) {
+    // 변경 전 스냅샷 캡처
     this._captureSnapshot('addColumn', { type });
-    const result = this.legacyStore.dispatch('addColumn', type);
+    
+    // 비동기 작업 완료 대기
+    const result = await this.legacyStore.dispatch('addColumn', type);
+    
+    // 작업 완료 후 상태 저장
     this.saveCurrentState();
     
     // 검증 처리
@@ -244,9 +254,14 @@ export class StoreBridge {
    * 행 삭제
    * @param {number} rowIndex - 삭제할 행 인덱스
    */
-  deleteRow(rowIndex) {
-    // 기존 로직 실행
-    this.legacyStore.dispatch('deleteRow', rowIndex);
+  async deleteRow(rowIndex) {
+    // 변경 전 스냅샷 캡처
+    this._captureSnapshot('deleteRow', { rowIndex });
+    
+    // 비동기 작업 완료 대기
+    await this.legacyStore.dispatch('deleteRow', rowIndex);
+    
+    // 작업 완료 후 상태 저장
     this.saveCurrentState();
     
     // 새로운 FilterRowValidationManager 사용
@@ -261,9 +276,14 @@ export class StoreBridge {
    * 여러 행 삭제
    * @param {Object} payload - 삭제 페이로드
    */
-  deleteMultipleRows(payload) {
-    // 기존 로직 실행
-    this.legacyStore.dispatch('deleteMultipleRows', payload);
+  async deleteMultipleRows(payload) {
+    // 변경 전 스냅샷 캡처
+    this._captureSnapshot('deleteMultipleRows', payload);
+    
+    // 비동기 작업 완료 대기
+    await this.legacyStore.dispatch('deleteMultipleRows', payload);
+    
+    // 작업 완료 후 상태 저장
     this.saveCurrentState();
     
     // 새로운 FilterRowValidationManager 사용
@@ -292,9 +312,14 @@ export class StoreBridge {
    * 개별 행 삭제
    * @param {Object} payload - 삭제 페이로드
    */
-  deleteIndividualRows(payload) {
-    // 기존 로직 실행
-    this.legacyStore.dispatch('deleteIndividualRows', payload);
+  async deleteIndividualRows(payload) {
+    // 변경 전 스냅샷 캡처
+    this._captureSnapshot('deleteIndividualRows', payload);
+    
+    // 비동기 작업 완료 대기
+    await this.legacyStore.dispatch('deleteIndividualRows', payload);
+    
+    // 작업 완료 후 상태 저장
     this.saveCurrentState();
     
     // 새로운 FilterRowValidationManager 사용
@@ -601,8 +626,14 @@ export class StoreBridge {
    * 엑셀에서 헤더 업데이트
    * @param {Object} headers - 헤더 데이터
    */
-  updateHeadersFromExcel(headers) {
-    const result = this.legacyStore.dispatch('updateHeadersFromExcel', headers);
+  async updateHeadersFromExcel(headers) {
+    // 변경 전 스냅샷 캡처
+    this._captureSnapshot('updateHeadersFromExcel', { headerCount: Object.keys(headers).length });
+    
+    // 비동기 작업 완료 대기
+    const result = await this.legacyStore.dispatch('updateHeadersFromExcel', headers);
+    
+    // 작업 완료 후 상태 저장
     this.saveCurrentState();
     return result;
   }
@@ -612,7 +643,13 @@ export class StoreBridge {
    * @param {Array} rows - 행 데이터
    */
   async addRowsFromExcel(rows) {
-    const result = this.legacyStore.dispatch('addRowsFromExcel', rows);
+    // 변경 전 스냅샷 캡처
+    this._captureSnapshot('addRowsFromExcel', { rowCount: rows.length });
+    
+    // 비동기 작업 완료 대기
+    const result = await this.legacyStore.dispatch('addRowsFromExcel', rows);
+    
+    // 작업 완료 후 상태 저장
     this.saveCurrentState();
     
     // 검증 처리
@@ -1767,17 +1804,13 @@ export class StoreBridge {
     'resetSheet'
   ];
   
-  dispatch(actionName, payload) {
+  async dispatch(actionName, payload) {
     if (!this.legacyStore) {
       console.error('[StoreBridge] legacyStore가 없습니다.');
       return;
     }
 
     const isMutative = StoreBridge.MUTATIVE_ACTIONS.includes(actionName);
-
-    if (isMutative) {
-      this._captureSnapshot(actionName, payload);
-    }
 
     if (this.debug) {
       console.log(`[StoreBridge] dispatch 호출: ${actionName}`, payload);
@@ -1816,8 +1849,15 @@ export class StoreBridge {
       return this.deleteIndividualRows(payload);
     }
     
-    const result = this.legacyStore.dispatch(actionName, payload);
+    // 변경 전 스냅샷 캡처 (변경 전 상태 보존)
+    if (isMutative) {
+      this._captureSnapshot(actionName, payload);
+    }
+    
+    // 비동기 작업 완료 대기
+    const result = await this.legacyStore.dispatch(actionName, payload);
 
+    // 작업 완료 후 상태 저장 (변경 후 상태)
     if (isMutative) {
       this.saveCurrentState();
     }

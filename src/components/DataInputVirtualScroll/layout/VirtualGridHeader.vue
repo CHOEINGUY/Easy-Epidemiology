@@ -112,6 +112,7 @@
 <script setup>
 import { ref, defineProps, defineExpose, defineEmits, reactive, computed } from 'vue';
 import { useStore } from 'vuex';
+import { safeGetGlobalProperty } from '../../../utils/globalAccessWrapper.js';
 
 const store = useStore();
 
@@ -266,8 +267,9 @@ function isColumnFiltered(colIndex) {
   }
   
   // fallback: window.storeBridge 사용
-  if (typeof window !== 'undefined' && window.storeBridge) {
-    return window.storeBridge.filterState.activeFilters?.has(colIndex);
+  const storeBridge = safeGetGlobalProperty('storeBridge', 'filterState');
+  if (storeBridge && storeBridge.activeFilters) {
+    return storeBridge.activeFilters.has(colIndex);
   }
   
   // fallback: Vuex store 사용
