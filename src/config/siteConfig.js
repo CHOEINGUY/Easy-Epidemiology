@@ -4,10 +4,10 @@
 export const siteConfig = {
   // 기본 정보
   basic: {
-    title: 'Easy-Epidemiology Web v1.0',
+    title: 'Easy-Epidemiology Web v1.2',
     subtitle: '감염병 역학조사 전문 플랫폼',
     description: '집단발생 사례 분석과 역학조사를 위한 통합 웹 기반 분석 솔루션',
-    version: 'v1.0',
+    version: 'v1.2',
     lastUpdate: '2025년 7월 7일',
     platform: '웹 기반 (크로스 플랫폼)'
   },

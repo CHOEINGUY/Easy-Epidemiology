@@ -1,6 +1,6 @@
 <template>
   <header class="app-header">
-    <h1 class="app-title">Easy-Epidemiology Web v1.0</h1>
+    <h1 class="app-title">Easy-Epidemiology Web v1.2</h1>
     <button 
       v-if="errorCount > 0"
       class="validation-error-button"

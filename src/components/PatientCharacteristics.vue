@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v1.0</h1>
+      <h1 class="app-title">Easy-Epidemiology Web v1.2</h1>
     </header>
 
     <div class="dashboard">
@@ -229,7 +229,17 @@
           </div>
         </div>
       </div>
-      <div v-else class="no-data-message"> 표시할 변수를 선택해주세요.
+      <div v-else class="no-data-message">
+        <DataGuideMessage
+          icon="analytics"
+          title="분석할 변수를 선택해주세요"
+          description="위의 변수 선택 버튼 중 하나를 클릭하여 차트로 분석할 특성을 선택하세요."
+          :steps="[
+            { number: '1', text: '분석하고 싶은 변수 버튼을 클릭하세요' },
+            { number: '2', text: '선택한 변수의 분포 차트가 자동으로 생성됩니다' },
+            { number: '3', text: '차트 설정을 조정하여 원하는 형태로 표시하세요' }
+          ]"
+        />
       </div>
     </div>
   </div>
@@ -240,6 +250,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useStore } from 'vuex';
 import * as echarts from 'echarts';
+import DataGuideMessage from './DataGuideMessage.vue';
 // === 원본 스크립트 끝 ===
 
 // +++ 신규: lodash-es 임포트 +++
@@ -2019,4 +2030,6 @@ watch(
   right: 10px !important;
   transform: translateX(0) !important;
 }
+
+
 </style>

@@ -40,7 +40,7 @@ Easy-Epidemiology Web 시스템은 이제 **동적 설정 관리 시스템**을 
 ### 관리 가능한 설정 항목
 
 #### 기본 정보
-- 제목 (예: "Easy-Epidemiology Web v1.0")
+- 제목 (예: "Easy-Epidemiology Web v1.2")
 - 부제목 (예: "감염병 역학조사 전문 플랫폼")
 - 설명
 - 버전
@@ -80,7 +80,7 @@ Easy-Epidemiology Web 시스템은 이제 **동적 설정 관리 시스템**을 
 // src/config/siteConfig.js
 export const siteConfig = {
   basic: {
-    title: "Easy-Epidemiology Web v1.0",
+    title: "Easy-Epidemiology Web v1.2",
     subtitle: "감염병 역학조사 전문 플랫폼",
     // ...
   },

@@ -229,6 +229,53 @@ function adjustChartImageSizes(xmlText, chartImages) {
       }
       return match;
     });
+    
+    // imgRect 태그 수정 (이미지 영역) - 두 번째 이미지
+    const imgRectPattern = /<hc:pt1 x="(\d+)" y="(\d+)"/g;
+    count = 0;
+    modifiedText = modifiedText.replace(imgRectPattern, (match) => {
+      count++;
+      // 두 번째 이미지(잠복기)만 수정
+      if (count === 2) {
+        return `<hc:pt1 x="${orgSzWidth}" y="0"`;
+      }
+      return match;
+    });
+    
+    const imgRectPattern2 = /<hc:pt2 x="(\d+)" y="(\d+)"/g;
+    count = 0;
+    modifiedText = modifiedText.replace(imgRectPattern2, (match) => {
+      count++;
+      // 두 번째 이미지(잠복기)만 수정
+      if (count === 2) {
+        return `<hc:pt2 x="${orgSzWidth}" y="135000"`;
+      }
+      return match;
+    });
+    
+    // imgClip 태그 수정 (이미지 클리핑) - 두 번째 이미지
+    const imgClipPattern = /<hp:imgClip left="0" right="(\d+)" top="0" bottom="(\d+)"/g;
+    count = 0;
+    modifiedText = modifiedText.replace(imgClipPattern, (match) => {
+      count++;
+      // 두 번째 이미지(잠복기)만 수정
+      if (count === 2) {
+        return `<hp:imgClip left="0" right="${orgSzWidth}" top="0" bottom="135000"`;
+      }
+      return match;
+    });
+    
+    // imgDim 태그 수정 (이미지 차원) - 두 번째 이미지
+    const imgDimPattern = /<hp:imgDim dimwidth="(\d+)" dimheight="(\d+)"/g;
+    count = 0;
+    modifiedText = modifiedText.replace(imgDimPattern, (match) => {
+      count++;
+      // 두 번째 이미지(잠복기)만 수정
+      if (count === 2) {
+        return `<hp:imgDim dimwidth="${orgSzWidth}" dimheight="135000"`;
+      }
+      return match;
+    });
   }
   
   return modifiedText;

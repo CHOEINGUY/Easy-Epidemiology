@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v1.0</h1>
+      <h1 class="app-title">Easy-Epidemiology Web v1.2</h1>
     </header>
 
     <!-- 메인 편집 & 미리보기 레이아웃 -->
@@ -58,7 +58,7 @@
               {{ suspectedSource || '미입력' }}
             </span>
           </li>
-          <li class="plain-item clickable" @click="openSectionModal('foodIntake')">
+          <li class="plain-item">
             <span class="item-label"><span class="material-icons icon">restaurant</span> 식품 섭취력 분석</span>
             <span :class="['badge', { empty: !foodIntakeAnalysis }]">
               {{ foodIntakeAnalysis ? '입력됨' : '미입력' }}
@@ -101,28 +101,7 @@
       </div>
     </div>
 
-    <!-- 섹션 편집 모달 -->
-    <div v-if="showSectionModal" class="modal-overlay" @click="closeSectionModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>{{ getModalTitle() }}</h3>
-          <button class="close-btn" @click="closeSectionModal">
-            <span class="material-icons">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <textarea
-            v-model="editingSectionContent"
-            placeholder="섹션 내용을 입력하세요..."
-            class="section-textarea"
-          ></textarea>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="closeSectionModal">취소</button>
-          <button class="btn btn-primary" @click="saveSectionContent">저장</button>
-        </div>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -163,34 +142,17 @@ function formatKoreanDateTime(dateObj) {
 // --- 로컬 상태: 조사 디자인 선택 ---
 const studyDesign = ref('case-control');
 
-// --- 새로운 섹션 데이터 ---
-const customFoodIntakeAnalysis = ref(''); // 사용자가 직접 입력한 내용
-
 const foodIntakeAnalysis = computed(() => {
-  // 사용자가 직접 입력한 내용이 있으면 그것을 우선 사용
-  if (customFoodIntakeAnalysis.value.trim()) {
-    return customFoodIntakeAnalysis.value;
-  }
-  
   // 분석 결과가 있으면 자동 생성된 내용 사용
   const results = store.getters.getAnalysisResults;
-  const selectedFoods = store.getters.getSelectedSuspectedFoods;
-  if (!results || !selectedFoods) return '';
+  if (!results) return '';
   
   const designResults = studyDesign.value === 'case-control' ? (results.caseControl || []) : (results.cohort || []);
-  const selected = selectedFoods.split(',').map(f => f.trim()).filter(f => f);
-  const filtered = designResults.filter(r => selected.includes(r.item));
-  
-  if (!filtered.length) return '';
+  if (!designResults.length) return '';
   
   // 분석 결과가 있으면 자동 생성된 텍스트 반환
   return generateFoodIntakeText();
 });
-
-// --- 모달 상태 ---
-const showSectionModal = ref(false);
-const editingSectionType = ref('');
-const editingSectionContent = ref('');
 
 // store access
 const store = useStore();
@@ -472,14 +434,13 @@ function parseSuspectedFoods() {
 // --- generateFoodIntakeText 함수 선언문으로 이동 (다운로드 함수들보다 위에 위치) ---
 function generateFoodIntakeText() {
   const results = getDesignResults();
-  if(!results.length) return '';
-  // 유행곡선 탭에서 선택된 추정 감염원들 가져오기
-  const selectedFoods = parseSuspectedFoods();
-  const filtered = results.filter(r => selectedFoods.includes(r.item));
-  if(!filtered.length) return '';
+  if (!results.length) return '';
+  // 0.05 미만만 필터링
+  const filtered = results.filter(r => r.pValue !== null && r.pValue < 0.05);
+  if (!filtered.length) return '';
   const metric = studyDesign.value==='case-control' ? 'OR' : 'RR';
   const parts = filtered.map(r => `${r.item} (p = ${(r.pValue<0.001?'<0.001':r.pValue.toFixed(3))}, ${metric} = ${studyDesign.value==='case-control'?r.oddsRatio:r.relativeRisk} (${studyDesign.value==='case-control'?r.ci_lower:r.rr_ci_lower} - ${studyDesign.value==='case-control'?r.ci_upper:r.rr_ci_upper}))`);
-  return `식품 섭취력에 따른 환례 연관성 분석 결과, ${parts.join(', ')}이 통계적으로 유의하게 나타났다.`;
+  return `식품 섭취력에 따른 환례 연관성 분석 결과, ${parts.join(', ')}이 통계적으로 유의한 연관성을 보였다.`;
 }
 
 // 차트 이미지 경로 결정 (store에 저장된 데이터)
@@ -585,9 +546,7 @@ const renderedHtml = computed(() => {
   
   function generateFoodIntakeTable() {
     const results = getDesignResults();
-    const selected = parseSuspectedFoods();
-    const filtered = results.filter(r => selected.includes(r.item));
-    if(!filtered.length) return '<div class="placeholder-table">선택된 추정 감염원 데이터가 없습니다.</div>';
+    const filtered = results; // 모든 행 사용
     const isCase = studyDesign.value === 'case-control';
     let tableHtml = '';
     if(isCase){
@@ -693,6 +652,20 @@ const renderedHtml = computed(() => {
   Object.entries(replacements).forEach(([key, val]) => {
     html = html.replaceAll(`%${key}%`, val);
   });
+
+  // 지정된 키워드들은 값이 없으면 무조건 빈 문자열로 치환
+  [
+    'reportDate',
+    'fieldInvestDate',
+    'region',
+    'place',
+    'suspectedPathogen',
+    'epiCurveDate',
+    'finalLabDate'
+  ].forEach((key) => {
+    html = html.replaceAll(`%${key}%`, '');
+  });
+
   return html;
 });
 
@@ -700,45 +673,7 @@ const renderedHtml = computed(() => {
 // 실제 구현 시에는 EpidemicCurve에서 차트를 이미지로 저장하는 기능을 추가하고
 // 여기서는 해당 이미지 파일을 참조하는 방식으로 구현
 
-// --- 모달 관련 함수들 ---
-function openSectionModal(sectionType) {
-  editingSectionType.value = sectionType;
-  editingSectionContent.value = getSectionContent(sectionType);
-  showSectionModal.value = true;
-}
 
-function closeSectionModal() {
-  showSectionModal.value = false;
-  editingSectionType.value = '';
-  editingSectionContent.value = '';
-}
-
-function getSectionContent(sectionType) {
-  switch (sectionType) {
-  case 'foodIntake':
-    return customFoodIntakeAnalysis.value;
-  default:
-    return '';
-  }
-}
-
-function saveSectionContent() {
-  switch (editingSectionType.value) {
-  case 'foodIntake':
-    customFoodIntakeAnalysis.value = editingSectionContent.value;
-    break;
-  }
-  closeSectionModal();
-}
-
-function getModalTitle() {
-  switch (editingSectionType.value) {
-  case 'foodIntake':
-    return '식품 섭취력 분석';
-  default:
-    return '섹션 편집';
-  }
-}
 
 // HWPX 파일 처리 유틸리티 import
 import { 
@@ -751,36 +686,24 @@ import {
 // 환자-대조군 연구용 표 데이터 생성 함수
 function generateCaseControlTableData() {
   const results = getDesignResults();
-  const selected = parseSuspectedFoods();
-  const filtered = results.filter(r => selected.includes(r.item));
-  
+  const filtered = results; // 모든 행 사용
   const tableData = {};
-  
-  // 5개 행에 대해 데이터 설정
-  for (let i = 1; i <= 5; i++) {
+  // 최대 20개 행까지 지원 (필요시 조정)
+  for (let i = 1; i <= Math.min(filtered.length, 20); i++) {
     const result = filtered[i - 1];
-    
     if (result) {
-      // 식품명
       tableData[`%F${i}`] = result.item;
-      
-      // 환자군 데이터
-      tableData[`%C${i}`] = result.b_obs || '0';  // 섭취자
-      tableData[`%CN${i}`] = result.c_obs || '0'; // 비섭취자
-      tableData[`%CT${i}`] = result.rowTotal_Case || '0'; // 합계
-      
-      // 대조군 데이터
-      tableData[`%O${i}`] = result.e_obs || '0';  // 섭취자
-      tableData[`%ON${i}`] = result.f_obs || '0'; // 비섭취자
-      tableData[`%OT${i}`] = result.rowTotal_Control || '0'; // 합계
-      
-      // 통계 결과
+      tableData[`%C${i}`] = result.b_obs || '0';
+      tableData[`%CN${i}`] = result.c_obs || '0';
+      tableData[`%CT${i}`] = result.rowTotal_Case || '0';
+      tableData[`%O${i}`] = result.e_obs || '0';
+      tableData[`%ON${i}`] = result.f_obs || '0';
+      tableData[`%OT${i}`] = result.rowTotal_Control || '0';
       tableData[`%P${i}`] = result.pValue !== null ? (result.pValue < 0.001 ? '<0.001' : result.pValue.toFixed(3)) : 'N/A';
       tableData[`%OR${i}`] = result.oddsRatio || 'N/A';
       tableData[`%L${i}`] = result.ci_lower || 'N/A';
       tableData[`%U${i}`] = result.ci_upper || 'N/A';
     } else {
-      // 데이터가 없는 경우 빈 값으로 설정
       tableData[`%F${i}`] = '';
       tableData[`%C${i}`] = '';
       tableData[`%CN${i}`] = '';
@@ -794,43 +717,29 @@ function generateCaseControlTableData() {
       tableData[`%U${i}`] = '';
     }
   }
-  
   return tableData;
 }
 
 // 코호트 연구용 표 데이터 생성 함수
 function generateCohortTableData() {
   const results = getDesignResults();
-  const selected = parseSuspectedFoods();
-  const filtered = results.filter(r => selected.includes(r.item));
-  
+  const filtered = results; // 모든 행 사용
   const tableData = {};
-  
-  // 5개 행에 대해 데이터 설정
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= Math.min(filtered.length, 20); i++) {
     const result = filtered[i - 1];
-    
     if (result) {
-      // 식품명
       tableData[`%F${i}`] = result.item;
-      
-      // 섭취자(노출군) 데이터
-      tableData[`%E${i}`] = result.rowTotal_Exposed || '0';  // 대상자수
-      tableData[`%EP${i}`] = result.a_obs || '0';  // 환자수
-      tableData[`%ER${i}`] = result.incidence_exposed_formatted || '0.0';  // 발병률
-      
-      // 비섭취자(비노출군) 데이터
-      tableData[`%U${i}`] = result.rowTotal_Unexposed || '0';  // 대상자수
-      tableData[`%UP${i}`] = result.c_obs || '0';  // 환자수
-      tableData[`%UR${i}`] = result.incidence_unexposed_formatted || '0.0';  // 발병률
-      
-      // 통계 결과
+      tableData[`%E${i}`] = result.rowTotal_Exposed || '0';
+      tableData[`%EP${i}`] = result.a_obs || '0';
+      tableData[`%ER${i}`] = result.incidence_exposed_formatted || '0.0';
+      tableData[`%U${i}`] = result.rowTotal_Unexposed || '0';
+      tableData[`%UP${i}`] = result.c_obs || '0';
+      tableData[`%UR${i}`] = result.incidence_unexposed_formatted || '0.0';
       tableData[`%P${i}`] = result.pValue !== null ? (result.pValue < 0.001 ? '<0.001' : result.pValue.toFixed(3)) : 'N/A';
       tableData[`%RR${i}`] = result.relativeRisk || 'N/A';
       tableData[`%L${i}`] = result.rr_ci_lower || 'N/A';
       tableData[`%U${i}`] = result.rr_ci_upper || 'N/A';
     } else {
-      // 데이터가 없는 경우 빈 값으로 설정
       tableData[`%F${i}`] = '';
       tableData[`%E${i}`] = '';
       tableData[`%EP${i}`] = '';
@@ -844,7 +753,6 @@ function generateCohortTableData() {
       tableData[`%U${i}`] = '';
     }
   }
-  
   return tableData;
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "epidemiology-auth-worker",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Cloudflare Worker for Epidemiology Web Authentication with Approval System",
   "type": "module",
   "main": "src/index.js",

@@ -86,7 +86,7 @@ class MemoryLeakDetector {
       timestamp: Date.now(),
       componentCount: this.snapshots.size,
       globalReferenceCount: this.globalReferences.size,
-      components: Array.from(this.snapshots.entries()).map(([instance, data]) => ({
+      components: Array.from(this.snapshots.entries()).map(([, data]) => ({
         componentName: data.componentName,
         globalReferences: Array.from(data.globalReferences),
         age: Date.now() - data.timestamp
@@ -108,7 +108,7 @@ class MemoryLeakDetector {
     const now = Date.now();
     const threshold = 5 * 60 * 1000; // 5분
 
-    this.snapshots.forEach((snapshot, instance) => {
+    this.snapshots.forEach((snapshot) => {
       const age = now - snapshot.timestamp;
       if (age > threshold && snapshot.globalReferences.size > 0) {
         leaks.push({

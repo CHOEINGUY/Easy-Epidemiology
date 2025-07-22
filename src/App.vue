@@ -190,6 +190,37 @@ export default {
       return isAuthRequired();
     },
     
+    // 데이터 완성도 감지 시스템
+    dataCompleteness() {
+      const rows = this.$store.getters.rows || [];
+      const headers = this.$store.getters.headers || {};
+      
+      const hasBasicData = rows.length > 0;
+      const hasPatientData = rows.some(row => row && row.isPatient === '1');
+      const hasDietData = headers.diet && headers.diet.length > 0;
+      const hasClinicalData = headers.clinical && headers.clinical.length > 0;
+      const hasSymptomOnsetData = rows.some(row => row && row.symptomOnset);
+      
+      // 완성도 점수 계산 (0-100)
+      let completenessScore = 0;
+      if (hasBasicData) completenessScore += 20;
+      if (hasPatientData) completenessScore += 30;
+      if (hasDietData) completenessScore += 25;
+      if (hasClinicalData) completenessScore += 15;
+      if (hasSymptomOnsetData) completenessScore += 10;
+      
+      return {
+        hasBasicData,
+        hasPatientData,
+        hasDietData,
+        hasClinicalData,
+        hasSymptomOnsetData,
+        completenessScore,
+        isComplete: completenessScore >= 80, // 80% 이상이면 완성으로 간주
+        canRunAnalysis: hasBasicData && hasPatientData && hasDietData // 분석 가능 여부
+      };
+    },
+    
     tabs() {
       const tabs = [...this.baseTabs];
       
@@ -242,6 +273,30 @@ export default {
     
     // 인증 상태 체크 및 자동 로그인
     this.checkAuthAndLoadData();
+  },
+  
+  watch: {
+    // 데이터 완성도 변화 감지
+    'dataCompleteness.canRunAnalysis': {
+      handler(newValue, oldValue) {
+        // 분석 가능 상태가 되었고, 이전에는 불가능했을 때만 실행
+        if (newValue && !oldValue) {
+          console.log('📊 데이터 완성도 변화 감지 - 백그라운드 분석 시작');
+          this.runBackgroundAnalysis();
+        }
+      },
+      immediate: false
+    },
+    
+    // 데이터 완성도 점수 변화 감지 (디버깅용)
+    'dataCompleteness.completenessScore': {
+      handler(newScore, oldScore) {
+        if (newScore !== oldScore) {
+          console.log(`📈 데이터 완성도: ${oldScore}% → ${newScore}%`);
+        }
+      },
+      immediate: false
+    }
   },
   
   methods: {
@@ -414,6 +469,203 @@ export default {
           this.closeLogoutConfirmModal();
         }
       }, 1000);
+    },
+    
+    // 백그라운드 분석 실행
+    async runBackgroundAnalysis() {
+      try {
+        console.log('🔄 백그라운드 분석 시작...');
+        
+        const completeness = this.dataCompleteness;
+        if (!completeness.canRunAnalysis) {
+          console.log('❌ 분석을 위한 데이터가 부족합니다');
+          return;
+        }
+        
+        // 환자대조군 분석 실행
+        await this.runCaseControlAnalysis();
+        
+        // 코호트 분석 실행
+        await this.runCohortAnalysis();
+        
+        console.log('✅ 백그라운드 분석 완료');
+      } catch (error) {
+        console.error('❌ 백그라운드 분석 실패:', error);
+      }
+    },
+    
+    // 환자대조군 분석 실행
+    async runCaseControlAnalysis() {
+      try {
+        const rows = this.$store.getters.rows || [];
+        const headers = this.$store.getters.headers || {};
+        
+        if (!headers.diet || headers.diet.length === 0) return;
+        
+        // CaseControl 컴포넌트의 분석 로직을 여기서 실행
+        const analysisResults = this.calculateCaseControlResults(rows, headers.diet);
+        
+        // 분석 결과를 store에 저장
+        this.$store.commit('SET_ANALYSIS_RESULTS', {
+          type: 'caseControl',
+          results: analysisResults
+        });
+        
+        console.log('✅ 환자대조군 분석 완료');
+      } catch (error) {
+        console.error('❌ 환자대조군 분석 실패:', error);
+      }
+    },
+    
+    // 코호트 분석 실행
+    async runCohortAnalysis() {
+      try {
+        const rows = this.$store.getters.rows || [];
+        const headers = this.$store.getters.headers || {};
+        
+        if (!headers.diet || headers.diet.length === 0) return;
+        
+        // CohortStudy 컴포넌트의 분석 로직을 여기서 실행
+        const analysisResults = this.calculateCohortResults(rows, headers.diet);
+        
+        // 분석 결과를 store에 저장
+        this.$store.commit('SET_ANALYSIS_RESULTS', {
+          type: 'cohort',
+          results: analysisResults
+        });
+        
+        console.log('✅ 코호트 분석 완료');
+      } catch (error) {
+        console.error('❌ 코호트 분석 실패:', error);
+      }
+    },
+    
+    // 환자대조군 분석 계산 (CaseControl.vue에서 가져온 로직)
+    calculateCaseControlResults(rows, dietHeaders) {
+      return dietHeaders.map((dietItem, index) => {
+        let b_obs = 0, c_obs = 0, e_obs = 0, f_obs = 0;
+        
+        rows.forEach((row) => {
+          const isPatient = row.isPatient;
+          const dietValue = row.dietInfo && row.dietInfo.length > index ? row.dietInfo[index] : null;
+          
+          if (isPatient === '1') {
+            if (dietValue === '1') b_obs++;
+            else if (dietValue === '0') c_obs++;
+          } else if (isPatient === '0') {
+            if (dietValue === '1') e_obs++;
+            else if (dietValue === '0') f_obs++;
+          }
+        });
+        
+        // 기본 통계 계산
+        const rowTotal_Case = b_obs + c_obs;
+        const rowTotal_Control = e_obs + f_obs;
+        const colTotal_Exposed = b_obs + e_obs;
+        const colTotal_Unexposed = c_obs + f_obs;
+        
+        // 카이제곱 및 P-value 계산 (간단한 버전)
+        const pValue = null;
+        let oddsRatio = 'N/A';
+        let ci_lower = 'N/A';
+        let ci_upper = 'N/A';
+        
+        if (colTotal_Exposed > 0 && colTotal_Unexposed > 0 && rowTotal_Case > 0 && rowTotal_Control > 0) {
+          // 0인 셀이 있는지 확인
+          const hasZeroCell = b_obs === 0 || c_obs === 0 || e_obs === 0 || f_obs === 0;
+          
+          if (hasZeroCell) {
+            // 0.5 보정 적용
+            const b_corrected = b_obs + 0.5;
+            const c_corrected = c_obs + 0.5;
+            const e_corrected = e_obs + 0.5;
+            const f_corrected = f_obs + 0.5;
+            
+            const or_calc = (b_corrected * f_corrected) / (c_corrected * e_corrected);
+            
+            if (isFinite(or_calc) && or_calc > 0) {
+              oddsRatio = or_calc.toFixed(3);
+              
+              // 간단한 신뢰구간 계산
+              const logOR = Math.log(or_calc);
+              const se_logOR = Math.sqrt(1/b_corrected + 1/c_corrected + 1/e_corrected + 1/f_corrected);
+              
+              if (isFinite(se_logOR)) {
+                const z_crit = 1.96; // 95% 신뢰구간
+                const logCI_lower = logOR - z_crit * se_logOR;
+                const logCI_upper = logOR + z_crit * se_logOR;
+                
+                ci_lower = Math.exp(logCI_lower).toFixed(3);
+                ci_upper = Math.exp(logCI_upper).toFixed(3);
+              }
+            }
+          }
+        }
+        
+        return {
+          item: dietItem,
+          b_obs,
+          c_obs,
+          rowTotal_Case,
+          e_obs,
+          f_obs,
+          rowTotal_Control,
+          pValue,
+          oddsRatio,
+          ci_lower,
+          ci_upper,
+          hasCorrection: false
+        };
+      });
+    },
+    
+    // 코호트 분석 계산 (CohortStudy.vue에서 가져온 로직)
+    calculateCohortResults(rows, dietHeaders) {
+      return dietHeaders.map((dietItem, index) => {
+        let exposedCases = 0;
+        let exposedNonCases = 0;
+        let unexposedCases = 0;
+        let unexposedNonCases = 0;
+        
+        rows.forEach((row) => {
+          const isPatient = row.isPatient;
+          const dietValue = row.dietInfo && row.dietInfo.length > index ? row.dietInfo[index] : null;
+          
+          if (dietValue === '1') {
+            if (isPatient === '1') exposedCases++;
+            else if (isPatient === '0') exposedNonCases++;
+          } else if (dietValue === '0') {
+            if (isPatient === '1') unexposedCases++;
+            else if (isPatient === '0') unexposedNonCases++;
+          }
+        });
+        
+        const totalExposed = exposedCases + exposedNonCases;
+        const totalUnexposed = unexposedCases + unexposedNonCases;
+        
+        // 발병률 계산
+        const exposedIncidence = totalExposed > 0 ? (exposedCases / totalExposed) * 100 : 0;
+        const unexposedIncidence = totalUnexposed > 0 ? (unexposedCases / totalUnexposed) * 100 : 0;
+        
+        // 상대위험도 계산
+        let relativeRisk = 'N/A';
+        if (unexposedIncidence > 0) {
+          relativeRisk = (exposedIncidence / unexposedIncidence).toFixed(3);
+        }
+        
+        return {
+          item: dietItem,
+          exposedCases,
+          exposedNonCases,
+          totalExposed,
+          unexposedCases,
+          unexposedNonCases,
+          totalUnexposed,
+          exposedIncidence: exposedIncidence.toFixed(1),
+          unexposedIncidence: unexposedIncidence.toFixed(1),
+          relativeRisk
+        };
+      });
     },
     
     handleTabClick(component) {

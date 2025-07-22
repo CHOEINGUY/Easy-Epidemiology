@@ -175,10 +175,27 @@ const store = createStore({
     suspectedSource: '',
     
     // --- 분석 결과 저장 (의심식단 드롭다운용) ---
-    analysisResults: {
-      caseControl: [], // 환자-대조군 분석 결과
-      cohort: []       // 코호트 분석 결과
-    },
+    analysisResults: (() => {
+      // localStorage에서 저장된 분석 결과 불러오기
+      try {
+        const saved = localStorage.getItem('analysisResults');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            caseControl: parsed.caseControl || [],
+            cohort: parsed.cohort || []
+          };
+        }
+      } catch (error) {
+        console.warn('localStorage에서 analysisResults 로드 실패:', error);
+      }
+      
+      // 기본값 반환
+      return {
+        caseControl: [], // 환자-대조군 분석 결과
+        cohort: []       // 코호트 분석 결과
+      };
+    })(),
     
     // === Validation ===
     validationState: {
@@ -930,6 +947,13 @@ const store = createStore({
     SET_ANALYSIS_RESULTS(state, { type, results }) {
       if (type === 'caseControl' || type === 'cohort') {
         state.analysisResults[type] = results;
+        
+        // localStorage에 분석 결과 저장
+        try {
+          localStorage.setItem('analysisResults', JSON.stringify(state.analysisResults));
+        } catch (error) {
+          console.warn('localStorage에 analysisResults 저장 실패:', error);
+        }
       }
     },
     // 의심식단 문자열 업데이트
@@ -1042,6 +1066,10 @@ const store = createStore({
       // 개별노출시간 열과 확진자 여부 열 가시성 초기화 (꺼짐)
       commit('SET_INDIVIDUAL_EXPOSURE_COLUMN_VISIBILITY', false);
       commit('SET_CONFIRMED_CASE_COLUMN_VISIBILITY', false);
+      
+      // 분석 결과도 초기화
+      commit('SET_ANALYSIS_RESULTS', { type: 'caseControl', results: [] });
+      commit('SET_ANALYSIS_RESULTS', { type: 'cohort', results: [] });
     },
     pasteData({ commit }, payload) {
       commit('PASTE_DATA', payload);

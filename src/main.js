@@ -44,7 +44,7 @@ if (isDevelopment) {
 }
 
 if (isDevelopment) {
-  logger.info('Easy-Epidemiology Web v1.0 - Development Mode');
+  logger.info('Easy-Epidemiology Web v1.2 - Development Mode');
 }
 
 // 개발 환경에서 마이그레이션 상태 확인 함수를 전역으로 추가

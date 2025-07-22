@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v1.0</h1>
+      <h1 class="app-title">Easy-Epidemiology Web v1.2</h1>
     </header>
 
     <div class="dashboard">
@@ -20,6 +20,25 @@
                 <div class="suspected-food-title">
                   <span class="selected-variable-details__title-dot"></span>
                   <span style="margin-left: 0.2em;">추정 감염원 선택</span>
+                  <div class="analysis-status-wrapper">
+                    <span 
+                      v-if="analysisStatus" 
+                      ref="analysisTooltipRef"
+                      class="analysis-status-badge" 
+                      :class="analysisStatus.type"
+                      @mouseenter="showAnalysisTooltip = true"
+                      @mouseleave="showAnalysisTooltip = false"
+                    >
+                      {{ analysisStatus.message }}
+                    </span>
+                    <div 
+                      v-if="showAnalysisTooltip" 
+                      class="analysis-tooltip"
+                      :style="analysisTooltipStyle"
+                    >
+                      {{ getAnalysisStatusTooltip(analysisStatus) }}
+                    </div>
+                  </div>
                 </div>
                 <div class="suspected-food-dropdown-container">
                   <div class="suspected-food-dropdown-wrapper">
@@ -44,7 +63,7 @@
                           <span>추정 감염원 선택 (다중 선택 가능)</span>
                         </div>
                         <div 
-                          v-for="food in sortedFoodItems" 
+                          v-for="food in (backgroundAnalysisFoods.length > 0 ? backgroundAnalysisFoods : sortedFoodItems)" 
                           :key="food.item"
                           class="checkbox-dropdown-item"
                           @click="toggleFoodSelection(food.item)"
@@ -57,8 +76,20 @@
                             class="food-checkbox"
                           />
                           <span class="food-name">{{ food.item }}</span>
-                          <span class="food-pvalue">
-                            p={{ food.pValue !== null ? (food.pValue < 0.001 ? '<0.001' : food.pValue.toFixed(3)) : 'N/A' }}
+                          <span v-if="food.pValue !== null" class="food-stat">
+                            p={{ food.pValue < 0.001 ? '<0.001' : food.pValue.toFixed(3) }}
+                            <span v-if="food.oddsRatio && food.oddsRatio !== 'N/A'" class="food-or">
+                              (OR: {{ food.oddsRatio }})
+                            </span>
+                            <span v-else-if="food.relativeRisk && food.relativeRisk !== 'N/A'" class="food-or">
+                              (RR: {{ food.relativeRisk }})
+                            </span>
+                          </span>
+                          <span v-else-if="food.oddsRatio && food.oddsRatio !== 'N/A'" class="food-stat">
+                            OR: {{ food.oddsRatio }}
+                          </span>
+                          <span v-else-if="food.relativeRisk && food.relativeRisk !== 'N/A'" class="food-stat">
+                            RR: {{ food.relativeRisk }}
                           </span>
                         </div>
                         <div class="dropdown-footer">
@@ -119,7 +150,16 @@
               </tbody>
             </table>
             <div v-else class="no-data-message">
-              증상 발현 시간 테이블 데이터를 생성할 수 없습니다.
+              <DataGuideMessage
+                icon="schedule"
+                title="증상 발현 시간 데이터가 필요합니다"
+                description="유행곡선을 생성하려면 환자들의 증상 발현 시간 정보가 필요합니다."
+                :steps="[
+                  { number: '1', text: '데이터 입력 화면에서 \'증상발현시간\' 열에 시간을 입력하세요' },
+                  { number: '2', text: '최소 2명 이상의 환자 데이터가 필요합니다' },
+                  { number: '3', text: '시간 형식: YYYY-MM-DD HH:MM (예: 2024-01-15 14:30)' }
+                ]"
+              />
             </div>
 
             <div class="table-title symptom-summary-title">
@@ -340,26 +380,39 @@
               </tbody>
             </table>
             <div v-else class="no-data-message">
-              <div v-if="!exposureDateTime && !isIndividualExposureColumnVisible" class="input-guide-message">
-                <div class="guide-icon">📅</div>
-                <div class="guide-text">
-                  <div class="guide-title">의심원 노출시간을 입력해주세요</div>
-                  <div class="guide-subtitle">위의 '의심원 노출시간' 입력란에 시간을 설정하면 잠복기 분석이 시작됩니다.</div>
-                </div>
-              </div>
-              <div v-else-if="exposureDateTime && incubationDurations.length === 0 && !isIndividualExposureColumnVisible" class="input-guide-message">
-                <div class="guide-text">
-                  <div class="guide-title">잠복기 차트가 생성되지 않는 이유</div>
-                  <div class="guide-subtitle">
-                    입력된 환자들의 증상발현시간이 <b>설정한 노출시간보다 이전</b>일 경우, 잠복기 계산이 불가능하여 차트가 생성되지 않습니다.<br/>
-                    <br/>
-                    <span style="color: #888;">※ 노출시간과 환자들의 증상발현시간을 다시 한 번 확인해주세요.</span>
-                  </div>
-                </div>
-              </div>
-              <div v-else class="no-data-message-default">
-                잠복 기간 테이블 데이터를 생성할 수 없습니다.
-              </div>
+              <DataGuideMessage
+                v-if="!exposureDateTime && !isIndividualExposureColumnVisible"
+                icon="event"
+                title="의심원 노출시간을 설정해주세요"
+                description="잠복기 분석을 위해 기준이 되는 의심원 노출시간을 설정해야 합니다."
+                :steps="[
+                  { number: '1', text: '위의 \'의심원 노출시간\' 입력란을 클릭하세요' },
+                  { number: '2', text: '모든 환자에게 공통으로 적용될 기준 노출시간을 설정하세요' },
+                  { number: '3', text: '설정 후 잠복기 분석이 자동으로 시작됩니다' }
+                ]"
+              />
+              <DataGuideMessage
+                v-else-if="exposureDateTime && incubationDurations.length === 0 && !isIndividualExposureColumnVisible"
+                icon="warning"
+                title="잠복기 계산이 불가능합니다"
+                description="환자들의 증상발현시간이 설정한 노출시간보다 이전이어서 잠복기를 계산할 수 없습니다."
+                :steps="[
+                  { number: '!', text: `노출시간: ${formattedExposureDateTime}` },
+                  { number: '!', text: '모든 환자의 증상발현시간이 노출시간 이후여야 합니다' },
+                  { number: '!', text: '데이터 입력 화면에서 시간을 다시 확인해주세요' }
+                ]"
+              />
+              <DataGuideMessage
+                v-else
+                icon="schedule"
+                title="증상 발현 시간 데이터가 필요합니다"
+                description="유행곡선을 생성하려면 환자들의 증상 발현 시간 정보가 필요합니다."
+                :steps="[
+                  { number: '1', text: '데이터 입력 화면에서 \'증상발현시간\' 열에 시간을 입력하세요' },
+                  { number: '2', text: '최소 2명 이상의 환자 데이터가 필요합니다' },
+                  { number: '3', text: '시간 형식: YYYY-MM-DD HH:MM (예: 2024-01-15 14:30)' }
+                ]"
+              />
             </div>
 
             <div class="table-title incubation-summary-title">
@@ -559,6 +612,7 @@ import * as echarts from 'echarts';
 import { debounce } from 'lodash-es';
 // DateTimePicker 컴포넌트 import
 import DateTimePicker from './DataInputVirtualScroll/parts/DateTimePicker.vue';
+import DataGuideMessage from './DataGuideMessage.vue';
 
 const store = useStore();
 const storeBridge = useStoreBridge(store);
@@ -578,6 +632,24 @@ const showConfirmedCaseLine = ref(true);
 
 // 추정 감염원 상태 추가
 const suspectedFood = ref(store.getters.getSelectedSuspectedFoods || '');
+
+// 분석 상태 툴팁 함수
+const getAnalysisStatusTooltip = (status) => {
+  switch (status.type) {
+  case 'success':
+    return '통계 분석이 완료되었습니다. 추정 감염원을 선택할 수 있습니다.';
+  case 'warning':
+    if (status.message.includes('분석 대기 중')) {
+      return '환자대조군 연구 또는 코호트 연구 탭에서 먼저 통계 분석을 수행해주세요.';
+    } else {
+      return '분석 데이터가 없습니다. 환자대조군 연구 또는 코호트 연구 탭에서 분석을 수행해주세요.';
+    }
+  case 'error':
+    return '분석 데이터가 없습니다. 데이터를 입력하고 분석을 수행해주세요.';
+  default:
+    return '분석 상태를 확인 중입니다.';
+  }
+};
 
 // 분석 결과 가져오기
 const analysisResults = computed(() => {
@@ -604,14 +676,113 @@ const sortedFoodItems = computed(() => {
     });
 });
 
-// 분석 결과가 있는지 확인
+// 분석 결과가 있는지 확인 (백그라운드 분석 결과 활용)
 const hasAnalysisResults = computed(() => {
+  // 백그라운드 분석 결과가 있으면 우선 사용
+  const analysisResults = store.getters.analysisResults;
+  if (analysisResults && (analysisResults.caseControl?.length > 0 || analysisResults.cohort?.length > 0)) {
+    return true;
+  }
+  
+  // 기존 방식 (fallback)
   return sortedFoodItems.value.length > 0;
+});
+
+// 백그라운드 분석 결과를 활용한 식단 목록
+const backgroundAnalysisFoods = computed(() => {
+  const analysisResults = store.getters.analysisResults;
+  
+  if (!analysisResults) return [];
+  
+  // 환자대조군 분석 결과 우선 사용
+  if (analysisResults.caseControl && analysisResults.caseControl.length > 0) {
+    return analysisResults.caseControl.map(item => ({
+      item: item.item,
+      pValue: item.pValue,
+      oddsRatio: item.oddsRatio,
+      type: 'caseControl'
+    }));
+  }
+  
+  // 코호트 분석 결과 사용
+  if (analysisResults.cohort && analysisResults.cohort.length > 0) {
+    return analysisResults.cohort.map(item => ({
+      item: item.item,
+      pValue: null, // 코호트는 p-value가 없음
+      relativeRisk: item.relativeRisk,
+      type: 'cohort'
+    }));
+  }
+  
+  return [];
+});
+
+// 툴팁 위치 계산
+const analysisTooltipStyle = computed(() => {
+  if (!showAnalysisTooltip.value || !analysisTooltipRef.value) {
+    return {};
+  }
+  
+  const rect = analysisTooltipRef.value.getBoundingClientRect();
+  const left = rect.left + (rect.width / 2);
+  const top = rect.bottom + 5;
+  
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+    transform: 'translateX(-50%)'
+  };
+});
+
+// 분석 상태 표시
+const analysisStatus = computed(() => {
+  const analysisResults = store.getters.analysisResults;
+  
+  // 디버깅을 위한 로그 추가
+  console.log('analysisStatus 계산 중:', {
+    analysisResults,
+    caseControlLength: analysisResults?.caseControl?.length,
+    cohortLength: analysisResults?.cohort?.length,
+    hasAnalysisResults: hasAnalysisResults.value,
+    backgroundAnalysisFoodsLength: backgroundAnalysisFoods.value.length
+  });
+  
+  // 최종 조건 완화: 드롭다운이 작동하면 분석 완료로 간주
+  if (hasAnalysisResults.value || backgroundAnalysisFoods.value.length > 0 || analysisResults) {
+    const caseControlCount = analysisResults?.caseControl?.length || 0;
+    const cohortCount = analysisResults?.cohort?.length || 0;
+    
+    if (caseControlCount > 0) {
+      return {
+        type: 'success',
+        message: `환자대조군 분석 완료 (${caseControlCount}개 항목)`
+      };
+    } else if (cohortCount > 0) {
+      return {
+        type: 'success',
+        message: `코호트 분석 완료 (${cohortCount}개 항목)`
+      };
+    } else {
+      // 분석 결과 객체는 있지만 빈 배열인 경우도 분석 완료로 간주
+      return {
+        type: 'success',
+        message: '분석 완료 (데이터 준비됨)'
+      };
+    }
+  } else {
+    return {
+      type: 'warning',
+      message: '분석 대기 중...'
+    };
+  }
 });
 
 // --- 커스텀 드롭다운 상태 ---
 const isDropdownOpen = ref(false);
 const selectedFoods = ref(new Set()); // 체크박스로 선택된 식단들
+const showAnalysisTooltip = ref(false); // 분석 상태 툴팁 표시 여부
+const analysisTooltipRef = ref(null); // 분석 상태 배지 참조
+
 
 // DateTimePicker 관련 상태
 const exposureDateTimePickerRef = ref(null);
@@ -1836,7 +2007,33 @@ const generateEpiCurveChartOptions = () => {
     const validData = data;
     if (!validData || validData.length === 0) {
       console.warn('generateEpiCurveChartOptions: 유효한 데이터가 없음');
-      return { title: { text: '데이터 없음' } };
+      return { 
+        title: { 
+          text: '유행곡선 데이터가 필요합니다',
+          subtext: '증상발현시간 데이터를 입력하면 유행곡선이 자동으로 생성됩니다',
+          left: 'center',
+          textStyle: { 
+            fontSize: 18, 
+            fontFamily: 'Noto Sans KR, sans-serif',
+            color: '#666'
+          },
+          subtextStyle: {
+            fontSize: 14,
+            color: '#999'
+          }
+        },
+        graphic: {
+          type: 'text',
+          left: 'center',
+          top: '60%',
+          style: {
+            text: '📊 증상발현시간 입력 → 유행곡선 생성',
+            fontSize: 16,
+            fill: '#1a73e8',
+            fontFamily: 'Noto Sans KR, sans-serif'
+          }
+        }
+      };
     }
 
     // --- 제공된 최종 예제 코드를 기반으로 로직 재구성 ---
@@ -2132,7 +2329,33 @@ const generateIncubationChartOptions = () => {
     const validData = data;
     if (!validData || validData.length === 0) {
       console.warn('generateIncubationChartOptions: 유효한 데이터가 없음');
-      return { title: { text: '데이터 없음' } };
+      return { 
+        title: { 
+          text: '잠복기 분석 데이터가 필요합니다',
+          subtext: '의심원 노출시간과 증상발현시간을 설정하면 잠복기 분석이 시작됩니다',
+          left: 'center',
+          textStyle: { 
+            fontSize: 18, 
+            fontFamily: 'Noto Sans KR, sans-serif',
+            color: '#666'
+          },
+          subtextStyle: {
+            fontSize: 14,
+            color: '#999'
+          }
+        },
+        graphic: {
+          type: 'text',
+          left: 'center',
+          top: '60%',
+          style: {
+            text: '⏰ 노출시간 설정 → 잠복기 분석',
+            fontSize: 16,
+            fill: '#1a73e8',
+            fontFamily: 'Noto Sans KR, sans-serif'
+          }
+        }
+      };
     }
     const hasValidLabels = validData.every(item => item && typeof item.intervalLabel === 'string');
     if (!hasValidLabels) {
@@ -2787,6 +3010,20 @@ watch(suspectedFood, () => {
   // Vuex에도 저장하여 보고서 탭에서 사용
   store.commit('SET_SELECTED_SUSPECTED_FOODS', suspectedFood.value);
 });
+
+// 백그라운드 분석 결과 변화 감지
+watch(() => store.getters.analysisResults, (newResults) => {
+  if (newResults && (newResults.caseControl?.length > 0 || newResults.cohort?.length > 0)) {
+    console.log('백그라운드 분석 결과 감지:', newResults);
+  }
+}, { deep: true });
+
+// 분석 상태 변화 감지
+watch(analysisStatus, (newStatus) => {
+  if (newStatus) {
+    console.log('분석 상태 업데이트:', newStatus.message);
+  }
+}, { deep: true });
 
 // 커스텀 드롭다운 토글
 const toggleDropdown = () => {
@@ -3799,12 +4036,14 @@ const resetIncubationChartSettings = () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: visible;
 }
 
 .suspected-food-dropdown-wrapper {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: visible;
 }
 
 .suspected-food-dropdown {
@@ -3944,6 +4183,105 @@ const resetIncubationChartSettings = () => {
   min-width: 60px;
 }
 
+.food-stat {
+  font-size: 12px;
+  color: #1a73e8;
+  text-align: right;
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.food-or {
+  font-size: 11px;
+  color: #888;
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+.analysis-status-badge {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: help;
+}
+
+.analysis-status-badge.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-color: #4caf50;
+}
+
+.analysis-status-badge.warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border-color: #ffc107;
+}
+
+.analysis-status-badge.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border-color: #f44336;
+}
+
+.analysis-status-wrapper {
+  position: relative;
+  display: inline-block;
+  overflow: visible;
+}
+
+.analysis-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-family: "Noto Sans KR", sans-serif;
+  font-weight: 400;
+  min-width: 280px;
+  max-width: 400px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.analysis-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #e0e0e0;
+}
+
+.analysis-tooltip::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid white;
+}
+
+
+
 .dropdown-footer {
   display: flex;
   gap: 8px;
@@ -4032,4 +4370,6 @@ const resetIncubationChartSettings = () => {
   border: 2px solid #1a73e8;
   border-radius: 4px;
 }
+
+
 </style>

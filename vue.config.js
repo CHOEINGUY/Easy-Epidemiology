@@ -28,7 +28,7 @@ module.exports = defineConfig({
     config
       .plugin('html')
       .tap(args => {
-        args[0].title = 'Easy-Epidemiology Web';
+        args[0].title = 'Easy-Epidemiology Web v1.2';
         // 오프라인 실행을 위한 메타 태그 추가
         args[0].meta = {
           ...args[0].meta,

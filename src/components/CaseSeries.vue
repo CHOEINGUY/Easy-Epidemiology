@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v1.0</h1>
+      <h1 class="app-title">Easy-Epidemiology Web v1.2</h1>
     </header>
 
     <div class="dashboard">
