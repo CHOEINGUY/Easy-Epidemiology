@@ -825,18 +825,18 @@ const barColors = [
 
 // 유행곡선 차트 상태 - store에서 설정 불러오기
 const chartSettings = computed(() => store.getters.getEpidemicCurveSettings);
-const epiChartFontSize = ref(chartSettings.value.fontSize || 15);
+const epiChartFontSize = ref(chartSettings.value.fontSize || 18); // 기본값 18
 const epiChartWidth = ref(chartSettings.value.chartWidth || 1100);
 const epiBarColor = ref(chartSettings.value.barColor || '#1E88E5');
-const epiFontSizeButtonText = ref(fontSizeLabels[fontSizes.indexOf(epiChartFontSize.value)] || '작게');
+const epiFontSizeButtonText = ref(fontSizeLabels[fontSizes.indexOf(epiChartFontSize.value)] || '보통');
 const epiChartWidthButtonText = ref(`${epiChartWidth.value}px`);
 
 // 잠복기 차트 상태 - store에서 설정 불러오기
 const incubationChartSettings = computed(() => store.getters.getEpidemicCurveSettings);
-const incubationChartFontSize = ref(incubationChartSettings.value.incubationFontSize || 15);
+const incubationChartFontSize = ref(incubationChartSettings.value.incubationFontSize || 18); // 기본값 18
 const incubationChartWidth = ref(incubationChartSettings.value.incubationChartWidth || 1100);
 const incubationBarColor = ref(incubationChartSettings.value.incubationBarColor || '#91cc75'); // 녹색으로 구분
-const incubationFontSizeButtonText = ref(fontSizeLabels[fontSizes.indexOf(incubationChartFontSize.value)] || '작게');
+const incubationFontSizeButtonText = ref(fontSizeLabels[fontSizes.indexOf(incubationChartFontSize.value)] || '보통');
 const incubationChartWidthButtonText = ref(`${incubationChartWidth.value}px`);
 
 // --- 차트 표시 모드 설정 ---
@@ -3296,19 +3296,19 @@ const saveIncubationChartForReport = async () => {
 // 유행곡선 차트 설정 초기화
 const resetEpiChartSettings = () => {
   // 기본값으로 초기화
-  epiChartFontSize.value = 15;
+  epiChartFontSize.value = 18; // 15 → 18
   epiChartWidth.value = 1100;
   epiBarColor.value = '#1E88E5';
   chartDisplayMode.value = 'time';
   showConfirmedCaseLine.value = true;
   
   // 버튼 텍스트 업데이트
-  epiFontSizeButtonText.value = '작게';
+  epiFontSizeButtonText.value = '보통';
   epiChartWidthButtonText.value = '1100px';
   
   // Vuex store 업데이트
   store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', {
-    fontSize: 15,
+    fontSize: 18, // 15 → 18
     chartWidth: 1100,
     barColor: '#1E88E5',
     displayMode: 'time'
@@ -3328,18 +3328,18 @@ const resetEpiChartSettings = () => {
 // 잠복기 차트 설정 초기화
 const resetIncubationChartSettings = () => {
   // 기본값으로 초기화
-  incubationChartFontSize.value = 15;
+  incubationChartFontSize.value = 18; // 15 → 18
   incubationChartWidth.value = 1100;
   incubationBarColor.value = '#91cc75';
   incubationChartDisplayMode.value = 'hour';
   
   // 버튼 텍스트 업데이트
-  incubationFontSizeButtonText.value = '작게';
+  incubationFontSizeButtonText.value = '보통';
   incubationChartWidthButtonText.value = '1100px';
   
   // Vuex store 업데이트
   store.commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', {
-    incubationFontSize: 15,
+    incubationFontSize: 18, // 15 → 18
     incubationChartWidth: 1100,
     incubationBarColor: '#91cc75',
     incubationDisplayMode: 'hour'

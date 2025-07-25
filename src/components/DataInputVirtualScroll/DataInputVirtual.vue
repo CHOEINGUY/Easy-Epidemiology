@@ -2631,12 +2631,8 @@ function onUndo() {
       }
     });
     
-    // 사용자에게 알림 (필터가 적용된 경우)
-    if (storeBridge.filterState.isFiltered) {
-      showToast('데이터와 필터 상태가 복원되었습니다.', 'info');
-    } else {
-      showToast('필터가 해제되었습니다.', 'info');
-    }
+    // Undo/Redo는 사용자가 의도적으로 수행하는 작업이므로 토스트 메시지 제거
+    // 필터 상태는 UI에서 자동으로 반영됨
   }
 }
 
@@ -2691,12 +2687,8 @@ function onRedo() {
       }
     });
     
-    // 사용자에게 알림 (필터가 적용된 경우)
-    if (storeBridge.filterState.isFiltered) {
-      showToast('데이터와 필터 상태가 복원되었습니다.', 'info');
-    } else {
-      showToast('필터가 해제되었습니다.', 'info');
-    }
+    // Undo/Redo는 사용자가 의도적으로 수행하는 작업이므로 토스트 메시지 제거
+    // 필터 상태는 UI에서 자동으로 반영됨
   } else {
     devLog('[Redo] Redo 실패 또는 불가능');
   }

@@ -28,32 +28,25 @@ function escapeXml(text) {
  */
 export function replacePlaceholders(xmlText, replacements) {
   let modifiedText = xmlText;
-  
   logger.debug('원본 XML 길이:', xmlText.length);
-  
-  // VSCode에서 수동으로 하는 것과 정확히 동일한 방식
-  Object.entries(replacements).forEach(([placeholder, value]) => {
-    // const searchText = `%${placeholder}%`;
-    const searchText = placeholder; // 이제 % 없이 key 그대로 검색
-    
-    // 플레이스홀더가 있는지 확인
-    if (modifiedText.includes(searchText)) {
-      logger.debug(`플레이스홀더 발견: ${searchText}`);
-      logger.debug(`교체할 값: ${value}`);
-      
-      // XML 특수문자 이스케이프 적용
-      const escapedValue = escapeXml(value);
-      logger.debug(`이스케이프된 값: ${escapedValue}`);
-      
-      // 단순 문자열 교체 (VSCode Find & Replace와 동일)
-      modifiedText = modifiedText.split(searchText).join(escapedValue);
-      
-      logger.debug(`교체 완료: ${searchText} → ${escapedValue}`);
-    } else {
-      logger.debug(`플레이스홀더 없음: ${searchText}`);
-    }
-  });
-  
+
+  // 긴 키부터 먼저 치환 (부분 치환 문제 방지)
+  Object.entries(replacements)
+    .sort(([a], [b]) => b.length - a.length) // 긴 키부터
+    .forEach(([placeholder, value]) => {
+      const searchText = placeholder; // % 없이 key 그대로 검색
+      if (modifiedText.includes(searchText)) {
+        logger.debug(`플레이스홀더 발견: ${searchText}`);
+        logger.debug(`교체할 값: ${value}`);
+        const escapedValue = escapeXml(value);
+        logger.debug(`이스케이프된 값: ${escapedValue}`);
+        modifiedText = modifiedText.split(searchText).join(escapedValue);
+        logger.debug(`교체 완료: ${searchText} → ${escapedValue}`);
+      } else {
+        logger.debug(`플레이스홀더 없음: ${searchText}`);
+      }
+    });
+
   logger.debug('수정된 XML 길이:', modifiedText.length);
   return modifiedText;
 }
@@ -315,8 +308,8 @@ export async function createHwpxFromTemplate(modifiedXmlText, chartImages = {}, 
     logger.info('원본 HWPX 파일 로드 시작...');
     
     // 조사 디자인에 따라 템플릿 파일 선택
-    const templateFile = studyDesign === 'case-control' ? '/report_template_caseControl.zip' : 
-      studyDesign === 'cohort' ? '/report_template_cohort.zip' : '/report_template.zip';
+    const templateFile = studyDesign === 'case-control' ? './report_template_caseControl.zip' : 
+      studyDesign === 'cohort' ? './report_template_cohort.zip' : './report_template.zip';
     logger.debug(`사용할 템플릿: ${templateFile}`);
     
     // 1. 원본 HWPX 파일 로드
@@ -396,8 +389,8 @@ export async function createHwpxFolderFromTemplate(modifiedXmlText, chartImages 
     console.log('🔄 원본 HWPX 파일 로드 시작 (폴더 생성용)...');
     
     // 조사 디자인에 따라 템플릿 파일 선택
-    const templateFile = studyDesign === 'case-control' ? '/report_template_caseControl.zip' : 
-      studyDesign === 'cohort' ? '/report_template_cohort.zip' : '/report_template.zip';
+    const templateFile = studyDesign === 'case-control' ? './report_template_caseControl.zip' : 
+      studyDesign === 'cohort' ? './report_template_cohort.zip' : './report_template.zip';
     console.log(`📄 사용할 템플릿 (폴더용): ${templateFile}`);
     
     // 1. 원본 HWPX 파일 로드
@@ -469,8 +462,8 @@ export async function loadTemplateSection0(studyDesign = 'case-control') {
     console.log('🔍 원본 HWPX에서 section0.xml 로드 시작...');
     
     // 조사 디자인에 따라 템플릿 파일 선택
-    const templateFile = studyDesign === 'case-control' ? '/report_template_caseControl.zip' : 
-      studyDesign === 'cohort' ? '/report_template_cohort.zip' : '/report_template.zip';
+    const templateFile = studyDesign === 'case-control' ? './report_template_caseControl.zip' : 
+      studyDesign === 'cohort' ? './report_template_cohort.zip' : './report_template.zip';
     console.log(`📄 사용할 템플릿 (로드용): ${templateFile}`);
     
     // 1. 원본 HWPX 파일 로드

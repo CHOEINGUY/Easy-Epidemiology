@@ -110,6 +110,24 @@ const store = createStore({
       haldaneCorrection: false
     },
 
+    // --- Yates 보정 설정 (환자대조군/코호트 탭용) ---
+    yatesCorrectionSettings: (() => {
+      try {
+        const saved = localStorage.getItem('yatesCorrectionSettings');
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (error) {
+        console.warn('localStorage에서 yatesCorrectionSettings 로드 실패:', error);
+      }
+      
+      // 기본값: 미적용
+      return {
+        caseControl: false, // 환자대조군 탭 기본값
+        cohort: false       // 코호트 탭 기본값
+      };
+    })(),
+
     // --- 유행곡선 탭에서 선택한 의심식단 (쉼표 구분 문자열) ---
     selectedSuspectedFoods: (() => {
       try {
@@ -275,7 +293,9 @@ const store = createStore({
     // 분석 결과
     getAnalysisResults: (state) => state.analysisResults,
     // 유행곡선 탭에서 선택한 의심식단 문자열
-    getSelectedSuspectedFoods: (state) => state.selectedSuspectedFoods
+    getSelectedSuspectedFoods: (state) => state.selectedSuspectedFoods,
+    // Yates 보정 설정
+    getYatesCorrectionSettings: (state) => state.yatesCorrectionSettings
   },
   mutations: {
     // --- 기존 Mutations ---
@@ -964,6 +984,17 @@ const store = createStore({
         localStorage.setItem('selectedSuspectedFoods', foodsStr);
       } catch (error) {
         console.warn('localStorage에 selectedSuspectedFoods 저장 실패:', error);
+      }
+    },
+
+    // Yates 보정 설정 업데이트
+    SET_YATES_CORRECTION_SETTINGS(state, { type, enabled }) {
+      state.yatesCorrectionSettings[type] = enabled;
+      // localStorage에 저장
+      try {
+        localStorage.setItem('yatesCorrectionSettings', JSON.stringify(state.yatesCorrectionSettings));
+      } catch (error) {
+        console.warn('yatesCorrectionSettings localStorage 저장 실패:', error);
       }
     }
     // === [NEW] Missing Mutations Added End ===

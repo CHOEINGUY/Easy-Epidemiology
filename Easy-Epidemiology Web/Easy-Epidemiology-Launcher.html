@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy-Epidemiology Web v1.2 - 런처</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        .logo {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .launch-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px;
+        }
+        .launch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: left;
+        }
+        .info h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .info ul {
+            color: #666;
+            line-height: 1.6;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">Easy-Epidemiology Web</div>
+        <div class="subtitle">v1.2 - 오프라인 실행 모드</div>
+        
+        <button class="launch-btn" onclick="launchApp()">
+            애플리케이션 시작
+        </button>
+        
+        <div class="info">
+            <h3>실행 방법</h3>
+            <ul>
+                <li><strong>권장:</strong> 위의 "애플리케이션 시작" 버튼 클릭</li>
+                <li><strong>대안:</strong> v1.2폴더 안의 index.html 파일을 직접 더블클릭</li>
+            </ul>
+        </div>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function launchApp() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // v1.2 폴더의 index.html 파일 경로
+                const appPath = './v1.2/index.html';
+                
+                // 디버깅 정보 표시
+                console.log('시도하는 경로:', appPath);
+                
+                // 직접 링크로 열기 (같은 탭에서)
+                const link = document.createElement('a');
+                link.href = appPath;
+                // target="_blank" 제거하여 같은 탭에서 열기
+                
+                // 링크 클릭 이벤트 추가
+                link.onclick = function(e) {
+                    e.preventDefault(); // 기본 동작 방지
+                    console.log('링크 클릭됨');
+                    
+                    // 약간의 지연 후 실행
+                    setTimeout(() => {
+                        window.location.href = appPath; // 같은 탭에서 이동
+                    }, 100);
+                };
+                
+                link.click();
+                
+            } catch (error) {
+                console.error('오류 발생:', error);
+                statusDiv.innerHTML = '<div class="status error">❌ 실행 중 오류가 발생했습니다: ' + error.message + '</div>';
+            }
+        }
+        
+        // 페이지 로드 시 자동 실행 옵션
+        window.onload = function() {
+            // URL에 auto=1 파라미터가 있으면 자동 실행
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('auto') === '1') {
+                launchApp();
+            }
+        };
+    </script>
+</body>
+</html> 

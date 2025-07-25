@@ -616,7 +616,6 @@ onMounted(() => {
   color: #234e52;
   font-size: 1rem;
   font-weight: 500;
-  border-left: 4px solid #38b2ac;
 }
 
 /* 조직 정보 */

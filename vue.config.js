@@ -3,7 +3,7 @@ module.exports = defineConfig({
   transpileDependencies: true,
   
   // 프로덕션 배포를 위한 설정
-  publicPath: '/',
+  publicPath: process.env.NODE_ENV === 'production' && process.env.VUE_APP_REQUIRE_AUTH === 'false' ? './' : '/',
   
   // 빌드 최적화 설정
   productionSourceMap: false,

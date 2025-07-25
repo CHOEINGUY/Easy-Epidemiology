@@ -173,8 +173,12 @@ const fontSizes = [12, 14, 16];
 const fontSizeLabels = ['작게', '보통', '크게'];
 const tableFontSize = ref(14);
 
-// Yates 보정 토글 변수 (기대값 5이상일 때 사용)
-const useYatesCorrection = ref(true); // 기본값: Yates 보정 사용
+// Yates 보정 토글 변수 (store에서 관리)
+const yatesSettings = computed(() => store.getters.getYatesCorrectionSettings);
+const useYatesCorrection = computed({
+  get: () => yatesSettings.value?.caseControl ?? false,
+  set: (value) => store.commit('SET_YATES_CORRECTION_SETTINGS', { type: 'caseControl', enabled: value })
+});
 const fontSizeButtonText = ref('보통');
 
 // 툴팁 상태 관리
