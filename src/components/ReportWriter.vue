@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v1.2</h1>
+      <h1 class="app-title">Easy-Epidemiology Web v1.4</h1>
     </header>
 
     <!-- 메인 편집 & 미리보기 레이아웃 -->
@@ -16,9 +16,17 @@
           <li class="design-item">
             <div class="design-header">
               <span class="item-label">조사 디자인</span>
-              <div v-if="!studyDesign" class="design-notice-inline" :class="getNoticeClass()">
+              <div 
+                v-if="!studyDesign" 
+                class="design-notice-inline" 
+                :class="getNoticeClass()"
+                @mouseenter="showDesignNoticeTooltip = true"
+                @mouseleave="showDesignNoticeTooltip = false"
+                style="cursor: help; position: relative;"
+              >
                 <span class="material-icons">{{ getNoticeIcon() }}</span>
                 {{ getNoticeText() }}
+                <div ref="designNoticeTooltipRef"></div>
               </div>
             </div>
             <div class="design-options">
@@ -116,14 +124,17 @@
           <h2 class="pane-title">미리보기</h2>
           <div class="download-buttons">
             <button 
-              class="download-btn primary" 
-              @click="downloadHwpxReport"
+              class="download-btn" 
+              :class="{ 
+                'primary': studyDesign && !hasTooManyFoodItems,
+                'warning': !studyDesign || hasTooManyFoodItems 
+              }"
+              @click="studyDesign ? downloadHwpxReport() : null"
               @mouseenter="showDownloadTooltip = true"
               @mouseleave="showDownloadTooltip = false"
-              :class="{ 'warning': hasTooManyFoodItems }"
             >
-              <span class="material-icons">{{ hasTooManyFoodItems ? 'warning' : 'description' }}</span>
-              보고서 다운로드
+              <span class="material-icons">{{ !studyDesign ? 'info' : (hasTooManyFoodItems ? 'warning' : 'description') }}</span>
+              {{ !studyDesign ? '조사 디자인 선택 필요' : '보고서 다운로드' }}
               <div ref="downloadTooltipRef"></div>
             </button>
           </div>
@@ -137,7 +148,10 @@
       <div v-if="showDownloadTooltip && downloadTooltipRef" 
            class="tooltip tooltip-body" 
            :style="downloadTooltipStyle">
-        <div v-if="hasTooManyFoodItems" class="tooltip-warning">
+        <div v-if="!studyDesign" class="tooltip-warning">
+          조사 디자인을 먼저 선택해주세요.
+        </div>
+        <div v-else-if="hasTooManyFoodItems" class="tooltip-warning">
           요인(식단)이 {{ foodItemCount }}개로 34개를 초과합니다. 표4 요인별 표분석결과에 데이터가 들어가지 않습니다.
         </div>
         <div v-else class="tooltip-normal">
@@ -151,6 +165,14 @@
         <div class="tooltip-text">
           <div>요인(식단)이 {{ foodItemCount }}개로 34개를 초과합니다.</div>
           <div>표4 요인별 표분석결과에 데이터가 들어가지 않습니다.</div>
+        </div>
+      </div>
+
+      <div v-if="showDesignNoticeTooltip && designNoticeTooltipRef"
+           class="item-tooltip tooltip-body"
+           :style="designNoticeTooltipStyle">
+        <div class="tooltip-text">
+          <div>조사 디자인을 먼저 선택해주세요.</div>
         </div>
       </div>
     </Teleport>
@@ -186,10 +208,12 @@ const logger = createComponentLogger('ReportWriter');
 // 툴팁 상태
 const showDownloadTooltip = ref(false);
 const showFoodAnalysisTooltip = ref(false);
+const showDesignNoticeTooltip = ref(false);
 
 // 툴팁 ref
 const downloadTooltipRef = ref(null);
 const foodAnalysisTooltipRef = ref(null);
+const designNoticeTooltipRef = ref(null);
 
 // 모달 상태
 const showAnalysisModal = ref(false);
@@ -706,6 +730,19 @@ const foodAnalysisTooltipStyle = computed(() => {
     position: 'fixed',
     bottom: `${window.innerHeight - badgeRect.top + 8}px`,
     left: `${badgeRect.left + badgeRect.width / 2}px`,
+    transform: 'translateX(-50%)',
+    zIndex: 10000
+  };
+});
+
+const designNoticeTooltipStyle = computed(() => {
+  if (!designNoticeTooltipRef.value) return {};
+  const elRect = designNoticeTooltipRef.value.parentElement?.getBoundingClientRect();
+  if (!elRect) return {};
+  return {
+    position: 'fixed',
+    bottom: `${window.innerHeight - elRect.top + 8}px`,
+    left: `${elRect.left + elRect.width / 2}px`,
     transform: 'translateX(-50%)',
     zIndex: 10000
   };
@@ -1330,12 +1367,18 @@ async function downloadHwpxReport() {
 }
 
 .download-btn.warning {
-  background-color: #f57c00;
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+  border: 1px solid #ffcc02;
+  color: #f57c00;
+  box-shadow: 0 1px 4px rgba(255, 193, 7, 0.2);
 }
 
 .download-btn.warning:hover {
-  background-color: #e65100;
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border-color: #ffb300;
 }
+
+
 
 .download-btn.secondary {
   background-color: #f1f3f4;

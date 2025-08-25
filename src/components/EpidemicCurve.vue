@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v1.2</h1>
+      <h1 class="app-title">Easy-Epidemiology Web v1.4</h1>
     </header>
 
     <div class="dashboard">
@@ -279,7 +279,14 @@
             <div class="chart-container-wrapper epi-chart-wrapper">
               <div class="chart-buttons">
                 <div style="position: relative;">
-                  <button @click="saveChartForReport" :class="['export-chart-button', isChartSaved ? 'saved' : 'unsaved']">
+                  <button
+                    @click="saveChartForReport"
+                    :class="['export-chart-button', isChartSaved ? 'saved' : 'unsaved', 'shadow-blink']"
+                    @mouseenter="onEpiSaveMouseEnter"
+                    @mouseleave="onEpiSaveMouseLeave"
+                    @focus="onEpiSaveInteract"
+                    @pointerdown="onEpiSaveInteract"
+                  >
                     <span class="button-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -289,6 +296,9 @@
                     </span>
                     <span class="button-text">{{ isChartSaved ? '저장 완료' : '보고서 저장' }}</span>
                   </button>
+                  <div v-if="activeTooltip === 'saveEpiReport'" class="control-tooltip">
+                    {{ tooltipText }}
+                  </div>
                   <div v-if="showChartSavedTooltip" class="copy-tooltip check-tooltip">
                     <svg width="32" height="32" viewBox="0 0 24 24">
                       <circle cx="12" cy="12" r="12" fill="#1a73e8"/>
@@ -391,17 +401,7 @@
                   { number: '3', text: '설정 후 잠복기 분석이 자동으로 시작됩니다' }
                 ]"
               />
-              <DataGuideMessage
-                v-else-if="exposureDateTime && incubationDurations.length === 0 && !isIndividualExposureColumnVisible"
-                icon="warning"
-                title="잠복기 계산이 불가능합니다"
-                description="환자들의 증상발현시간이 설정한 노출시간보다 이전이어서 잠복기를 계산할 수 없습니다."
-                :steps="[
-                  { number: '!', text: `노출시간: ${formattedExposureDateTime}` },
-                  { number: '!', text: '모든 환자의 증상발현시간이 노출시간 이후여야 합니다' },
-                  { number: '!', text: '데이터 입력 화면에서 시간을 다시 확인해주세요' }
-                ]"
-              />
+              <template v-else-if="exposureDateTime && incubationDurations.length === 0 && !isIndividualExposureColumnVisible"></template>
               <DataGuideMessage
                 v-else
                 icon="schedule"
@@ -528,7 +528,14 @@
             <div class="chart-container-wrapper incubation-chart-wrapper">
               <div class="chart-buttons">
                 <div style="position: relative;">
-                  <button @click="saveIncubationChartForReport" :class="['export-chart-button', isIncubationChartSaved ? 'saved' : 'unsaved']">
+                  <button
+                    @click="saveIncubationChartForReport"
+                    :class="['export-chart-button', isIncubationChartSaved ? 'saved' : 'unsaved', 'shadow-blink']"
+                    @mouseenter="onIncubationSaveMouseEnter"
+                    @mouseleave="onIncubationSaveMouseLeave"
+                    @focus="onIncubationSaveInteract"
+                    @pointerdown="onIncubationSaveInteract"
+                  >
                     <span class="button-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -538,6 +545,9 @@
                     </span>
                     <span class="button-text">{{ isIncubationChartSaved ? '저장 완료' : '보고서 저장' }}</span>
                   </button>
+                  <div v-if="activeTooltip === 'saveIncubationReport'" class="control-tooltip">
+                    {{ tooltipText }}
+                  </div>
                   <div v-if="showIncubationChartSavedTooltip" class="copy-tooltip check-tooltip">
                     <svg width="32" height="32" viewBox="0 0 24 24">
                       <circle cx="12" cy="12" r="12" fill="#1a73e8"/>
@@ -573,7 +583,22 @@
                   <span class="button-text">차트 저장</span>
                 </button>
               </div>
-              <div ref="incubationChartContainer" class="chart-instance" :style="{ width: incubationChartWidth + 'px' }"></div>
+              <div
+                v-if="exposureDateTime && incubationDurations.length === 0 && !isIndividualExposureColumnVisible"
+                class="no-data-message"
+              >
+                <DataGuideMessage
+                  icon="warning"
+                  title="증상발현시간을 노출시간 이후로 바꿔주세요"
+                  description="잠복기는 ‘노출 이후’ 경과시간으로 계산됩니다. 현재는 모두 노출 이전으로 입력되어 계산할 수 없습니다. 의심원 노출시간이 잘못 입력되었을 수도 있습니다."
+                  :steps="[
+                    { number: '!', text: `현재 노출시간: ${formattedExposureDateTime}` },
+                    { number: '1', text: '상단 \'의심원 노출시간\' 입력란을 클릭해 올바른 기준시간으로 다시 설정합니다' },
+                    { number: '2', text: '또는 데이터 입력 화면에서 각 환자의 \'증상발현시간\'을 노출시간 이후로 수정합니다' }
+                  ]"
+                />
+              </div>
+              <div v-else ref="incubationChartContainer" class="chart-instance" :style="{ width: incubationChartWidth + 'px' }"></div>
             </div>
           </div>
         </div>
@@ -3159,6 +3184,7 @@ watch(chartSettings, (newSettings) => {
 // --- 보고서 저장 상태 관리 ---
 const isChartSaved = ref(false);
 const showChartSavedTooltip = ref(false);
+// 저장 버튼 강조 상태 (보더 샤인 사용) - 별도 상태 변수 불필요
 
 // 차트 옵션이 바뀌면 저장되지 않은 상태로 표시
 watch([
@@ -3170,6 +3196,8 @@ watch([
   showConfirmedCaseLine
 ], () => {
   isChartSaved.value = false;
+  // 옵션 변경 시 블링크 스케줄 재개
+  if (!isChartSaved.value) scheduleBlink('epi');
 });
 
 // 저장 버튼으로 보고서용 차트 이미지를 Vuex에 저장
@@ -3228,6 +3256,7 @@ const saveChartForReport = async () => {
 // 잠복기 차트 보고서 저장 상태 관리
 const isIncubationChartSaved = ref(false);
 const showIncubationChartSavedTooltip = ref(false);
+// 잠복기 저장 버튼 강조 상태 (보더 샤인 사용) - 별도 상태 변수 불필요
 
 // 잠복기 차트 옵션 변경 시 저장되지 않은 상태로 표시
 watch([
@@ -3238,6 +3267,7 @@ watch([
   selectedIncubationInterval
 ], () => {
   isIncubationChartSaved.value = false;
+  if (!isIncubationChartSaved.value) scheduleBlink('incubation');
 }, { deep: false, immediate: false });
 
 // 잠복기 차트 저장 버튼 (보고서용)
@@ -3355,6 +3385,60 @@ const resetIncubationChartSettings = () => {
   
   console.log('잠복기 차트 설정이 기본값으로 초기화되었습니다.');
 };
+
+// --- Border Shine Sweep (no layout shift) ---
+// 스케줄: 진입 즉시 1회 + 이후 22–24초 간격 1–2회. 사용자 상호작용 시 중단.
+const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const BLINK_DURATION_MS = 3500;
+
+function triggerBlink(kind) {
+  if (prefersReducedMotion) return;
+  const selector = kind === 'epi'
+    ? '.epi-chart-wrapper .export-chart-button.shadow-blink'
+    : '.incubation-chart-wrapper .export-chart-button.shadow-blink';
+  const done = kind === 'epi' ? isChartSaved.value : isIncubationChartSaved.value;
+  if (done) return;
+  document.querySelectorAll(selector).forEach((btn) => {
+    btn.classList.add('blink-active');
+    setTimeout(() => btn.classList.remove('blink-active'), BLINK_DURATION_MS);
+  });
+}
+
+function scheduleBlink(kind) {
+  if (prefersReducedMotion) return;
+  const stateKey = kind === 'epi' ? 'epiBlink' : 'incBlink';
+  if (!scheduleBlink._state) scheduleBlink._state = { epiBlink: { timer: null }, incBlink: { timer: null } };
+  const s = scheduleBlink._state[stateKey];
+  if (s.timer) clearInterval(s.timer);
+  // 저장 완료 여부와 무관하게, '보고서 저장' 버튼일 때는 항상 깜박
+  // 반복적으로 은은히 깜박 (3초 주기)
+  s.timer = setInterval(() => {
+    triggerBlink(kind);
+  }, 4000);
+}
+
+onMounted(() => {
+  // 탭 진입 즉시 첫 깜박 + 주기 시작
+  triggerBlink('epi');
+  triggerBlink('incubation');
+  scheduleBlink('epi');
+  scheduleBlink('incubation');
+});
+
+onUnmounted(() => {
+  if (scheduleBlink._state?.epiBlink?.timer) clearTimeout(scheduleBlink._state.epiBlink.timer);
+  if (scheduleBlink._state?.incBlink?.timer) clearTimeout(scheduleBlink._state.incBlink.timer);
+});
+
+function onEpiSaveMouseEnter() { showTooltip('saveEpiReport', '보고서 작성 탭에 차트를 넣으려면 저장을 눌러주세요. 현재 스타일 그대로 저장됩니다.'); }
+function onEpiSaveMouseLeave() { hideTooltip(); }
+function onEpiSaveInteract() { if (scheduleBlink._state?.epiBlink?.timer) clearTimeout(scheduleBlink._state.epiBlink.timer); }
+function onIncubationSaveMouseEnter() { showTooltip('saveIncubationReport', '보고서 작성 탭에 차트를 넣으려면 저장을 눌러주세요. 현재 스타일 그대로 저장됩니다.'); }
+function onIncubationSaveMouseLeave() { hideTooltip(); }
+function onIncubationSaveInteract() { if (scheduleBlink._state?.incBlink?.timer) clearTimeout(scheduleBlink._state.incBlink.timer); }
+
+watch(isChartSaved, (v) => { if (v && scheduleBlink._state?.epiBlink?.timer) clearTimeout(scheduleBlink._state.epiBlink.timer); });
+watch(isIncubationChartSaved, (v) => { if (v && scheduleBlink._state?.incBlink?.timer) clearTimeout(scheduleBlink._state.incBlink.timer); });
 
 </script>
 
@@ -3782,7 +3866,7 @@ const resetIncubationChartSettings = () => {
 .chart-container-wrapper {
   flex: 1 1 0;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -3835,6 +3919,27 @@ const resetIncubationChartSettings = () => {
 .export-chart-button:active,
 .copy-chart-button:active {
   background-color: rgba(26, 115, 232, 0.2);
+}
+
+/* --- Shadow Blink (soft glow pulse, no layout shift) --- */
+.export-chart-button.shadow-blink { position: relative; z-index: 0; }
+.export-chart-button.shadow-blink::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 0 0 0 rgba(26,115,232,0.0), 0 0 0 rgba(26,115,232,0.0);
+  opacity: 0;
+}
+.export-chart-button.shadow-blink.blink-active::after { animation: shadow-blink-key 3500ms ease-in-out 1; }
+@keyframes shadow-blink-key {
+  0% { opacity: 0; box-shadow: 0 0 0 0 rgba(26,115,232,0.00), 0 0 0 rgba(26,115,232,0.00); }
+  50% { opacity: 1; box-shadow: 0 2px 10px 0 rgba(26,115,232,0.55), 0 0 16px rgba(26,115,232,0.45); }
+  100% { opacity: 0; box-shadow: 0 0 0 0 rgba(26,115,232,0.00), 0 0 0 rgba(26,115,232,0.00); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .export-chart-button.shadow-blink.blink-active::after { animation: none; opacity: 1; box-shadow: 0 0 0 0 rgba(26,115,232,0.0), 0 0 12px rgba(26,115,232,0.25); }
 }
 
 .button-icon {

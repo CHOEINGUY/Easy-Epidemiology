@@ -1101,6 +1101,36 @@ const store = createStore({
       // 분석 결과도 초기화
       commit('SET_ANALYSIS_RESULTS', { type: 'caseControl', results: [] });
       commit('SET_ANALYSIS_RESULTS', { type: 'cohort', results: [] });
+
+      // 유행곡선/잠복기 및 보고서 관련 전역 상태 초기화 (모든 탭 공통 저장값)
+      commit('SET_SYMPTOM_INTERVAL', 6);
+      commit('SET_EXPOSURE_DATETIME', '');
+      commit('SET_INCUBATION_INTERVAL', 6);
+      commit('UPDATE_EPIDEMIC_CURVE_SETTINGS', {
+        timeInterval: 6,
+        chartWidth: 800,
+        chartHeight: 400,
+        fontSize: 14,
+        barColor: '#5470c6',
+        showGrid: true,
+        showLegend: true,
+        backgroundColor: '#ffffff',
+        displayMode: 'time',
+        reportChartDataUrl: null,
+        reportIncubationChartDataUrl: null,
+        // 잠복기 차트 기본값
+        incubationFontSize: 15,
+        incubationChartWidth: 1100,
+        incubationBarColor: '#91cc75',
+        incubationDisplayMode: 'hour'
+      });
+      // 의심식단/의심원 및 분석 옵션 초기화
+      commit('SET_SELECTED_SUSPECTED_FOODS', '');
+      commit('SET_SUSPECTED_SOURCE', '');
+      commit('SET_ANALYSIS_OPTIONS', { statMethod: 'chi-square', haldaneCorrection: false });
+      // Yates 보정 설정 초기화 (양 탭 모두)
+      commit('SET_YATES_CORRECTION_SETTINGS', { type: 'caseControl', enabled: false });
+      commit('SET_YATES_CORRECTION_SETTINGS', { type: 'cohort', enabled: false });
     },
     pasteData({ commit }, payload) {
       commit('PASTE_DATA', payload);

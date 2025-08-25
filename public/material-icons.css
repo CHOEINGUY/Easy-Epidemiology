@@ -3,18 +3,26 @@
   font-family: 'Material Icons';
   font-style: normal;
   font-weight: 400;
-  src: url('./fonts/MaterialIcons-Regular.woff2') format('woff2'),
+  font-display: swap;
+  src: local('Material Icons'),
+       url('./fonts/MaterialIcons-Regular.woff2') format('woff2'),
        url('./fonts/MaterialIcons-Regular.woff') format('woff'),
-       url('./fonts/MaterialIcons-Regular.ttf') format('truetype');
+       url('./fonts/MaterialIcons-Regular.ttf') format('truetype'),
+       /* CDN fallback (마지막 수단) */
+       url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.woff2') format('woff2');
 }
 
 @font-face {
   font-family: 'Material Icons Outlined';
   font-style: normal;
   font-weight: 400;
-  src: url('./fonts/MaterialIconsOutlined-Regular.woff2') format('woff2'),
+  font-display: swap;
+  src: local('Material Icons Outlined'),
+       url('./fonts/MaterialIconsOutlined-Regular.woff2') format('woff2'),
        url('./fonts/MaterialIconsOutlined-Regular.woff') format('woff'),
-       url('./fonts/MaterialIconsOutlined-Regular.ttf') format('truetype');
+       url('./fonts/MaterialIconsOutlined-Regular.ttf') format('truetype'),
+       /* CDN fallback (마지막 수단) */
+       url('https://fonts.gstatic.com/s/materialiconsoutlined/v108/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.woff2') format('woff2');
 }
 
 .material-icons {
@@ -29,8 +37,10 @@
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
+  font-feature-settings: 'liga';
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .material-icons-outlined {
@@ -45,6 +55,8 @@
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
+  font-feature-settings: 'liga';
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 } 

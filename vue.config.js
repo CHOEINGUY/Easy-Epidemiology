@@ -3,7 +3,7 @@ module.exports = defineConfig({
   transpileDependencies: true,
   
   // 프로덕션 배포를 위한 설정
-  publicPath: process.env.NODE_ENV === 'production' && process.env.VUE_APP_REQUIRE_AUTH === 'false' ? './' : '/',
+  publicPath: './',
   
   // 빌드 최적화 설정
   productionSourceMap: false,
@@ -28,7 +28,7 @@ module.exports = defineConfig({
     config
       .plugin('html')
       .tap(args => {
-        args[0].title = 'Easy-Epidemiology Web v1.2';
+        args[0].title = 'Easy-Epidemiology Web v1.3';
         // 오프라인 실행을 위한 메타 태그 추가
         args[0].meta = {
           ...args[0].meta,
@@ -39,7 +39,7 @@ module.exports = defineConfig({
         // Cloudflare Pages 호환성을 위한 추가 설정
         args[0].templateParameters = {
           ...args[0].templateParameters,
-          BASE_URL: '/'
+          BASE_URL: './'
         };
         return args;
       });

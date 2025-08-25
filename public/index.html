@@ -5,11 +5,29 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
-    <!-- Material Icons - Google CDN (안정적 버전) -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-    <!-- 폰트 로드 실패 시 대체 스타일 -->
+    <!-- Preload Material Icons to reduce FOIT and version-related issues -->
+    <link rel="preload" href="<%= BASE_URL %>fonts/MaterialIcons-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- Unified Material Icons CSS (local first, with CDN fallback in CSS) -->
+    <link rel="stylesheet" href="<%= BASE_URL %>material-icons.css">
+    <!-- Material Icons - 로컬 폰트 파일 (오프라인 배포용) -->
     <style>
+      @font-face {
+        font-family: 'Material Icons';
+        font-style: normal;
+        font-weight: 400;
+        src: url('<%= BASE_URL %>fonts/MaterialIcons-Regular.woff2') format('woff2'),
+             url('<%= BASE_URL %>fonts/MaterialIcons-Regular.woff') format('woff'),
+             url('<%= BASE_URL %>fonts/MaterialIcons-Regular.ttf') format('truetype');
+      }
+      @font-face {
+        font-family: 'Material Icons Outlined';
+        font-style: normal;
+        font-weight: 400;
+        src: url('<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff2') format('woff2'),
+             url('<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff') format('woff'),
+             url('<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.ttf') format('truetype');
+      }
       .material-icons {
         font-family: 'Material Icons';
         font-weight: normal;
@@ -41,6 +59,36 @@
         -webkit-font-smoothing: antialiased;
       }
     </style>
+    <!-- Runtime fallback: if local font load stalls, inject Google CDN stylesheet -->
+    <script>
+      (function(){
+        try {
+          if (!('fonts' in document)) return; // older browsers will use CSS fallbacks
+          var injected = false;
+          var timeoutMs = 3000;
+          function injectCdn(){
+            if (injected) return; injected = true;
+            if (!document.getElementById('material-icons-cdn')) {
+              var link = document.createElement('link');
+              link.id = 'material-icons-cdn';
+              link.rel = 'stylesheet';
+              link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons&display=swap';
+              document.head.appendChild(link);
+              var link2 = document.createElement('link');
+              link2.rel = 'stylesheet';
+              link2.href = 'https://fonts.googleapis.com/icon?family=Material+Icons+Outlined&display=swap';
+              document.head.appendChild(link2);
+            }
+          }
+          Promise.race([
+            document.fonts.load('24px "Material Icons"'),
+            new Promise(function(resolve){ setTimeout(function(){ resolve('timeout'); }, timeoutMs); })
+          ]).then(function(res){ if (res === 'timeout') injectCdn(); }).catch(injectCdn);
+        } catch (e) {
+          /* noop */
+        }
+      })();
+    </script>
     <title><%= htmlWebpackPlugin.options.title %></title>
   </head>
   <body>

@@ -1,5 +1,8 @@
 import JSZip from 'jszip';
 import { createComponentLogger } from './logger.js';
+import { getreportTemplateBase64ArrayBuffer } from './reportTemplateBase64.js';
+import { getreportTemplateCaseControlBase64ArrayBuffer } from './reportTemplateCaseControlBase64.js';
+import { getreportTemplateCohortBase64ArrayBuffer } from './reportTemplateCohortBase64.js';
 
 // Logger 초기화
 const logger = createComponentLogger('HwpxProcessor');
@@ -305,21 +308,22 @@ async function convertDataUrlToBlob(dataUrl) {
  */
 export async function createHwpxFromTemplate(modifiedXmlText, chartImages = {}, studyDesign = 'case-control') {
   try {
-    logger.info('원본 HWPX 파일 로드 시작...');
+    logger.info('원본 HWPX 파일 로드 시작 (Base64 임베드)...');
     
-    // 조사 디자인에 따라 템플릿 파일 선택
-    const templateFile = studyDesign === 'case-control' ? './report_template_caseControl.zip' : 
-      studyDesign === 'cohort' ? './report_template_cohort.zip' : './report_template.zip';
-    logger.debug(`사용할 템플릿: ${templateFile}`);
-    
-    // 1. 원본 HWPX 파일 로드
-    const response = await fetch(templateFile);
-    if (!response.ok) {
-      throw new Error(`원본 HWPX 파일을 로드할 수 없습니다. 상태: ${response.status}`);
+    // 조사 디자인에 따라 Base64 함수 선택
+    let hwpxArrayBuffer;
+    if (studyDesign === 'case-control') {
+      hwpxArrayBuffer = getreportTemplateCaseControlBase64ArrayBuffer();
+      logger.debug('사용할 템플릿: case-control (Base64)');
+    } else if (studyDesign === 'cohort') {
+      hwpxArrayBuffer = getreportTemplateCohortBase64ArrayBuffer();
+      logger.debug('사용할 템플릿: cohort (Base64)');
+    } else {
+      hwpxArrayBuffer = getreportTemplateBase64ArrayBuffer();
+      logger.debug('사용할 템플릿: default (Base64)');
     }
     
-    const hwpxArrayBuffer = await response.arrayBuffer();
-    logger.info('원본 HWPX 파일 로드 완료:', hwpxArrayBuffer.byteLength, 'bytes');
+    logger.info('원본 HWPX 파일 로드 완료 (Base64):', hwpxArrayBuffer.byteLength, 'bytes');
     
     // 2. HWPX 파일을 ZIP으로 파싱
     const zip = new JSZip();
@@ -386,21 +390,22 @@ export async function createHwpxFromTemplate(modifiedXmlText, chartImages = {}, 
  */
 export async function createHwpxFolderFromTemplate(modifiedXmlText, chartImages = {}, studyDesign = 'case-control') {
   try {
-    console.log('🔄 원본 HWPX 파일 로드 시작 (폴더 생성용)...');
+    console.log('🔄 원본 HWPX 파일 로드 시작 (폴더 생성용, Base64)...');
     
-    // 조사 디자인에 따라 템플릿 파일 선택
-    const templateFile = studyDesign === 'case-control' ? './report_template_caseControl.zip' : 
-      studyDesign === 'cohort' ? './report_template_cohort.zip' : './report_template.zip';
-    console.log(`📄 사용할 템플릿 (폴더용): ${templateFile}`);
-    
-    // 1. 원본 HWPX 파일 로드
-    const response = await fetch(templateFile);
-    if (!response.ok) {
-      throw new Error(`원본 HWPX 파일을 로드할 수 없습니다. 상태: ${response.status}`);
+    // 조사 디자인에 따라 Base64 함수 선택
+    let hwpxArrayBuffer;
+    if (studyDesign === 'case-control') {
+      hwpxArrayBuffer = getreportTemplateCaseControlBase64ArrayBuffer();
+      console.log('📄 사용할 템플릿 (폴더용): case-control (Base64)');
+    } else if (studyDesign === 'cohort') {
+      hwpxArrayBuffer = getreportTemplateCohortBase64ArrayBuffer();
+      console.log('📄 사용할 템플릿 (폴더용): cohort (Base64)');
+    } else {
+      hwpxArrayBuffer = getreportTemplateBase64ArrayBuffer();
+      console.log('📄 사용할 템플릿 (폴더용): default (Base64)');
     }
     
-    const hwpxArrayBuffer = await response.arrayBuffer();
-    console.log('✅ 원본 HWPX 파일 로드 완료:', hwpxArrayBuffer.byteLength, 'bytes');
+    console.log('✅ 원본 HWPX 파일 로드 완료 (Base64):', hwpxArrayBuffer.byteLength, 'bytes');
     
     // 2. HWPX 파일을 ZIP으로 파싱
     const zip = new JSZip();
@@ -459,25 +464,22 @@ export async function createHwpxFolderFromTemplate(modifiedXmlText, chartImages 
  */
 export async function loadTemplateSection0(studyDesign = 'case-control') {
   try {
-    console.log('🔍 원본 HWPX에서 section0.xml 로드 시작...');
+    console.log('🔍 원본 HWPX에서 section0.xml 로드 시작 (Base64)...');
     
-    // 조사 디자인에 따라 템플릿 파일 선택
-    const templateFile = studyDesign === 'case-control' ? './report_template_caseControl.zip' : 
-      studyDesign === 'cohort' ? './report_template_cohort.zip' : './report_template.zip';
-    console.log(`📄 사용할 템플릿 (로드용): ${templateFile}`);
-    
-    // 1. 원본 HWPX 파일 로드
-    const response = await fetch(templateFile);
-    console.log('📡 Fetch 응답 상태:', response.status, response.statusText);
-    console.log('📡 Content-Type:', response.headers.get('content-type'));
-    console.log('📡 Content-Length:', response.headers.get('content-length'));
-    
-    if (!response.ok) {
-      throw new Error(`원본 HWPX 파일을 로드할 수 없습니다. 상태: ${response.status}`);
+    // 조사 디자인에 따라 Base64 함수 선택
+    let hwpxArrayBuffer;
+    if (studyDesign === 'case-control') {
+      hwpxArrayBuffer = getreportTemplateCaseControlBase64ArrayBuffer();
+      console.log('📄 사용할 템플릿 (로드용): case-control (Base64)');
+    } else if (studyDesign === 'cohort') {
+      hwpxArrayBuffer = getreportTemplateCohortBase64ArrayBuffer();
+      console.log('📄 사용할 템플릿 (로드용): cohort (Base64)');
+    } else {
+      hwpxArrayBuffer = getreportTemplateBase64ArrayBuffer();
+      console.log('📄 사용할 템플릿 (로드용): default (Base64)');
     }
     
-    const hwpxArrayBuffer = await response.arrayBuffer();
-    console.log('✅ 원본 HWPX 파일 로드 완료:', hwpxArrayBuffer.byteLength, 'bytes');
+    console.log('✅ 원본 HWPX 파일 로드 완료 (Base64):', hwpxArrayBuffer.byteLength, 'bytes');
     
     // HWPX 파일 헤더 확인
     const uint8Array = new Uint8Array(hwpxArrayBuffer);

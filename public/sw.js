@@ -1,10 +1,13 @@
 // Service Worker for offline functionality
-const CACHE_NAME = 'easy-epidemiology-v1.2';
+const CACHE_NAME = 'easy-epidemiology-v1.4';
 const urlsToCache = [
   './',
   './index.html',
-  './static/js/app.js',
-  './static/css/app.css',
+  // Fonts for Material Icons (offline stability)
+  './fonts/MaterialIcons-Regular.woff2',
+  './fonts/MaterialIcons-Regular.woff',
+  './fonts/MaterialIconsOutlined-Regular.woff2',
+  './fonts/MaterialIconsOutlined-Regular.woff',
   './favicon.ico'
 ];
 

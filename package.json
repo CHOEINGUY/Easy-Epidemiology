@@ -1,6 +1,6 @@
 {
   "name": "webpage",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -11,12 +11,15 @@
     "build:clean": "node cleanup-for-production.js && vue-cli-service build",
     "build:clean:noauth": "node cleanup-for-production.js && vue-cli-service build --mode noauth",
     "build:clean:auth": "node cleanup-for-production.js && vue-cli-service build --mode production",
+    "build:offline": "node scripts/embed-zip-templates.js && vue-cli-service build --mode offline",
+    "build:noauth-offline": "node scripts/embed-zip-templates.js && vue-cli-service build --mode noauth",
     "cleanup": "node cleanup-for-production.js",
     "lint": "vue-cli-service lint",
     "test": "jest",
     "test:auth": "node test-modes.js auth",
     "test:noauth": "node test-modes.js noauth",
     "download-icons": "node scripts/download-material-icons.js",
+    "embed-templates": "node scripts/embed-zip-templates.js",
     "postinstall": "npm run download-icons"
   },
   "dependencies": {
