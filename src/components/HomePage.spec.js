@@ -1,6 +1,5 @@
 import { mount } from '@vue/test-utils';
 import HomePage from './HomePage.vue';
-import { siteConfig } from '../config/siteConfig';
 
 // Mock the siteConfig module
 jest.mock('@/config/siteConfig', () => ({
@@ -11,14 +10,14 @@ jest.mock('@/config/siteConfig', () => ({
       description: 'Test Description',
       version: 'v0.1',
       lastUpdate: '2025-01-01',
-      platform: 'Test Platform',
+      platform: 'Test Platform'
     },
     features: [
       {
         icon: '🧪',
         title: 'Test Feature',
-        description: 'Test Feature Description',
-      },
+        description: 'Test Feature Description'
+      }
     ],
     systemFeatures: ['Test System Feature'],
     targetUsers: [{ name: 'Test User', type: 'test' }],
@@ -26,30 +25,30 @@ jest.mock('@/config/siteConfig', () => ({
       timeline: [
         {
           title: 'Test Education',
-          subtitle: 'Test Subtitle',
-        },
+          subtitle: 'Test Subtitle'
+        }
       ],
-      highlight: 'Test Highlight',
+      highlight: 'Test Highlight'
     },
     organization: {
       name: 'Test Org',
       department: 'Test Dept',
       center: 'Test Center',
-      team: [{ role: 'Test Role', name: 'Test Name' }],
+      team: [{ role: 'Test Role', name: 'Test Name' }]
     },
     quickGuide: [
       {
         step: 1,
         title: 'Test Step',
-        description: 'Test Step Description',
-      },
+        description: 'Test Step Description'
+      }
     ],
     contact: {
       title: 'Test Contact',
       organization: 'Test Org',
-      department: 'Test Dept',
-    },
-  })),
+      department: 'Test Dept'
+    }
+  }))
 }));
 
 describe('HomePage.vue', () => {

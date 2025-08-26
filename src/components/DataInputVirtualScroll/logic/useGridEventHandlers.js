@@ -4,21 +4,15 @@ import {
   handleVirtualCellMouseDown,
   handleVirtualDocumentMouseMove,
   handleVirtualDocumentMouseUp,
-  handleVirtualCellDoubleClick,
+  handleVirtualCellDoubleClick
 } from '../handlers/virtualCellHandlers.js';
 import { handleVirtualKeyDown } from '../handlers/virtualKeyboardHandlers.js';
 import { devLog, logger } from '../../../utils/logger.js';
 import {
-  COL_IDX_SERIAL,
-  COL_IDX_IS_PATIENT,
-  COL_TYPE_SERIAL,
   COL_TYPE_IS_PATIENT,
   COL_TYPE_CONFIRMED_CASE,
   COL_TYPE_BASIC,
-  COL_TYPE_CLINICAL,
   COL_TYPE_ONSET,
-  COL_TYPE_DIET,
-  COLUMN_STYLES,
   COL_TYPE_INDIVIDUAL_EXPOSURE
 } from '../constants/index.js';
 
@@ -41,7 +35,7 @@ export function useGridEventHandlers(
     focusGrid,
     ensureCellIsVisible,
     getCellValue,
-    captureSnapshotWithFilter,
+    captureSnapshotWithFilter
   }
 ) {
   const onDocumentMouseMoveBound = ref(null);
@@ -70,7 +64,7 @@ export function useGridEventHandlers(
       hideContextMenu,
       dateTimePickerRef,
       dateTimePickerState,
-      captureSnapshotWithFilter,
+      captureSnapshotWithFilter
     };
   }
 
@@ -173,27 +167,27 @@ export function useGridEventHandlers(
   function onKeyDown(event) {
     if (dateTimePickerState.visible) {
       switch (event.key) {
-        case 'Escape':
-          event.preventDefault();
-          event.stopPropagation();
-          onDateTimeCancel();
-          return;
-        case 'Enter':
-          event.preventDefault();
-          event.stopPropagation();
-          if (dateTimePickerRef.value?.confirm) {
-            dateTimePickerRef.value.confirm();
-          }
-          return;
-        case 'Tab':
-          event.preventDefault();
-          event.stopPropagation();
-          if (dateTimePickerRef.value?.confirm) {
-            dateTimePickerRef.value.confirm();
-          }
-          return;
-        default:
-          return;
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        onDateTimeCancel();
+        return;
+      case 'Enter':
+        event.preventDefault();
+        event.stopPropagation();
+        if (dateTimePickerRef.value?.confirm) {
+          dateTimePickerRef.value.confirm();
+        }
+        return;
+      case 'Tab':
+        event.preventDefault();
+        event.stopPropagation();
+        if (dateTimePickerRef.value?.confirm) {
+          dateTimePickerRef.value.confirm();
+        }
+        return;
+      default:
+        return;
       }
     }
 
@@ -444,28 +438,28 @@ export function useGridEventHandlers(
       await storeBridge.togglePatientFilter(value);
       filterDetails = { filterType: 'patient', value };
     } else if (action.startsWith('filter-confirmed-')) {
-        const value = action.replace('filter-confirmed-', '');
-        await storeBridge.toggleConfirmedFilter(target.colIndex, value);
-        filterDetails = { filterType: 'confirmed', colIndex: target.colIndex, value };
+      const value = action.replace('filter-confirmed-', '');
+      await storeBridge.toggleConfirmedFilter(target.colIndex, value);
+      filterDetails = { filterType: 'confirmed', colIndex: target.colIndex, value };
     } else if (action.startsWith('filter-clinical-')) {
-        const value = action.replace('filter-clinical-', '');
-        await storeBridge.toggleClinicalFilter(target.colIndex, value);
-        filterDetails = { filterType: 'clinical', colIndex: target.colIndex, value };
+      const value = action.replace('filter-clinical-', '');
+      await storeBridge.toggleClinicalFilter(target.colIndex, value);
+      filterDetails = { filterType: 'clinical', colIndex: target.colIndex, value };
     } else if (action.startsWith('filter-diet-')) {
-        const value = action.replace('filter-diet-', '');
-        await storeBridge.toggleDietFilter(target.colIndex, value);
-        filterDetails = { filterType: 'diet', colIndex: target.colIndex, value };
+      const value = action.replace('filter-diet-', '');
+      await storeBridge.toggleDietFilter(target.colIndex, value);
+      filterDetails = { filterType: 'diet', colIndex: target.colIndex, value };
     } else if (action.startsWith('filter-basic-')) {
-        const value = action.replace('filter-basic-', '');
-        await storeBridge.toggleBasicFilter(target.colIndex, value);
-        filterDetails = { filterType: 'basic', colIndex: target.colIndex, value };
+      const value = action.replace('filter-basic-', '');
+      await storeBridge.toggleBasicFilter(target.colIndex, value);
+      filterDetails = { filterType: 'basic', colIndex: target.colIndex, value };
     } else if (action.startsWith('filter-datetime-')) {
-        const value = action.replace('filter-datetime-', '');
-        await storeBridge.toggleDateTimeFilter(target.colIndex, value);
-        filterDetails = { filterType: 'datetime', colIndex: target.colIndex, value };
+      const value = action.replace('filter-datetime-', '');
+      await storeBridge.toggleDateTimeFilter(target.colIndex, value);
+      filterDetails = { filterType: 'datetime', colIndex: target.colIndex, value };
     } else if (action === 'clear-all-filters') {
-        storeBridge.clearAllFilters();
-        filterDetails = { filterType: 'clear_all' };
+      storeBridge.clearAllFilters();
+      filterDetails = { filterType: 'clear_all' };
     }
 
     if (oldFilterState !== JSON.stringify(storeBridge.filterState)) {
@@ -514,37 +508,37 @@ export function useGridEventHandlers(
     const colSelection = getEffectiveColumnSelection();
 
     switch (action) {
-      case 'clear-cell-data':
-        await handleClearCellData(target);
-        break;
-      case 'add-row-above':
-      case 'add-row-below':
-        await handleAddRow(action, rowSelection);
-        break;
-      case 'delete-rows':
-        await handleDeleteRows(rowSelection);
-        break;
-      case 'add-col-left':
-      case 'add-col-right':
-        await handleAddColumn(action, colSelection, target);
-        break;
-      case 'delete-cols':
-        await handleDeleteCols(colSelection);
-        break;
-      case 'delete-empty-rows':
-        await storeBridge.dispatch('deleteEmptyRows');
-        break;
-      case 'clear-rows-data':
-        await handleClearRowsData(rowSelection);
-        break;
-      case 'clear-cols-data':
-        await handleClearColsData(colSelection);
-        break;
-      default:
-        if (action.startsWith('filter-')) {
-          await handleFilterToggle(action, target);
-        }
-        break;
+    case 'clear-cell-data':
+      await handleClearCellData(target);
+      break;
+    case 'add-row-above':
+    case 'add-row-below':
+      await handleAddRow(action, rowSelection);
+      break;
+    case 'delete-rows':
+      await handleDeleteRows(rowSelection);
+      break;
+    case 'add-col-left':
+    case 'add-col-right':
+      await handleAddColumn(action, colSelection, target);
+      break;
+    case 'delete-cols':
+      await handleDeleteCols(colSelection);
+      break;
+    case 'delete-empty-rows':
+      await storeBridge.dispatch('deleteEmptyRows');
+      break;
+    case 'clear-rows-data':
+      await handleClearRowsData(rowSelection);
+      break;
+    case 'clear-cols-data':
+      await handleClearColsData(colSelection);
+      break;
+    default:
+      if (action.startsWith('filter-')) {
+        await handleFilterToggle(action, target);
+      }
+      break;
     }
     selectionSystem.clearIndividualSelections();
   }

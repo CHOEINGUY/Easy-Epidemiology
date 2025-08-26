@@ -150,7 +150,7 @@ import { useGridEventHandlers } from './logic/useGridEventHandlers.js';
 // --- Utilities & Managers ---
 import ValidationManager from '../../validation/ValidationManager.js';
 import { createProcessingOptions } from '../../utils/environmentUtils.js';
-import { logger, devLog } from '../../utils/logger.js';
+import { logger } from '../../utils/logger.js';
 import { FilterRowValidationManager } from './utils/FilterRowValidationManager.js';
 import { showToast } from './logic/toast.js';
 
@@ -198,7 +198,7 @@ const dateTimePickerState = reactive({
   visible: false,
   position: { top: 0, left: 0 },
   initialValue: null,
-  currentEdit: null,
+  currentEdit: null
 });
 const isValidationProgressVisible = ref(false);
 const validationProgress = ref(0);
@@ -239,69 +239,69 @@ const allColumnsMeta = computed(() => {
 });
 
 const headerGroups = computed(() => {
-    // ... (This complex computed property also remains here)
-    const groups = [];
-    const basicLength = headers.value.basic?.length || 0;
-    const clinicalLength = headers.value.clinical?.length || 0;
-    const dietLength = headers.value.diet?.length || 0;
-    let currentCol = 0;
-    groups.push({ text: '연번', rowspan: 2, startColIndex: COL_IDX_SERIAL, style: COLUMN_STYLES[COL_TYPE_SERIAL] });
+  // ... (This complex computed property also remains here)
+  const groups = [];
+  const basicLength = headers.value.basic?.length || 0;
+  const clinicalLength = headers.value.clinical?.length || 0;
+  const dietLength = headers.value.diet?.length || 0;
+  let currentCol = 0;
+  groups.push({ text: '연번', rowspan: 2, startColIndex: COL_IDX_SERIAL, style: COLUMN_STYLES[COL_TYPE_SERIAL] });
+  currentCol++;
+  groups.push({ text: '환자여부 <br />(환자 O - 1, 정상 - 0)', rowspan: 2, startColIndex: COL_IDX_IS_PATIENT, style: COLUMN_STYLES[COL_TYPE_IS_PATIENT] });
+  currentCol++;
+  if (storeBridge.state.isConfirmedCaseColumnVisible) {
+    groups.push({ text: '확진여부 <br />(확진 O - 1, X - 0)', rowspan: 2, startColIndex: currentCol, style: COLUMN_STYLES[COL_TYPE_CONFIRMED_CASE] });
     currentCol++;
-    groups.push({ text: '환자여부 <br />(환자 O - 1, 정상 - 0)', rowspan: 2, startColIndex: COL_IDX_IS_PATIENT, style: COLUMN_STYLES[COL_TYPE_IS_PATIENT] });
+  }
+  if (basicLength > 0) {
+    groups.push({ text: '기본정보', colspan: basicLength, startColIndex: currentCol, type: COL_TYPE_BASIC, addable: true, deletable: true, columnCount: basicLength });
+    currentCol += basicLength;
+  } else {
+    groups.push({ text: '기본정보', colspan: 1, startColIndex: currentCol, type: COL_TYPE_BASIC, addable: true, deletable: false, columnCount: 0, style: { minWidth: '60px' } });
     currentCol++;
-    if (storeBridge.state.isConfirmedCaseColumnVisible) {
-        groups.push({ text: '확진여부 <br />(확진 O - 1, X - 0)', rowspan: 2, startColIndex: currentCol, style: COLUMN_STYLES[COL_TYPE_CONFIRMED_CASE] });
-        currentCol++;
-    }
-    if (basicLength > 0) {
-        groups.push({ text: '기본정보', colspan: basicLength, startColIndex: currentCol, type: COL_TYPE_BASIC, addable: true, deletable: true, columnCount: basicLength });
-        currentCol += basicLength;
-    } else {
-        groups.push({ text: '기본정보', colspan: 1, startColIndex: currentCol, type: COL_TYPE_BASIC, addable: true, deletable: false, columnCount: 0, style: { minWidth: '60px' } });
-        currentCol++;
-    }
-    if (clinicalLength > 0) {
-        groups.push({ text: '임상증상 (증상 O - 1, 증상 X - 0)', colspan: clinicalLength, startColIndex: currentCol, type: COL_TYPE_CLINICAL, addable: true, deletable: true, columnCount: clinicalLength });
-        currentCol += clinicalLength;
-    } else {
-        groups.push({ text: '임상증상 (증상 O - 1, 증상 X - 0)', colspan: 1, startColIndex: currentCol, type: COL_TYPE_CLINICAL, addable: true, deletable: false, columnCount: 0, style: { minWidth: '60px' } });
-        currentCol++;
-    }
-    if (storeBridge.state.isIndividualExposureColumnVisible) {
-        groups.push({ text: '의심원 노출시간', rowspan: 2, startColIndex: currentCol, style: COLUMN_STYLES[COL_TYPE_ONSET] });
-        currentCol++;
-    }
-    groups.push({ text: '증상발현시간', rowspan: 2, startColIndex: currentCol, style: COLUMN_STYLES[COL_TYPE_ONSET] });
+  }
+  if (clinicalLength > 0) {
+    groups.push({ text: '임상증상 (증상 O - 1, 증상 X - 0)', colspan: clinicalLength, startColIndex: currentCol, type: COL_TYPE_CLINICAL, addable: true, deletable: true, columnCount: clinicalLength });
+    currentCol += clinicalLength;
+  } else {
+    groups.push({ text: '임상증상 (증상 O - 1, 증상 X - 0)', colspan: 1, startColIndex: currentCol, type: COL_TYPE_CLINICAL, addable: true, deletable: false, columnCount: 0, style: { minWidth: '60px' } });
     currentCol++;
-    if (dietLength > 0) {
-        groups.push({ text: '식단 (섭취 O - 1, 섭취 X - 0)', colspan: dietLength, startColIndex: currentCol, type: COL_TYPE_DIET, addable: true, deletable: true, columnCount: dietLength });
-    } else {
-        groups.push({ text: '식단 (섭취 O - 1, 섭취 X - 0)', colspan: 1, startColIndex: currentCol, type: COL_TYPE_DIET, addable: true, deletable: false, columnCount: 0, style: { minWidth: '60px' } });
-    }
-    return groups;
+  }
+  if (storeBridge.state.isIndividualExposureColumnVisible) {
+    groups.push({ text: '의심원 노출시간', rowspan: 2, startColIndex: currentCol, style: COLUMN_STYLES[COL_TYPE_ONSET] });
+    currentCol++;
+  }
+  groups.push({ text: '증상발현시간', rowspan: 2, startColIndex: currentCol, style: COLUMN_STYLES[COL_TYPE_ONSET] });
+  currentCol++;
+  if (dietLength > 0) {
+    groups.push({ text: '식단 (섭취 O - 1, 섭취 X - 0)', colspan: dietLength, startColIndex: currentCol, type: COL_TYPE_DIET, addable: true, deletable: true, columnCount: dietLength });
+  } else {
+    groups.push({ text: '식단 (섭취 O - 1, 섭취 X - 0)', colspan: 1, startColIndex: currentCol, type: COL_TYPE_DIET, addable: true, deletable: false, columnCount: 0, style: { minWidth: '60px' } });
+  }
+  return groups;
 });
 
 const tableWidth = computed(() => `${allColumnsMeta.value.reduce((total, column) => total + parseInt(column.style?.width || '80px', 10), 0)}px`);
 
 const selectedCellInfo = computed(() => {
-    const { rowIndex, colIndex } = selectionSystem.state.selectedCell;
-    if (rowIndex === null || colIndex === null) return { address: '', value: '' };
-    const columnMeta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
-    if (!columnMeta) return { address: '', value: '' };
-    if (colIndex === 0 && rowIndex >= 0) return { address: '', value: String(rows.value[rowIndex] ? rowIndex + 1 : '') };
+  const { rowIndex, colIndex } = selectionSystem.state.selectedCell;
+  if (rowIndex === null || colIndex === null) return { address: '', value: '' };
+  const columnMeta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
+  if (!columnMeta) return { address: '', value: '' };
+  if (colIndex === 0 && rowIndex >= 0) return { address: '', value: String(rows.value[rowIndex] ? rowIndex + 1 : '') };
 
-    let headerLabel = (columnMeta.headerText || '').replace(/<br\s*\/?>/gi, ' ').trim();
-    if (columnMeta.type === COL_TYPE_IS_PATIENT) headerLabel = headerLabel.split('(')[0].trim();
+  let headerLabel = (columnMeta.headerText || '').replace(/<br\s*\/?>/gi, ' ').trim();
+  if (columnMeta.type === COL_TYPE_IS_PATIENT) headerLabel = headerLabel.split('(')[0].trim();
 
-    const groupedTypes = [COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET];
-    if (rowIndex < 0 && groupedTypes.includes(columnMeta.type)) {
-        const grp = headerGroups.value.find(g => colIndex >= g.startColIndex && colIndex < g.startColIndex + (g.colspan || 1));
-        headerLabel = grp && grp.text ? String(grp.text).split('(')[0].trim() : '';
-    }
+  const groupedTypes = [COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET];
+  if (rowIndex < 0 && groupedTypes.includes(columnMeta.type)) {
+    const grp = headerGroups.value.find(g => colIndex >= g.startColIndex && colIndex < g.startColIndex + (g.colspan || 1));
+    headerLabel = grp && grp.text ? String(grp.text).split('(')[0].trim() : '';
+  }
 
-    const address = rowIndex >= 0 ? `${headerLabel} / ${rowIndex + 1}` : headerLabel;
-    const value = rowIndex < 0 ? getCellValue(null, columnMeta, -1) : getCellValue(rows.value[rowIndex], columnMeta, rowIndex);
-    return { address, value };
+  const address = rowIndex >= 0 ? `${headerLabel} / ${rowIndex + 1}` : headerLabel;
+  const value = rowIndex < 0 ? getCellValue(null, columnMeta, -1) : getCellValue(rows.value[rowIndex], columnMeta, rowIndex);
+  return { address, value };
 });
 
 const filteredRows = computed(() => {
@@ -315,8 +315,8 @@ const filteredRows = computed(() => {
 const validationErrors = computed(() => store.state.validationState?.errors instanceof Map ? store.state.validationState.errors : new Map());
 const filterRowValidationManager = new FilterRowValidationManager();
 const visibleValidationErrors = computed(() => {
-    filterRowValidationManager.updateFilterState(storeBridge.filterState.isFiltered, filteredRows.value, validationErrors.value);
-    return filterRowValidationManager.getVisibleErrors();
+  filterRowValidationManager.updateFilterState(storeBridge.filterState.isFiltered, filteredRows.value, validationErrors.value);
+  return filterRowValidationManager.getVisibleErrors();
 });
 
 const computedActiveFilters = computed(() => new Map(filterState.value.activeFilters || []));
@@ -328,75 +328,75 @@ const { visibleRows, totalHeight, paddingTop, onScroll } = useVirtualScroll(filt
 const focusGrid = () => dataContainerRef.value?.focus();
 
 function getCellValue(row, columnMeta, rowIndex = null) {
-    if (!columnMeta) return '';
-    if (rowIndex < 0) return (columnMeta.headerText || '').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '').trim();
-    if (columnMeta.type === COL_TYPE_SERIAL) return (row && row._originalIndex !== undefined) ? row._originalIndex + 1 : (rowIndex + 1);
-    if (!row || !columnMeta.dataKey) return '';
-    if (columnMeta.cellIndex !== null && columnMeta.cellIndex !== undefined) {
-        return (row[columnMeta.dataKey] && Array.isArray(row[columnMeta.dataKey])) ? (row[columnMeta.dataKey][columnMeta.cellIndex] ?? '') : '';
-    }
-    return row[columnMeta.dataKey] ?? '';
+  if (!columnMeta) return '';
+  if (rowIndex < 0) return (columnMeta.headerText || '').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '').trim();
+  if (columnMeta.type === COL_TYPE_SERIAL) return (row && row._originalIndex !== undefined) ? row._originalIndex + 1 : (rowIndex + 1);
+  if (!row || !columnMeta.dataKey) return '';
+  if (columnMeta.cellIndex !== null && columnMeta.cellIndex !== undefined) {
+    return (row[columnMeta.dataKey] && Array.isArray(row[columnMeta.dataKey])) ? (row[columnMeta.dataKey][columnMeta.cellIndex] ?? '') : '';
+  }
+  return row[columnMeta.dataKey] ?? '';
 }
 
 async function ensureCellIsVisible(rowIndex, colIndex) {
-    // ... (This helper function remains)
-    if (!gridBodyRef.value?.bodyContainer) return;
-    const container = gridBodyRef.value.bodyContainer;
-    let hasScrolled = false;
-    if (rowIndex >= 0) {
-        const rowHeight = 35;
-        const { scrollTop, clientHeight } = container;
-        const rowTop = rowIndex * rowHeight;
-        const rowBottom = rowTop + rowHeight;
-        let newScrollTop = scrollTop;
-        if (rowTop < scrollTop) newScrollTop = rowTop;
-        else if (rowBottom > scrollTop + clientHeight) newScrollTop = rowBottom - clientHeight + 40;
-        if (newScrollTop !== scrollTop) {
-            container.scrollTop = Math.min(newScrollTop, totalHeight.value - clientHeight);
-            hasScrolled = true;
-        }
+  // ... (This helper function remains)
+  if (!gridBodyRef.value?.bodyContainer) return;
+  const container = gridBodyRef.value.bodyContainer;
+  let hasScrolled = false;
+  if (rowIndex >= 0) {
+    const rowHeight = 35;
+    const { scrollTop, clientHeight } = container;
+    const rowTop = rowIndex * rowHeight;
+    const rowBottom = rowTop + rowHeight;
+    let newScrollTop = scrollTop;
+    if (rowTop < scrollTop) newScrollTop = rowTop;
+    else if (rowBottom > scrollTop + clientHeight) newScrollTop = rowBottom - clientHeight + 40;
+    if (newScrollTop !== scrollTop) {
+      container.scrollTop = Math.min(newScrollTop, totalHeight.value - clientHeight);
+      hasScrolled = true;
     }
-    if (colIndex >= 0) {
-        const column = allColumnsMeta.value.find(c => c.colIndex === colIndex);
-        if (!column) return;
-        const { scrollLeft, clientWidth } = container;
-        const colLeft = column.offsetLeft;
-        const colRight = colLeft + parseInt(column.style.width, 10);
-        let newScrollLeft = scrollLeft;
-        if (colLeft < scrollLeft) newScrollLeft = colIndex === 1 ? 0 : colLeft;
-        else if (colRight > scrollLeft + clientWidth) newScrollLeft = colRight - clientWidth;
-        if (newScrollLeft !== scrollLeft) {
-            container.scrollLeft = newScrollLeft;
-            hasScrolled = true;
-        }
+  }
+  if (colIndex >= 0) {
+    const column = allColumnsMeta.value.find(c => c.colIndex === colIndex);
+    if (!column) return;
+    const { scrollLeft, clientWidth } = container;
+    const colLeft = column.offsetLeft;
+    const colRight = colLeft + parseInt(column.style.width, 10);
+    let newScrollLeft = scrollLeft;
+    if (colLeft < scrollLeft) newScrollLeft = colIndex === 1 ? 0 : colLeft;
+    else if (colRight > scrollLeft + clientWidth) newScrollLeft = colRight - clientWidth;
+    if (newScrollLeft !== scrollLeft) {
+      container.scrollLeft = newScrollLeft;
+      hasScrolled = true;
     }
-    if (hasScrolled) await nextTick();
+  }
+  if (hasScrolled) await nextTick();
 }
 
 function captureSnapshotWithFilter(actionType, metadata = {}) {
-    try {
-        storeBridge._captureSnapshot(actionType, metadata);
-    } catch (error) {
-        logger.error(`스냅샷 캡처 실패: ${actionType}`, error);
-    }
+  try {
+    storeBridge._captureSnapshot(actionType, metadata);
+  } catch (error) {
+    logger.error(`스냅샷 캡처 실패: ${actionType}`, error);
+  }
 }
 
 function syncFilterStateAfterHistoryChange() {
-    const newFilterState = { ...storeBridge.filterState };
-    filterState.value = newFilterState;
-    if (storeBridge.setFilterState) {
-        storeBridge.setFilterState(newFilterState);
+  const newFilterState = { ...storeBridge.filterState };
+  filterState.value = newFilterState;
+  if (storeBridge.setFilterState) {
+    storeBridge.setFilterState(newFilterState);
+  }
+  nextTick(() => {
+    const gridBody = gridBodyRef.value;
+    const gridHeader = gridHeaderRef.value;
+    if (gridBody && gridHeader) {
+      if (newFilterState.isFiltered !== filterState.value.isFiltered || newFilterState.activeFilters?.size !== filterState.value.activeFilters?.size) {
+        gridBody.$forceUpdate();
+        gridHeader.$forceUpdate();
+      }
     }
-    nextTick(() => {
-        const gridBody = gridBodyRef.value;
-        const gridHeader = gridHeaderRef.value;
-        if (gridBody && gridHeader) {
-            if (newFilterState.isFiltered !== filterState.value.isFiltered || newFilterState.activeFilters?.size !== filterState.value.activeFilters?.size) {
-                gridBody.$forceUpdate();
-                gridHeader.$forceUpdate();
-            }
-        }
-    });
+  });
 }
 
 // --- Composables Instantiation ---
@@ -407,7 +407,9 @@ const eventHandlerContext = { selectionSystem, storeBridge, cellInputState, vali
 const eventHandlerHelpers = { showContextMenu, hideContextMenu, focusGrid, ensureCellIsVisible, getCellValue, captureSnapshotWithFilter };
 const { onDocumentMouseMoveBound, onDocumentMouseUpBound, ...eventHandlers } = useGridEventHandlers(eventHandlerContext, eventHandlerHelpers);
 
-const { onFileDropped } = useDragDrop(dataOperations.onExcelFileSelected);
+// --- Drag & Drop ---
+const { isDragOver, setupDragDropListeners } = useDragDrop();
+
 
 // --- Pass event handlers to the template ---
 const {
@@ -425,106 +427,106 @@ const {
 
 // --- Lifecycle and Watchers ---
 watch(allColumnsMeta, (newMeta) => {
-    setColumnsMeta(newMeta);
-    nextTick(() => updateHeaderPadding());
+  setColumnsMeta(newMeta);
+  nextTick(() => updateHeaderPadding());
 }, { immediate: true });
 
 watch(() => storeBridge.filterState, (newState) => {
-    if (JSON.stringify(newState) !== JSON.stringify(filterState.value)) {
-        filterState.value = { ...newState };
-        nextTick(() => {
-            if (gridBodyRef.value && gridHeaderRef.value) {
-                gridBodyRef.value.$forceUpdate();
-                gridHeaderRef.value.$forceUpdate();
-            }
-        });
-    }
+  if (JSON.stringify(newState) !== JSON.stringify(filterState.value)) {
+    filterState.value = { ...newState };
+    nextTick(() => {
+      if (gridBodyRef.value && gridHeaderRef.value) {
+        gridBodyRef.value.$forceUpdate();
+        gridHeaderRef.value.$forceUpdate();
+      }
+    });
+  }
 }, { deep: true, immediate: true });
 
 onMounted(() => {
-    registerFunction('storeBridge', storeBridge);
-    registerFunction('showToast', showToast);
-    registerFunction('updateValidationProgress', (progress, processed, total, errors) => {
-        isValidationProgressVisible.value = true;
-        validationProgress.value = progress;
-        validationProcessed.value = processed;
-        validationTotal.value = total;
-        validationErrorCount.value = errors;
-    });
-    registerFunction('hideValidationProgress', () => {
-        isValidationProgressVisible.value = false;
-    });
+  registerFunction('storeBridge', storeBridge);
+  registerFunction('showToast', showToast);
+  registerFunction('updateValidationProgress', (progress, processed, total, errors) => {
+    isValidationProgressVisible.value = true;
+    validationProgress.value = progress;
+    validationProcessed.value = processed;
+    validationTotal.value = total;
+    validationErrorCount.value = errors;
+  });
+  registerFunction('hideValidationProgress', () => {
+    isValidationProgressVisible.value = false;
+  });
 
-    storeBridge.clearAllFilters();
-    if (gridContainerRef.value) {
-        const bodyElement = gridContainerRef.value.querySelector('.grid-body-virtual');
-        if (bodyElement) viewportHeight.value = bodyElement.clientHeight - 5;
-    }
-    setColumnsMeta(allColumnsMeta.value);
+  storeBridge.clearAllFilters();
+  if (gridContainerRef.value) {
+    const bodyElement = gridContainerRef.value.querySelector('.grid-body-virtual');
+    if (bodyElement) viewportHeight.value = bodyElement.clientHeight - 5;
+  }
+  setColumnsMeta(allColumnsMeta.value);
 
-    document.addEventListener('click', hideContextMenu);
-    document.addEventListener('click', handleGlobalClick);
-    const cleanupDragDrop = setupDragDropListeners(onFileDropped);
-    window.addEventListener('resize', handleWindowResize);
+  document.addEventListener('click', hideContextMenu);
+  document.addEventListener('click', handleGlobalClick);
+  const cleanupDragDrop = setupDragDropListeners(onExcelFileSelected);
+  window.addEventListener('resize', handleWindowResize);
 
-    onBeforeUnmount(() => {
-        document.removeEventListener('click', hideContextMenu);
-        document.removeEventListener('click', handleGlobalClick);
-        window.removeEventListener('resize', handleWindowResize);
-        if (onDocumentMouseMoveBound.value) document.removeEventListener('mousemove', onDocumentMouseMoveBound.value);
-        if (onDocumentMouseUpBound.value) document.removeEventListener('mouseup', onDocumentMouseUpBound.value);
-        if (cleanupDragDrop) cleanupDragDrop();
-        if (validationManager?.clearTimers) validationManager.clearTimers();
-    });
+  onBeforeUnmount(() => {
+    document.removeEventListener('click', hideContextMenu);
+    document.removeEventListener('click', handleGlobalClick);
+    window.removeEventListener('resize', handleWindowResize);
+    if (onDocumentMouseMoveBound.value) document.removeEventListener('mousemove', onDocumentMouseMoveBound.value);
+    if (onDocumentMouseUpBound.value) document.removeEventListener('mouseup', onDocumentMouseUpBound.value);
+    if (cleanupDragDrop) cleanupDragDrop();
+    if (validationManager?.clearTimers) validationManager.clearTimers();
+  });
 });
 
 function handleFocusFirstError() {
-    const errors = Array.from(visibleValidationErrors.value.entries());
-    if (errors.length === 0) return;
-    const [key] = errors[0];
-    const [rowIndex, uniqueKey] = key.split('_');
-    const originalRowIndex = parseInt(rowIndex, 10);
-    const columnMeta = allColumnsMeta.value.find(col => validationManager.getColumnUniqueKey(col) === uniqueKey);
-    if (!columnMeta) return;
-    const colIndex = columnMeta.colIndex;
-    let targetRowIndex = originalRowIndex;
-    if (storeBridge.filterState.isFiltered) {
-        const filteredIndex = filteredRows.value.findIndex(row => row._originalIndex === originalRowIndex);
-        if (filteredIndex !== -1) targetRowIndex = filteredIndex;
-    }
-    ensureCellIsVisible(targetRowIndex, colIndex);
-    selectionSystem.selectCell(targetRowIndex, colIndex);
-    focusGrid();
+  const errors = Array.from(visibleValidationErrors.value.entries());
+  if (errors.length === 0) return;
+  const [key] = errors[0];
+  const [rowIndex, uniqueKey] = key.split('_');
+  const originalRowIndex = parseInt(rowIndex, 10);
+  const columnMeta = allColumnsMeta.value.find(col => validationManager.getColumnUniqueKey(col) === uniqueKey);
+  if (!columnMeta) return;
+  const colIndex = columnMeta.colIndex;
+  let targetRowIndex = originalRowIndex;
+  if (storeBridge.filterState.isFiltered) {
+    const filteredIndex = filteredRows.value.findIndex(row => row._originalIndex === originalRowIndex);
+    if (filteredIndex !== -1) targetRowIndex = filteredIndex;
+  }
+  ensureCellIsVisible(targetRowIndex, colIndex);
+  selectionSystem.selectCell(targetRowIndex, colIndex);
+  focusGrid();
 }
 
 function updateHeaderPadding() {
-    const newScrollbarWidth = calculateScrollbarWidth();
-    if (newScrollbarWidth !== scrollbarWidth.value) {
-        scrollbarWidth.value = newScrollbarWidth;
-        nextTick(() => {
-            if (gridHeaderRef.value?.headerContainer) {
-                gridHeaderRef.value.headerContainer.style.paddingRight = `${scrollbarWidth.value}px`;
-            }
-        });
-    }
+  const newScrollbarWidth = calculateScrollbarWidth();
+  if (newScrollbarWidth !== scrollbarWidth.value) {
+    scrollbarWidth.value = newScrollbarWidth;
+    nextTick(() => {
+      if (gridHeaderRef.value?.headerContainer) {
+        gridHeaderRef.value.headerContainer.style.paddingRight = `${scrollbarWidth.value}px`;
+      }
+    });
+  }
 }
 
 function calculateScrollbarWidth() {
-    const bodyElement = gridBodyRef.value?.bodyContainer;
-    if (!bodyElement) return 0;
-    return bodyElement.scrollHeight > bodyElement.clientHeight ? bodyElement.offsetWidth - bodyElement.clientWidth : 0;
+  const bodyElement = gridBodyRef.value?.bodyContainer;
+  if (!bodyElement) return 0;
+  return bodyElement.scrollHeight > bodyElement.clientHeight ? bodyElement.offsetWidth - bodyElement.clientWidth : 0;
 }
 
 function handleGridScroll(event) {
-    const { scrollLeft } = event.target;
-    if (scrollLeft !== lastScrollLeft.value) {
-        lastScrollLeft.value = scrollLeft;
-        if (gridHeaderRef.value?.headerContainer) {
-            gridHeaderRef.value.headerContainer.scrollLeft = scrollLeft;
-        }
+  const { scrollLeft } = event.target;
+  if (scrollLeft !== lastScrollLeft.value) {
+    lastScrollLeft.value = scrollLeft;
+    if (gridHeaderRef.value?.headerContainer) {
+      gridHeaderRef.value.headerContainer.scrollLeft = scrollLeft;
     }
-    updateHeaderPadding();
-    onScroll(event);
+  }
+  updateHeaderPadding();
+  onScroll(event);
 }
 
 function handleWindowResize() {
