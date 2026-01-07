@@ -1,6 +1,6 @@
 {
   "name": "webpage",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -40,14 +40,15 @@
     "lodash.debounce": "^4.0.8",
     "mitt": "^3.0.1",
     "papaparse": "^5.5.2",
+    "pinia": "^3.0.4",
     "tui-grid": "^4.21.22",
     "v-calendar": "^3.1.2",
     "vue": "^3.2.13",
     "vue-chartjs": "^5.3.2",
+    "vue-router": "^4.6.4",
     "vue-toastification": "^2.0.0-rc.5",
     "vue-virtual-scroller": "^2.0.0-beta.8",
     "vuetify": "^3.7.0-beta.1",
-    "vuex": "^4.0.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

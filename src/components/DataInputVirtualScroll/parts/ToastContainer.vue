@@ -51,7 +51,7 @@ const { toasts, removeToast } = useToast();
 /* Toast 시스템 스타일 */
 .toast-container {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
   z-index: 10000;
   display: flex;

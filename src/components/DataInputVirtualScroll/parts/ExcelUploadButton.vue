@@ -99,4 +99,15 @@ function handleFileSelect(event) {
   to { transform: rotate(360deg); }
 }
 .upload-text { font-size: 14px; }
+
+/* 반응형: 화면이 좁아지면 텍스트 숨김 */
+@media (max-width: 1300px) {
+  .upload-text {
+    display: none;
+  }
+  
+  .function-button {
+    padding: 8px 6px;
+  }
+}
 </style>

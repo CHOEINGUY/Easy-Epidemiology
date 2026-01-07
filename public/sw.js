@@ -1,5 +1,5 @@
 // Service Worker for offline functionality
-const CACHE_NAME = 'easy-epidemiology-v1.4';
+const CACHE_NAME = 'easy-epidemiology-v2.0';
 const urlsToCache = [
   './',
   './index.html',

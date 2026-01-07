@@ -3,7 +3,7 @@ module.exports = defineConfig({
   transpileDependencies: true,
   
   // 프로덕션 배포를 위한 설정
-  publicPath: './',
+  publicPath: '/',
   
   // 빌드 최적화 설정
   productionSourceMap: false,
@@ -28,7 +28,7 @@ module.exports = defineConfig({
     config
       .plugin('html')
       .tap(args => {
-        args[0].title = 'Easy-Epidemiology Web v1.4';
+        args[0].title = 'Easy-Epidemiology Web v2.0';
         // 오프라인 실행을 위한 메타 태그 추가
         args[0].meta = {
           ...args[0].meta,
@@ -44,7 +44,13 @@ module.exports = defineConfig({
         return args;
       });
 
-
+    // Feature flags definition
+    config.plugin('define').tap(definitions => {
+      Object.assign(definitions[0], {
+        __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false'
+      });
+      return definitions;
+    });
 
     // 외부 리소스 처리
     config.module

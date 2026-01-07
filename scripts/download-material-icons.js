@@ -4,14 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-// Material Icons 폰트 파일 URLs (최신 버전)
+// Material Icons 폰트 파일 URLs (최신 버전 - 2025년 1월 업데이트)
 const fontUrls = {
-  'MaterialIcons-Regular.woff2': 'https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.woff2',
-  'MaterialIcons-Regular.woff': 'https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.woff',
-  'MaterialIcons-Regular.ttf': 'https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.ttf',
-  'MaterialIconsOutlined-Regular.woff2': 'https://fonts.gstatic.com/s/materialiconsoutlined/v108/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.woff2',
-  'MaterialIconsOutlined-Regular.woff': 'https://fonts.gstatic.com/s/materialiconsoutlined/v108/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.woff',
-  'MaterialIconsOutlined-Regular.ttf': 'https://fonts.gstatic.com/s/materialiconsoutlined/v108/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.ttf'
+  'MaterialIcons-Regular.ttf': 'https://fonts.gstatic.com/s/materialicons/v143/flUhRq6tzZclQEJ-Vdg-IuiaDsNZ.ttf',
+  'MaterialIconsOutlined-Regular.otf': 'https://fonts.gstatic.com/s/materialiconsoutlined/v110/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUcd.otf'
 };
 
 // 폰트 디렉토리 생성

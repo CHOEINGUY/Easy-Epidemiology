@@ -135,7 +135,7 @@ export function validateDateTime(value, rule) {
     };
   }
   
-  // 실제 유효한 날짜인지 검증
+  // 실제 유효한 날짜인지 검증 (Strict check)
   const date = new Date(stringValue.replace(' ', 'T'));
   if (isNaN(date.getTime())) {
     return { 
@@ -143,7 +143,25 @@ export function validateDateTime(value, rule) {
       message: '올바른 날짜를 입력하세요.' 
     };
   }
-  
+
+  // 입력된 문자열과 파싱된 날짜 객체의 각 부분이 일치하는지 확인 (롤오버 방지)
+  const [datePart, timePart] = stringValue.split(' ');
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [hh, mm] = timePart.split(':').map(Number);
+
+  if (
+    date.getFullYear() !== y ||
+    (date.getMonth() + 1) !== m ||
+    date.getDate() !== d ||
+    date.getHours() !== hh ||
+    date.getMinutes() !== mm
+  ) {
+    return { 
+      valid: false, 
+      message: '올바른 날짜를 입력하세요.' 
+    };
+  }
+
   return { valid: true };
 }
 

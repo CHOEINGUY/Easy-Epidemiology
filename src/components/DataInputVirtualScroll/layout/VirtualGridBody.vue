@@ -431,9 +431,7 @@ td {
   background-color: white; /* 명시적으로 흰색 배경 설정 */
 }
 
-.cell-selected {
-  /* This style is now defined in the parent component with :deep */
-}
+
 
 .serial-cell {
   background-color: #f1f3f4;
@@ -516,4 +514,48 @@ td {
   font-weight: 600;
   z-index: 2;
 }
-</style> 
+</style>
+
+<style>
+/* MacOS style scrollbar with expand-on-hover effect */
+/* Global Scope for .grid-body-virtual */
+
+/* 1. Base Scrollbar Dimensions (Fixed to prevent layout shift) */
+.grid-body-virtual::-webkit-scrollbar {
+  width: 12px;  /* Reduced from 14px for a sleeker look */
+  height: 12px;
+  background-color: transparent;
+}
+
+.grid-body-virtual::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* 2. Scrollbar Thumb (The moving part) */
+.grid-body-virtual::-webkit-scrollbar-thumb {
+  /* Color */
+  background-color: rgba(0, 0, 0, 0.3); /* Slightly darker base for better visibility */
+  
+  /* Shape & Transparency Trick for "Thin" look */
+  border-radius: 12px;
+  border: 3px solid transparent; /* default: 12 - 3 - 3 = 6px visible width */
+  background-clip: content-box;
+  
+  /* Smoother Transition with cubic-bezier */
+  transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              border-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 3. Hover State (Expand) */
+/* When hovering over the scrollbar THUMB, decrease border width to make thumb larger */
+.grid-body-virtual::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(95, 99, 104, 0.7); /* Dark grey with high opacity on hover */
+  border-width: 1px; /* expansion: 12 - 1 - 1 = 10px visible width */
+}
+
+/* Corner */
+.grid-body-virtual::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+</style>
+ 

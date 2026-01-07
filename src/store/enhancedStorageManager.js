@@ -1,5 +1,6 @@
 import { CellInputState } from './cellInputState.js';
-import { getMigrationStatus, executeMigration } from './utils/migration.js';
+import { safeLoadFromStorage } from './utils/recovery.js';
+
 
 /**
  * 개선된 저장 매니저 클래스
@@ -152,7 +153,7 @@ export class EnhancedStorageManager {
     const { rowIndex, key, value, cellIndex } = editData;
     
     // 기존 store.js의 updateCell 액션 호출
-    this.legacyStore.dispatch('updateCell', {
+    this.legacyStore.dispatch('epidemic/updateCell', {
       rowIndex,
       key,
       value,
@@ -278,18 +279,6 @@ export class EnhancedStorageManager {
    */
   loadData() {
     try {
-      // 마이그레이션 상태 확인
-      const migrationStatus = getMigrationStatus();
-      
-      if (migrationStatus.needsMigration) {
-        const migrationResult = executeMigration();
-        
-        if (!migrationResult.success) {
-          console.error('[EnhancedStorageManager] 마이그레이션 실패:', migrationResult.error);
-          return null;
-        }
-      }
-      
       // 사용자별 데이터 키 사용
       const dataKey = this.getUserDataKey();
       const newData = localStorage.getItem(dataKey);
@@ -298,6 +287,74 @@ export class EnhancedStorageManager {
         const parsedData = JSON.parse(newData);
         this.isInitialized = true;
         return parsedData;
+      }
+
+      // --- 마이그레이션 로직 ---
+      console.log('[EnhancedStorageManager] 새로운 형식의 데이터가 없습니다. 레거시 데이터 마이그레이션을 시도합니다.');
+      
+      // 1. headers, rows, 기본 visibility 로드
+      const legacyData = safeLoadFromStorage();
+      
+      // 2. 추가 설정 로드 (StoreBridge가 아닌 settings.js에서 관리하던 항목들)
+      const exposureDateTime = localStorage.getItem('exposureDateTime') || '';
+      const selectedSuspectedFoods = localStorage.getItem('selectedSuspectedFoods') || '';
+      
+      let epidemicCurveSettings = null;
+      try {
+        const savedCurve = localStorage.getItem('epidemicCurveSettings');
+        if (savedCurve) epidemicCurveSettings = JSON.parse(savedCurve);
+      } catch (e) {
+        console.warn('Failed to load legacy epidemicCurveSettings', e);
+      }
+
+      let analysisResults = { caseControl: [], cohort: [] };
+      try {
+        const savedResults = localStorage.getItem('analysisResults');
+        if (savedResults) analysisResults = JSON.parse(savedResults);
+      } catch (e) {
+        console.warn('Failed to load legacy analysisResults', e);
+      }
+
+      let yatesCorrectionSettings = { caseControl: false, cohort: false };
+      try {
+        const savedYates = localStorage.getItem('yatesCorrectionSettings');
+        if (savedYates) yatesCorrectionSettings = JSON.parse(savedYates);
+      } catch (e) {
+        console.warn('Failed to load legacy yatesCorrectionSettings', e);
+      }
+
+      // 3. 통합 데이터 객체 구성
+      const migratedData = {
+        version: '2.0', // 마이그레이션된 버전
+        timestamp: Date.now(),
+        headers: legacyData.headers,
+        rows: legacyData.rows,
+        settings: {
+          // 기존 safeLoadFromStorage에서 가져온 것들
+          isIndividualExposureColumnVisible: legacyData.settings.isIndividualExposureColumnVisible,
+          isConfirmedCaseColumnVisible: legacyData.settings.isConfirmedCaseColumnVisible,
+          
+          // 추가 로드한 것들
+          exposureDateTime,
+          selectedSuspectedFoods,
+          epidemicCurveSettings,
+          analysisResults,
+          yatesCorrectionSettings,
+          
+          // 기본값들
+          selectedSymptomInterval: 6, 
+          selectedIncubationInterval: 6,
+          suspectedSource: '', 
+          analysisOptions: { statMethod: 'chi-square', haldaneCorrection: false }
+        },
+        validationState: { errors: {}, version: 0 }
+      };
+
+      if (legacyData) {
+        console.log('[EnhancedStorageManager] 레거시 데이터 마이그레이션 성공. 새로운 형식으로 저장합니다.');
+        this.saveData(migratedData); // 새 형식으로 저장
+        this.isInitialized = true;
+        return migratedData;
       }
       
       return null;
@@ -316,7 +373,7 @@ export class EnhancedStorageManager {
   saveData(data) {
     try {
       const saveData = {
-        version: '1.0',
+        version: '2.0',
         timestamp: Date.now(),
         userId: this.currentUser?.username,
         ...data
@@ -348,8 +405,8 @@ export class EnhancedStorageManager {
     
     // 유효성 검사 오류를 안전하게 변환
     const validationErrors = {};
-    if (currentState.validationState?.errors) {
-      currentState.validationState.errors.forEach((error, key) => {
+    if (currentState.epidemic.validationState?.errors) {
+      currentState.epidemic.validationState.errors.forEach((error, key) => {
         // error가 객체인지 확인하고 안전하게 저장
         if (typeof error === 'object' && error !== null) {
           validationErrors[key] = {
@@ -370,20 +427,34 @@ export class EnhancedStorageManager {
       });
     }
     
+    // settings 모듈의 전체 상태 저장
+    const settingsState = currentState.settings;
+
     const data = {
-      headers: currentState.headers,
-      rows: currentState.rows,
+      headers: currentState.epidemic.headers,
+      rows: currentState.epidemic.rows,
       settings: {
-        isIndividualExposureColumnVisible: currentState.isIndividualExposureColumnVisible,
-        isConfirmedCaseColumnVisible: currentState.isConfirmedCaseColumnVisible
+        // 기존
+        isIndividualExposureColumnVisible: settingsState.isIndividualExposureColumnVisible,
+        isConfirmedCaseColumnVisible: settingsState.isConfirmedCaseColumnVisible,
+        
+        // 추가: 모든 설정 상태 저장
+        selectedSymptomInterval: settingsState.selectedSymptomInterval,
+        exposureDateTime: settingsState.exposureDateTime,
+        selectedIncubationInterval: settingsState.selectedIncubationInterval,
+        analysisOptions: settingsState.analysisOptions,
+        yatesCorrectionSettings: settingsState.yatesCorrectionSettings,
+        selectedSuspectedFoods: settingsState.selectedSuspectedFoods,
+        epidemicCurveSettings: settingsState.epidemicCurveSettings,
+        suspectedSource: settingsState.suspectedSource,
+        analysisResults: settingsState.analysisResults
       },
       validationState: {
         errors: validationErrors,
-        version: currentState.validationState?.version || 0
+        version: currentState.epidemic.validationState?.version || 0
       }
     };
     
-    console.log('[EnhancedStorageManager] 유효성 검사 오류 저장:', validationErrors);
     return this.saveData(data);
   }
 } 

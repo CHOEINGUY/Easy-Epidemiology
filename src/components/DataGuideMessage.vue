@@ -1,16 +1,27 @@
 <template>
-  <div class="data-guide-container">
-    <div class="guide-content">
-      <div class="guide-title">{{ title }}</div>
-      <div class="guide-description">{{ description }}</div>
+  <div class="data-guide-wrapper">
+    <div class="data-guide-card">
+      <div class="guide-header">
+        <div class="guide-icon-box">
+          <span class="material-icons guide-main-icon">{{ icon }}</span>
+        </div>
+        <h2 class="guide-title">{{ title }}</h2>
+        <p class="guide-description">{{ description }}</p>
+      </div>
+
       <div class="guide-steps">
         <div 
           v-for="(step, index) in steps" 
           :key="index" 
-          class="step-item"
+          class="step-card"
         >
-          <span class="step-number">{{ step.number }}</span>
-          <span class="step-text">{{ step.text }}</span>
+          <div class="step-indicator">
+            <span class="step-badge">{{ step.number }}</span>
+            <div v-if="index < steps.length - 1" class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-text">{{ step.text }}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -39,72 +50,123 @@ defineProps({
 </script>
 
 <style scoped>
-.data-guide-container {
+.data-guide-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: linear-gradient(135deg, #f8f9ff 0%, #e8f4fd 100%);
-  border: 2px solid #e3f2fd;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(26, 115, 232, 0.1);
-  margin: 20px 0;
+  padding: 40px 20px;
   width: 100%;
   box-sizing: border-box;
 }
 
-.guide-content {
-  max-width: 600px;
-  text-align: center;
+.data-guide-card {
+  max-width: 650px;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.02);
+  padding: 40px;
+  transition: transform 0.3s ease;
 }
 
-.guide-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 12px;
+.guide-header {
+  text-align: center;
+  margin-bottom: 35px;
+}
+
+.guide-icon-box {
+  width: 64px;
+  height: 64px;
+  background: #f0f7ff;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
   color: #1a73e8;
 }
 
+.guide-main-icon {
+  font-size: 32px;
+}
+
+.guide-title {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #202124;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.02em;
+}
+
 .guide-description {
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: #5f6368;
-  margin-bottom: 20px;
-  line-height: 1.5;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .guide-steps {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  align-items: center;
+  gap: 0;
 }
 
-.step-item {
+.step-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  max-width: 500px;
+  gap: 20px;
 }
 
-.step-number {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1a73e8;
-  background: #e8f4fd;
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 32px;
+}
+
+.step-badge {
+  width: 32px;
+  height: 32px;
+  background: #1a73e8;
+  color: white;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 2;
+  box-shadow: 0 4px 10px rgba(26, 115, 232, 0.3);
+}
+
+.step-line {
+  width: 2px;
+  flex: 1;
+  background: #eef2f6;
+  margin: 4px 0;
+}
+
+.step-content {
+  flex: 1;
+  padding-bottom: 25px;
+}
+
+.step-card:last-child .step-content {
+  padding-bottom: 0;
 }
 
 .step-text {
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: #3c4043;
-  line-height: 1.4;
+  line-height: 1.5;
+  padding-top: 4px;
   text-align: left;
 }
-</style> 
+
+/* Hover Effect */
+.data-guide-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+}
+</style>
+ 

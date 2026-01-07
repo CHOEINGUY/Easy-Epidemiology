@@ -61,7 +61,7 @@
               <span class="material-icons-outlined function-button-icon">
                 filter_list
               </span>
-              필터
+              <span class="button-label">필터</span>
               <span class="filter-badge">적용됨</span>
             </button>
           </div>
@@ -82,7 +82,7 @@
             <span class="material-icons-outlined function-button-icon">
               verified_user
             </span>
-            확진여부
+            <span class="button-label">확진여부</span>
           </button>
         </div>
         <div class="control-button-wrapper" style="margin-left: 2px;">
@@ -97,7 +97,7 @@
             <span class="material-icons-outlined function-button-icon">
               access_time
             </span>
-            개별 노출시간
+            <span class="button-label">개별 노출시간</span>
           </button>
         </div>
       </div>
@@ -131,7 +131,7 @@
             <span class="material-icons-outlined function-button-icon">
               description
             </span>
-            양식 다운로드
+            <span class="button-label">양식 다운로드</span>
           </button>
           <div v-if="showTemplateMenu" class="template-menu" @mouseenter="showTemplateMenuHover" @mouseleave="hideTemplateMenuHover" @click.stop>
             <button class="template-menu-button" tabindex="-1" @click="onSelectTemplate('basic')">기본 양식</button>
@@ -150,7 +150,7 @@
             <span class="material-icons-outlined function-button-icon">
               file_download
             </span>
-            데이터 내보내기
+            <span class="button-label">데이터 내보내기</span>
           </button>
         </div>
       </div>
@@ -172,7 +172,7 @@
             <span class="material-icons-outlined function-button-icon">
               content_copy
             </span>
-            전체 복사
+            <span class="button-label">전체 복사</span>
           </button>
         </div>
         <div class="control-button-wrapper">
@@ -187,7 +187,7 @@
             <span class="material-icons-outlined function-button-icon">
               delete_outline
             </span>
-            빈 열 삭제
+            <span class="button-label">빈 열 삭제</span>
           </button>
         </div>
         <div class="control-button-wrapper">
@@ -202,7 +202,7 @@
             <span class="material-icons-outlined function-button-icon">
               refresh
             </span>
-            전체 초기화
+            <span class="button-label">전체 초기화</span>
           </button>
         </div>
       </div>
@@ -224,7 +224,7 @@
 
 <script setup>
 import { ref, watch, defineProps, defineEmits, computed, nextTick } from 'vue';
-import { useStore } from 'vuex';
+import { useSettingsStore } from '../../../stores/settingsStore';
 import ExcelUploadButton from '../parts/ExcelUploadButton.vue';
 
 const props = defineProps({
@@ -269,18 +269,18 @@ const props = defineProps({
 
 const emit = defineEmits(['update-cell-value', 'enter-pressed', 'excel-file-selected', 'download-template', 'export-data', 'copy-entire-data', 'delete-empty-cols', 'reset-sheet', 'toggle-exposure-col', 'toggle-confirmed-case-col', 'undo', 'redo', 'clear-all-filters']);
 
-const store = useStore();
+const settingsStore = useSettingsStore();
 const inputValue = ref(props.cellValue);
 const showTemplateMenu = ref(false);
 
 // 개별 노출시간 컬럼 가시성 상태
 const isIndividualExposureColumnVisible = computed(
-  () => store.state.isIndividualExposureColumnVisible
+  () => settingsStore.isIndividualExposureColumnVisible
 );
 
 // 확진자 여부 컬럼 가시성 상태
 const isConfirmedCaseColumnVisible = computed(
-  () => store.state.isConfirmedCaseColumnVisible
+  () => settingsStore.isConfirmedCaseColumnVisible
 );
 
 // === Tooltip State ===
@@ -397,6 +397,8 @@ function onRedo() {
 }
 
 function onFilterButtonClick() {
+  // 버튼이 사라지기 때문에 툴팁을 강제로 숨겨야 함
+  hideTooltip();
   // 필터 버튼 클릭 시 모든 필터 해제
   emit('clear-all-filters');
 }
@@ -534,6 +536,28 @@ function onFilterButtonClick() {
   min-width: 0;
 }
 
+/* 반응형: 화면이 좁아지면 텍스트 숨김 (아이콘만 표시) */
+@media (max-width: 1300px) {
+  .button-label {
+    display: none;
+  }
+  
+  .filter-badge {
+    display: none; /* 공간 절약을 위해 배지도 숨김 */
+  }
+  
+  /* 아이콘만 남을 때 여백 조정 */
+  .function-button {
+    padding: 8px 6px;
+  }
+  
+  .function-button-icon {
+    margin-right: 0;
+  }
+  
+  /* 툴팁이나 호버 효과는 그대로 유지됨 */
+}
+
 .function-button:hover {
   background: #f1f3f4;
   color: #1a73e8;
@@ -561,6 +585,7 @@ function onFilterButtonClick() {
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
+  font-feature-settings: 'liga';
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
   flex-shrink: 0;

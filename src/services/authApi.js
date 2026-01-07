@@ -69,12 +69,36 @@ class AuthApiService {
     });
   }
 
-  // 로그인
+  // 로그인 - 개발 모드: API 우회
   async login(credentials) {
-    return this.makeRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials)
-    });
+    console.log('🔓 개발 모드: 로그인 API 우회');
+    
+    // 더미 사용자 데이터
+    const dummyUser = {
+      id: 'dev-user-001',
+      email: credentials.identifier || 'dev@example.com',
+      name: '개발자',
+      organization: '개발팀',
+      role: 'admin',
+      isApproved: true,
+      approved: true,
+      createdAt: new Date().toISOString()
+    };
+    
+    // 더미 토큰 생성
+    const dummyToken = `dev-token-${Date.now()}`;
+    
+    // 로컬 스토리지에 저장
+    tokenManager.saveToken(dummyToken);
+    userManager.saveUser(dummyUser);
+    
+    return {
+      success: true,
+      data: {
+        token: dummyToken,
+        user: dummyUser
+      }
+    };
   }
 
   // 토큰 검증
@@ -118,101 +142,70 @@ class AdminApiService {
   }
 
   // API 요청 헬퍼 함수 (관리자용)
-  async makeRequest(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`;
-    const token = localStorage.getItem('authToken');
-    
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options.headers
-      },
-      ...options
-    };
-
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'API 요청 실패');
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Admin API Error:', error);
-      throw error;
-    }
+  // 개발 모드: 모든 API 호출 우회
+  async makeRequest() {
+    console.log('🔓 개발 모드: Admin API 우회');
+    return { success: true };
   }
 
-  // 승인 대기 사용자 목록
+  // 승인 대기 사용자 목록 - 개발 모드
   async getPendingUsers() {
-    return this.makeRequest('/api/admin/pending-users', {
-      method: 'GET'
-    });
+    console.log('🔓 개발 모드: getPendingUsers 우회');
+    return { success: true, data: [] };
   }
 
-  // 사용자 승인
-  async approveUser(userId) {
-    return this.makeRequest('/api/admin/approve', {
-      method: 'POST',
-      body: JSON.stringify({ userId })
-    });
+  // 사용자 승인 - 개발 모드
+  async approveUser() {
+    return { success: true };
   }
 
-  // 사용자 거부
-  async rejectUser(userId) {
-    return this.makeRequest('/api/admin/reject', {
-      method: 'POST',
-      body: JSON.stringify({ userId })
-    });
+  // 사용자 거부 - 개발 모드
+  async rejectUser() {
+    return { success: true };
   }
 
-  // 일괄 사용자 승인
-  async bulkApproveUsers(userIds) {
-    return this.makeRequest('/api/admin/bulk-approve', {
-      method: 'POST',
-      body: JSON.stringify({ userIds })
-    });
+  // 일괄 사용자 승인 - 개발 모드
+  async bulkApproveUsers() {
+    return { success: true };
   }
 
-  // 일괄 사용자 거부
-  async bulkRejectUsers(userIds) {
-    return this.makeRequest('/api/admin/bulk-reject', {
-      method: 'POST',
-      body: JSON.stringify({ userIds })
-    });
+  // 일괄 사용자 거부 - 개발 모드
+  async bulkRejectUsers() {
+    return { success: true };
   }
 
-  // 전체 사용자 목록
+  // 전체 사용자 목록 - 개발 모드
   async getAllUsers() {
-    return this.makeRequest('/api/admin/users', {
-      method: 'GET'
-    });
+    console.log('🔓 개발 모드: 사용자 목록 API 우회');
+    return {
+      success: true,
+      data: [
+        {
+          id: 'dev-user-001',
+          email: 'dev@example.com',
+          name: '개발자',
+          organization: '개발팀',
+          role: 'admin',
+          isApproved: true,
+          createdAt: new Date().toISOString()
+        }
+      ]
+    };
   }
 
-  // 사용자 삭제
-  async deleteUser(userId) {
-    return this.makeRequest(`/api/admin/delete-user?userId=${userId}`, {
-      method: 'DELETE'
-    });
+  // 사용자 삭제 - 개발 모드
+  async deleteUser() {
+    return { success: true };
   }
 
-  // 사용자 권한 변경
-  async updateUserRole(userId, role) {
-    return this.makeRequest('/api/admin/update-role', {
-      method: 'POST',
-      body: JSON.stringify({ userId, role })
-    });
+  // 사용자 권한 변경 - 개발 모드
+  async updateUserRole() {
+    return { success: true };
   }
 
-  // 사용자 정보 업데이트
-  async updateUserInfo(userId, userInfo) {
-    return this.makeRequest('/api/admin/update-user-info', {
-      method: 'POST',
-      body: JSON.stringify({ userId, ...userInfo })
-    });
+  // 사용자 정보 업데이트 - 개발 모드
+  async updateUserInfo() {
+    return { success: true };
   }
 }
 
@@ -237,30 +230,11 @@ export const tokenManager = {
     localStorage.removeItem('authToken');
   },
 
-  // 토큰 유효성 확인
+  // 토큰 유효성 확인 (개발 모드: 항상 true 반환)
   async validateToken() {
-    const token = this.getToken();
-    if (!token) return false;
-
-    try {
-      const result = await authApi.verifyToken(token);
-      if (result.success && (result.data.user.isApproved || result.data.user.approved)) {
-        // 토큰이 유효하면 사용자 정보도 업데이트
-        userManager.saveUser(result.data.user);
-        return true;
-      } else {
-        // 토큰이 유효하지 않으면 정리
-        this.removeToken();
-        userManager.removeUser();
-        return false;
-      }
-    } catch (error) {
-      console.error('토큰 검증 실패:', error);
-      // 에러 발생 시 정리
-      this.removeToken();
-      userManager.removeUser();
-      return false;
-    }
+    // 개발 모드에서는 API 호출 없이 항상 성공 반환
+    console.log('🔓 개발 모드: 토큰 검증 우회');
+    return true;
   }
 };
 
@@ -271,10 +245,23 @@ export const userManager = {
     localStorage.setItem('user', JSON.stringify(user));
   },
 
-  // 사용자 정보 가져오기
+  // 사용자 정보 가져오기 (개발 모드: 더미 사용자 반환)
   getUser() {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    if (userStr) {
+      return JSON.parse(userStr);
+    }
+    // 개발 모드: 더미 사용자 반환
+    return {
+      id: 'dev-user-001',
+      email: 'dev@example.com',
+      name: '개발자',
+      organization: '개발팀',
+      role: 'admin',
+      isApproved: true,
+      approved: true,
+      createdAt: new Date().toISOString()
+    };
   },
 
   // 사용자 정보 삭제
@@ -282,20 +269,11 @@ export const userManager = {
     localStorage.removeItem('user');
   },
 
-  // 로그인 상태 확인
+  // 로그인 상태 확인 (개발 모드: 항상 true 반환)
   isLoggedIn() {
-    const user = this.getUser();
-    const token = tokenManager.getToken();
-    
-    // 사용자 정보와 토큰이 모두 있어야 로그인 상태로 간주
-    if (!user || !token) {
-      return false;
-    }
-    
-    // 사용자가 승인된 상태인지 확인 (둘 다 체크)
-    const isApproved = user.isApproved || user.approved;
-    
-    return isApproved;
+    // 개발 모드에서는 항상 로그인 상태로 간주
+    console.log('🔓 개발 모드: 항상 로그인 상태');
+    return true;
   },
 
   // 관리자 권한 확인

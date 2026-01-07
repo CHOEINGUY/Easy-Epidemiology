@@ -5,6 +5,7 @@
     class="context-menu"
     :style="menuStyle"
     @contextmenu.prevent
+    @mousedown.stop
   >
     <template v-for="(item, index) in items" :key="index">
       <div v-if="item.type === 'separator'" class="context-menu-separator"></div>

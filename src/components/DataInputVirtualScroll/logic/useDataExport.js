@@ -367,14 +367,16 @@ export function useDataExport() {
    */
   const downloadTemplate = (type = 'basic') => {
     const link = document.createElement('a');
+    const baseUrl = process.env.BASE_URL || './';
+    
     if (type === 'individual') {
-      link.href = './Easy-Epidemiology_Individual_Exposure_Time_Template.xlsx';
+      link.href = `${baseUrl}Easy-Epidemiology_Individual_Exposure_Time_Template.xlsx`;
       link.setAttribute(
         'download',
         'Easy-Epidemiology_Individual_Exposure_Time_Template.xlsx'
       );
     } else {
-      link.href = './Easy-Epidemiology_Template.xlsx';
+      link.href = `${baseUrl}Easy-Epidemiology_Template.xlsx`;
       link.setAttribute('download', 'Easy-Epidemiology_Template.xlsx');
     }
     document.body.appendChild(link);

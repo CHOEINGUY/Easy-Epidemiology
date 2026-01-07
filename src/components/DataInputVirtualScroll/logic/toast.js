@@ -53,33 +53,33 @@ export function removeToast(id) {
 /**
  * 확인/취소 버튼이 있는 토스트를 표시합니다
  * @param {string} message - 표시할 메시지
- * @param {Function} onConfirm - 확인 버튼 클릭 시 실행할 함수
- * @param {Function} onCancel - 취소 버튼 클릭 시 실행할 함수 (기본값: null)
+ * @returns {Promise<boolean>} 확인 시 true, 취소 시 false
  */
-export function showConfirmToast(message, onConfirm, onCancel = null) {
-  const id = ++toastIdCounter;
-  const toast = {
-    id,
-    message,
-    type: 'confirm',
-    onConfirm: () => {
-      removeToast(id);
-      onConfirm();
-    },
-    onCancel: onCancel ? () => {
-      removeToast(id);
-      onCancel();
-    } : () => {
-      removeToast(id);
+export function showConfirmToast(message) {
+  return new Promise((resolve) => {
+    const id = ++toastIdCounter;
+    console.log('showConfirmToast called', id); // Debug: Force HMR
+    const toast = {
+      id,
+      message,
+      type: 'confirm',
+      onConfirm: () => {
+        removeToast(id);
+        resolve(true);
+      },
+      onCancel: () => {
+        removeToast(id);
+        resolve(false);
+      }
+    };
+    
+    toasts.value.push(toast);
+    
+    // 최대 3개까지만 표시
+    if (toasts.value.length > 3) {
+      toasts.value.shift();
     }
-  };
-  
-  toasts.value.push(toast);
-  
-  // 최대 3개까지만 표시
-  if (toasts.value.length > 3) {
-    toasts.value.shift();
-  }
+  });
 }
 
 /**

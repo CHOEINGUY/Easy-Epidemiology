@@ -1,35 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <link rel="icon" href="<%= BASE_URL %>favicon.ico">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="<%= BASE_URL %>favicon.png" />
     <!-- Preload Material Icons to reduce FOIT and version-related issues -->
-    <link rel="preload" href="<%= BASE_URL %>fonts/MaterialIcons-Regular.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link
+      rel="preload"
+      href="<%= BASE_URL %>fonts/MaterialIcons-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <!-- Unified Material Icons CSS (local first, with CDN fallback in CSS) -->
-    <link rel="stylesheet" href="<%= BASE_URL %>material-icons.css">
+    <link rel="stylesheet" href="<%= BASE_URL %>material-icons.css" />
     <!-- Material Icons - 로컬 폰트 파일 (오프라인 배포용) -->
     <style>
       @font-face {
-        font-family: 'Material Icons';
+        font-family: "Material Icons";
         font-style: normal;
         font-weight: 400;
-        src: url('<%= BASE_URL %>fonts/MaterialIcons-Regular.woff2') format('woff2'),
-             url('<%= BASE_URL %>fonts/MaterialIcons-Regular.woff') format('woff'),
-             url('<%= BASE_URL %>fonts/MaterialIcons-Regular.ttf') format('truetype');
+        src:
+          url("<%= BASE_URL %>fonts/MaterialIcons-Regular.woff2")
+            format("woff2"),
+          url("<%= BASE_URL %>fonts/MaterialIcons-Regular.woff") format("woff"),
+          url("<%= BASE_URL %>fonts/MaterialIcons-Regular.ttf")
+            format("truetype");
       }
       @font-face {
-        font-family: 'Material Icons Outlined';
+        font-family: "Material Icons Outlined";
         font-style: normal;
         font-weight: 400;
-        src: url('<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff2') format('woff2'),
-             url('<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff') format('woff'),
-             url('<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.ttf') format('truetype');
+        src:
+          url("<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff2")
+            format("woff2"),
+          url("<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.woff")
+            format("woff"),
+          url("<%= BASE_URL %>fonts/MaterialIconsOutlined-Regular.ttf")
+            format("truetype");
       }
       .material-icons {
-        font-family: 'Material Icons';
+        font-family: "Material Icons";
         font-weight: normal;
         font-style: normal;
         font-size: 24px;
@@ -40,11 +59,11 @@
         white-space: nowrap;
         word-wrap: normal;
         direction: ltr;
-        -webkit-font-feature-settings: 'liga';
+        -webkit-font-feature-settings: "liga";
         -webkit-font-smoothing: antialiased;
       }
       .material-icons-outlined {
-        font-family: 'Material Icons Outlined';
+        font-family: "Material Icons Outlined";
         font-weight: normal;
         font-style: normal;
         font-size: 24px;
@@ -55,7 +74,7 @@
         white-space: nowrap;
         word-wrap: normal;
         direction: ltr;
-        -webkit-font-feature-settings: 'liga';
+        -webkit-font-feature-settings: "liga";
         -webkit-font-smoothing: antialiased;
       }
     </style>
@@ -80,6 +99,21 @@
               document.head.appendChild(link2);
             }
           }
+          // Inject Premium Fonts
+          function injectFonts() {
+              var link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css';
+              document.head.appendChild(link);
+
+              var link2 = document.createElement('link');
+              link2.rel = 'stylesheet';
+              link2.href = 'https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap';
+              document.head.appendChild(link2);
+          }
+          injectFonts();
+
+
           Promise.race([
             document.fonts.load('24px "Material Icons"'),
             new Promise(function(resolve){ setTimeout(function(){ resolve('timeout'); }, timeoutMs); })
@@ -93,7 +127,11 @@
   </head>
   <body>
     <noscript>
-      <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong
+        >We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work
+        properly without JavaScript enabled. Please enable it to
+        continue.</strong
+      >
     </noscript>
     <div id="app"></div>
     <!-- built files will be auto injected -->

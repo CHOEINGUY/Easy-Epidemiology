@@ -30,7 +30,7 @@ import { FilterRowValidationManager } from '../components/DataInputVirtualScroll
 
 export class ValidationManager {
   /**
-   * @param {import('vuex').Store} store  Vuex 인스턴스
+   * @param {Object} store  Vuex 인스턴스 (or Pinia Shim)
    * @param {ValidationManagerOptions} [options] 설정값
    */
   constructor(store, options = {}) {
@@ -153,7 +153,7 @@ export class ValidationManager {
       console.log('[ValidationManager] 기존 에러를 고유 식별자 기반으로 마이그레이션 시작');
     }
 
-    const currentErrors = this.store.state.validationState.errors;
+    const currentErrors = this.store.state.epidemic.validationState.errors;
     if (!currentErrors || currentErrors.size === 0) {
       if (this.debug) {
         console.log('[ValidationManager] 마이그레이션할 에러가 없음');
@@ -492,7 +492,7 @@ export class ValidationManager {
   clearErrorsForRow(rowIndex) {
     const errorsToRemove = [];
     
-    this.store.state.validationState.errors.forEach((error, key) => {
+    this.store.state.epidemic.validationState.errors.forEach((error, key) => {
       const parsed = parseErrorKey(key);
       if (parsed && parsed.rowIndex === rowIndex) {
         errorsToRemove.push(key);
@@ -518,7 +518,7 @@ export class ValidationManager {
     const uniqueKey = getColumnUniqueKey(columnMeta);
     if (!uniqueKey) return;
     
-    this.store.state.validationState.errors.forEach((error, key) => {
+    this.store.state.epidemic.validationState.errors.forEach((error, key) => {
       const parsed = parseErrorKey(key);
       if (parsed && parsed.uniqueKey === uniqueKey) {
         errorsToRemove.push(key);
@@ -639,7 +639,7 @@ export class ValidationManager {
       return;
     }
 
-    const currentErrors = this.store.state.validationState.errors;
+    const currentErrors = this.store.state.epidemic.validationState.errors;
     if (currentErrors.size === 0) return;
 
     // 삭제된 열들의 오류 제거
@@ -832,7 +832,7 @@ export class ValidationManager {
           console.log('[ValidationManager] validateCell 호출', rowIndex, colIndex, value, columnMeta.dataKey);
           this.store.commit('REMOVE_VALIDATION_ERROR', { rowIndex, colIndex });
           if (value !== '' && value !== null && value !== undefined) {
-            this.validateCell(rowIndex, colIndex, value, columnMeta.dataKey, true);
+            this.validateCell(rowIndex, colIndex, value, columnMeta.type, true);
           }
         }
       });
@@ -846,7 +846,7 @@ export class ValidationManager {
   _clearErrorsInPasteArea(startRow, startCol, rowCount, colCount) {
     const errorsToRemove = [];
     
-    this.store.state.validationState.errors.forEach((error, key) => {
+    this.store.state.epidemic.validationState.errors.forEach((error, key) => {
       const [errorRow, errorCol] = key.split('_').map(Number);
       
       // 붙여넣기 영역 내의 오류인지 확인
@@ -947,7 +947,7 @@ export class ValidationManager {
       return;
     }
 
-    const currentErrors = this.store.state.validationState.errors;
+    const currentErrors = this.store.state.epidemic.validationState.errors;
     if (currentErrors.size === 0) return;
 
     const newErrors = new Map();
@@ -992,7 +992,7 @@ export class ValidationManager {
       return;
     }
 
-    const currentErrors = this.store.state.validationState.errors;
+    const currentErrors = this.store.state.epidemic.validationState.errors;
     if (!currentErrors || currentErrors.size === 0) {
       console.log('[ValidationManager] remapValidationErrorsByRowDeletion: 재매핑할 오류가 없음');
       return;
@@ -1075,7 +1075,7 @@ export class ValidationManager {
    * @param {Array} deletedColIndices - 삭제된 열의 colIndex 배열 (선택적)
    */
   remapValidationErrorsByColumnIdentity(oldColumnsMeta, newColumnsMeta, deletedColIndices = []) {
-    const currentErrors = this.store.state.validationState.errors;
+    const currentErrors = this.store.state.epidemic.validationState.errors;
     if (!currentErrors || currentErrors.size === 0) {
       return;
     }

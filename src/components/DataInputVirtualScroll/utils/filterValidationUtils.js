@@ -265,8 +265,8 @@ export class FilterCSSUpdater {
   static forceCSSUpdate(store, nextTick) {
     nextTick(() => {
       // validationErrors의 버전을 강제로 증가시켜 반응성 트리거
-      if (store.state.validationState) {
-        store.state.validationState.version++;
+      if (store.state.epidemic.validationState) {
+        store.state.epidemic.validationState.version++;
       }
       
       // DOM 강제 업데이트를 위한 추가 틱

@@ -1,28 +1,30 @@
 <template>
   <div id="app">
-    <!-- 로그인 화면 (로그인 모드에서만 표시) -->
-    <AuthScreen 
-      v-if="requiresAuth && !isAuthenticated" 
-      @login-success="handleLoginSuccess"
-    />
-    
-    <!-- 메인 앱 -->
-    <div v-else class="main-app">
+    <!-- 메인 앱 (로그인 화면 포함 모든 라우트 뷰) -->
+    <div class="main-app">
       <!-- 메인 콘텐츠 영역 -->
       <main :class="contentClass">
-        <component :is="currentView" @logout="handleLogout" />
+        <router-view v-slot="{ Component }">
+          <component 
+            :is="Component" 
+            @logout="handleLogout" 
+            @login-success="handleLoginSuccess"
+          />
+        </router-view>
       </main>
       
-      <!-- 탭 네비게이션 -->
-      <div class="tabs">
+      <!-- 탭 네비게이션 (로그인 화면이 아닐 때만 표시) -->
+      <div v-if="showTabs" class="tabs">
         <div class="tabs-left">
           <div
             v-for="tab in tabs"
             :key="tab.name"
-            :class="['tab', currentView === tab.name ? 'active' : '']"
+            :class="['tab', currentRouteName === tab.name ? 'active' : '']"
             @click="handleTabClick(tab.name)"
+            :title="tab.label"
           >
-            {{ tab.label }}
+            <span class="material-icons tab-icon">{{ tab.icon }}</span>
+            <span class="tab-label">{{ tab.label }}</span>
           </div>
         </div>
         
@@ -90,42 +92,19 @@
 </template>
 
 <script>
-
-import DataInputVirtual from './components/DataInputVirtualScroll/DataInputVirtual.vue';
-import PatientCharacteristics from './components/PatientCharacteristics.vue';
-import EpidemicCurve from './components/EpidemicCurve.vue';
-import CaseControl from './components/CaseControl.vue';
-import CohortStudy from './components/CohortStudy.vue';
-import HomePage from './components/HomePage.vue';
-import ClinicalSymptoms from './components/ClinicalSymptoms.vue';
-import CaseSeries from './components/CaseSeries.vue';
-import ReportWriter from './components/ReportWriter.vue';
+// Components are now loaded via Router, so we only need shared UI components if any
 import ToastContainer from './components/DataInputVirtualScroll/parts/ToastContainer.vue';
-import AuthScreen from './components/AuthScreen.vue';
-import AdminPanel from './components/AdminPanel.vue';
 import { showConfirmToast } from './components/DataInputVirtualScroll/logic/toast.js';
 import { tokenManager } from './services/authApi.js';
 import { isAuthRequired, logEnvironmentInfo } from './utils/environmentUtils.js';
 
 export default {
-  name: 'App', // 컴포넌트 이름 명시 권장
+  name: 'App',
   components: {
-    DataInputVirtual,
-    PatientCharacteristics,
-    EpidemicCurve,
-    CaseControl,
-    CohortStudy,
-    HomePage,
-    ClinicalSymptoms,
-    CaseSeries,
-    ReportWriter,
-    ToastContainer,
-    AuthScreen,
-    AdminPanel
+    ToastContainer
   },
   data() {
     return {
-      currentView: 'AuthScreen',
       isAuthenticated: false,
       currentUser: null,
       isAdmin: false,
@@ -139,47 +118,47 @@ export default {
         {
           name: 'DataInputVirtual',
           label: '데이터 입력',
-          component: 'DataInputVirtual'
+          icon: 'table_chart'
         },
         {
           name: 'PatientCharacteristics',
           label: '환자특성',
-          component: 'PatientCharacteristics'
+          icon: 'accessibility_new'
         },
         {
           name: 'EpidemicCurve',
           label: '유행곡선',
-          component: 'EpidemicCurve'
+          icon: 'show_chart'
         },
         {
           name: 'ClinicalSymptoms',
           label: '임상증상',
-          component: 'ClinicalSymptoms'
+          icon: 'sick'
         },
         {
           name: 'CaseControl',
           label: '환자대조군(OR)',
-          component: 'CaseControl'
+          icon: 'compare_arrows'
         },
         {
           name: 'CohortStudy',
           label: '코호트(RR)',
-          component: 'CohortStudy'
+          icon: 'groups'
         },
         {
           name: 'CaseSeries',
           label: '사례군조사',
-          component: 'CaseSeries'
+          icon: 'list_alt'
         },
         {
           name: 'ReportWriter',
           label: '보고서 작성',
-          component: 'ReportWriter'
+          icon: 'edit_note'
         },
         {
           name: 'HomePage',
           label: '웹페이지 정보',
-          component: 'HomePage'
+          icon: 'info'
         }
       ]
     };
@@ -190,35 +169,12 @@ export default {
       return isAuthRequired();
     },
     
-    // 데이터 완성도 감지 시스템
-    dataCompleteness() {
-      const rows = this.$store.getters.rows || [];
-      const headers = this.$store.getters.headers || {};
-      
-      const hasBasicData = rows.length > 0;
-      const hasPatientData = rows.some(row => row && row.isPatient === '1');
-      const hasDietData = headers.diet && headers.diet.length > 0;
-      const hasClinicalData = headers.clinical && headers.clinical.length > 0;
-      const hasSymptomOnsetData = rows.some(row => row && row.symptomOnset);
-      
-      // 완성도 점수 계산 (0-100)
-      let completenessScore = 0;
-      if (hasBasicData) completenessScore += 20;
-      if (hasPatientData) completenessScore += 30;
-      if (hasDietData) completenessScore += 25;
-      if (hasClinicalData) completenessScore += 15;
-      if (hasSymptomOnsetData) completenessScore += 10;
-      
-      return {
-        hasBasicData,
-        hasPatientData,
-        hasDietData,
-        hasClinicalData,
-        hasSymptomOnsetData,
-        completenessScore,
-        isComplete: completenessScore >= 80, // 80% 이상이면 완성으로 간주
-        canRunAnalysis: hasBasicData && hasPatientData && hasDietData // 분석 가능 여부
-      };
+    currentRouteName() {
+      return this.$route.name;
+    },
+    
+    showTabs() {
+      return this.currentRouteName !== 'Login' && (!this.requiresAuth || this.isAuthenticated);
     },
     
     tabs() {
@@ -229,7 +185,7 @@ export default {
         tabs.push({
           name: 'AdminPanel',
           label: '관리자 패널',
-          component: 'AdminPanel'
+          icon: 'admin_panel_settings'
         });
       }
       
@@ -237,7 +193,7 @@ export default {
     },
     
     contentClass() {
-      if (this.currentView === 'DataInputVirtual' || this.currentView === 'ReportWriter' || this.currentView === 'ClinicalSymptoms') {
+      if (this.currentRouteName === 'DataInputVirtual' || this.currentRouteName === 'ReportWriter') {
         return 'content no-scroll';
       }
       return 'content scrollable';
@@ -257,7 +213,6 @@ export default {
     // 비로그인 모드인 경우
     if (!this.requiresAuth) {
       this.isAuthenticated = true;
-      this.currentView = 'DataInputVirtual';
       console.log('🚀 비로그인 모드로 실행됨');
       this.loadInitialData();
       return;
@@ -266,27 +221,10 @@ export default {
     // 로그인 모드인 경우
     this.updateAuthState();
     
-    if (this.isAuthenticated) {
-      // 로그인된 상태라면 바로 DataInputVirtual로 설정
-      this.currentView = 'DataInputVirtual';
-    }
-    
     // 인증 상태 체크 및 자동 로그인
-    this.checkAuthAndLoadData();
-  },
-  
-  watch: {
-    // 데이터 완성도 변화 감지
-    // 백그라운드 분석 제거 - 탭에 직접 가야만 분석 실행
-    
-    // 데이터 완성도 점수 변화 감지 (디버깅용)
-    'dataCompleteness.completenessScore': {
-      handler(newScore, oldScore) {
-        if (newScore !== oldScore) {
-          console.log(`📈 데이터 완성도: ${oldScore}% → ${newScore}%`);
-        }
-      },
-      immediate: false
+    // 이미 로그인되어 있다면 데이터를 로드합니다.
+    if (this.isAuthenticated) {
+      this.checkAuthAndLoadData();
     }
   },
   
@@ -308,15 +246,18 @@ export default {
           this.updateAuthState();
           console.log('❌ 토큰 무효 - 로그인 상태 아님');
           
-          // 기존 데이터 마이그레이션 시도
-          this.loadInitialData();
+          if (this.$route.name !== 'Login') {
+            this.$router.push({ name: 'Login' });
+          }
         }
       } catch (error) {
         console.error('인증 체크 실패:', error);
         // 에러가 발생해도 인증 상태 업데이트
         this.updateAuthState();
-        // 기본 데이터 로드
-        this.loadInitialData();
+        
+        if (this.isAuthenticated) {
+          this.loadInitialData();
+        }
       }
     },
     
@@ -359,8 +300,8 @@ export default {
       this.currentUser = JSON.parse(localStorage.getItem('user'));
       this.isAdmin = this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.role === 'support');
       
-      // 모든 사용자는 DataInputVirtual 탭으로 이동
-      this.currentView = 'DataInputVirtual';
+      // DataInputVirtual 탭으로 이동
+      this.$router.push({ name: 'DataInputVirtual' });
       
       console.log('로그인 후 상태:', {
         isAuthenticated: this.isAuthenticated,
@@ -398,6 +339,7 @@ export default {
       // 로그인 모드에서만 로그아웃 처리
       if (this.requiresAuth) {
         this.updateAuthState();
+        this.$router.push({ name: 'Login' });
       }
     },
     
@@ -458,15 +400,14 @@ export default {
         
         if (this.remainingSeconds <= 0) {
           this.closeLogoutConfirmModal();
+          this.$router.push({ name: 'Login' });
         }
       }, 1000);
     },
     
-    // 백그라운드 분석 관련 메서드들 제거 - 탭에 직접 가야만 분석 실행
-    
-    handleTabClick(component) {
+    handleTabClick(routeName) {
       // 현재 탭이 DataInputVirtual이고, 다른 탭으로 이동하려는 경우
-      if (this.currentView === 'DataInputVirtual' && component !== 'DataInputVirtual') {
+      if (this.currentRouteName === 'DataInputVirtual' && routeName !== 'DataInputVirtual') {
         // 유효성 검사 오류가 있는지 확인
         const validationErrors = this.$store.state.validationState?.errors;
         const hasErrors = validationErrors && validationErrors.size > 0;
@@ -479,7 +420,7 @@ export default {
             confirmMessage,
             () => {
               // 확인 시 탭 전환
-              this.currentView = component;
+              this.$router.push({ name: routeName });
             },
             () => {
               // 취소 시 아무것도 하지 않음 (현재 탭에 머무름)
@@ -487,11 +428,11 @@ export default {
           );
         } else {
           // 오류가 없으면 바로 전환
-          this.currentView = component;
+          this.$router.push({ name: routeName });
         }
       } else {
         // DataInputVirtual가 아니거나 같은 탭으로의 이동은 바로 처리
-        this.currentView = component;
+        this.$router.push({ name: routeName });
       }
     }
   }
@@ -512,9 +453,6 @@ body {
   flex-direction: column;
   min-height: 600px; /* 최소 높이 설정으로 기본 사용성 보장 */
 }
-
-
-
 
 #app {
   height: 100vh; /* 화면 높이에 꽉 차게 */
@@ -597,10 +535,40 @@ body {
 
 /* 각 tab 스타일 */
 .tab {
-  padding: 6px 20px;
+  padding: 6px 16px;
   cursor: pointer;
   font-size: 16px;
   color: #444;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab-icon {
+  display: none; /* 기본적으로 아이콘 숨김 */
+  font-size: 20px;
+}
+
+.tab-label {
+  display: block;
+}
+
+/* 반응형: 화면이 좁아지면 아이콘 표시, 텍스트 숨김 */
+@media (max-width: 1200px) {
+  .tab {
+    padding: 6px 12px;
+    justify-content: center;
+  }
+  
+  .tab-icon {
+    display: block;
+  }
+  
+  .tab-label {
+    display: none;
+  }
 }
 
 /* ↓↓↓ 추가: 활성 탭이 아닐 때 마우스 오버 효과 */
@@ -761,20 +729,5 @@ body {
     opacity: 1; 
     transform: translateY(0) scale(1); 
   }
-}
-
-
-
-
-
-/* 로그아웃 모달 단계 전환 애니메이션 */
-.logout-confirm-step,
-.logout-success-step {
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 </style>

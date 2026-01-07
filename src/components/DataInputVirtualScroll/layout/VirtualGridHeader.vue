@@ -111,10 +111,10 @@
 
 <script setup>
 import { ref, defineProps, defineExpose, defineEmits, reactive, computed } from 'vue';
-import { useStore } from 'vuex';
+import { useUiStore } from '../../../stores/uiStore';
 import { safeGetGlobalProperty } from '../../../utils/globalAccessWrapper.js';
 
-const store = useStore();
+const uiStore = useUiStore();
 
 const props = defineProps({
   headerGroups: {
@@ -148,6 +148,10 @@ const props = defineProps({
   activeFilters: {
     type: Map,
     default: () => new Map()
+  },
+  isFiltered: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -272,9 +276,9 @@ function isColumnFiltered(colIndex) {
     return storeBridge.activeFilters.has(colIndex);
   }
   
-  // fallback: Vuex store 사용
-  if (store.state && store.state.filterState && store.state.filterState.activeFilters) {
-    return store.state.filterState.activeFilters.has(colIndex);
+  // fallback: Pinia UI Store 사용
+  if (uiStore.filterState && uiStore.filterState.activeFilters) {
+    return uiStore.filterState.activeFilters.has(colIndex);
   }
   
   return false;
@@ -299,6 +303,7 @@ function isColumnFiltered(colIndex) {
 }
 
 th {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
   position: relative;
   border: 1px solid #adb5bd;
   padding: 8px;
@@ -312,6 +317,7 @@ th {
   white-space: nowrap;
   /* Prevent text selection when dragging across header cells */
   user-select: none;
+  letter-spacing: -0.5px; /* Tighten tracking to prevent wrapping */
 }
 
 /* '환자여부'와 '확진여부' 헤더에 줄바꿈을 허용하는 스타일 */
