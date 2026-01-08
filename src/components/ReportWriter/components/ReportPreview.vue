@@ -1,14 +1,28 @@
 <template>
-  <div class="preview-pane">
-    <div class="preview-header">
-      <h2 class="pane-title">미리보기</h2>
-      <div class="download-buttons">
+  <div class="flex-1 bg-white rounded-[10px] shadow-md overflow-hidden h-full flex flex-col relative">
+    <!-- Header with Sticky -->
+    <div class="flex justify-between items-center p-5 pb-2 flex-shrink-0 sticky top-0 bg-white z-10">
+      <div class="flex flex-col gap-1">
+        <h2 class="m-0 text-lg font-bold">미리보기</h2>
+        <div class="flex gap-2">
+          <button 
+            v-for="section in sections" 
+            :key="section.id"
+            @click="scrollToSection(section.id)"
+            class="px-2.5 py-1 text-[10px] font-black uppercase rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all cursor-pointer whitespace-nowrap"
+          >
+            {{ section.label }}
+          </button>
+        </div>
+      </div>
+      <div class="flex gap-2">
         <button 
-          class="download-btn" 
-          :class="{ 
-            'primary': reportData.studyDesign.value && !reportData.hasTooManyFoodItems.value,
-            'warning': !reportData.studyDesign.value || reportData.hasTooManyFoodItems.value 
-          }"
+          :class="[
+            'flex items-center gap-1.5 px-4 py-2 border-none rounded-md text-sm font-medium cursor-pointer transition-colors relative',
+            (reportData.studyDesign.value && !reportData.hasTooManyFoodItems.value) 
+              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+              : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-yellow-400 text-orange-500 shadow-sm hover:from-orange-50 hover:to-orange-100 hover:border-amber-500'
+          ]"
           @click="reportData.studyDesign.value ? reportData.downloadHwpxReport() : null"
           @mouseenter="showDownloadTooltip = true"
           @mouseleave="showDownloadTooltip = false"
@@ -19,20 +33,28 @@
         </button>
       </div>
     </div>
-    <div class="report-preview" v-html="reportData.renderedHtml.value"></div>
+    
+    <!-- Content Area -->
+    <div class="flex-1 overflow-hidden p-5 pt-2 min-h-0 flex flex-col">
+      <div class="flex-1 border border-gray-200 rounded bg-white shadow-inner overflow-y-auto relative p-5">
+        <div class="report-preview" v-html="reportData.renderedHtml.value"></div>
+        <!-- Spacer to ensure bottom content is not hidden -->
+        <div class="w-full h-10 flex-shrink-0"></div>
+      </div>
+    </div>
 
     <!-- Tooltip -->
     <Teleport to="body">
       <div v-if="showDownloadTooltip && downloadTooltipRef" 
-           class="tooltip tooltip-body" 
+           class="fixed bg-black border border-gray-700 rounded-lg p-3 shadow-xl text-[13px] leading-relaxed max-w-[300px] z-[10000]" 
            :style="downloadTooltipStyle">
-        <div v-if="!reportData.studyDesign.value" class="tooltip-warning">
+        <div v-if="!reportData.studyDesign.value" class="text-white flex items-start gap-1.5">
           조사 디자인을 먼저 선택해주세요.
         </div>
-        <div v-else-if="reportData.hasTooManyFoodItems.value" class="tooltip-warning">
+        <div v-else-if="reportData.hasTooManyFoodItems.value" class="text-white flex items-start gap-1.5">
           요인(식단)이 {{ reportData.foodItemCount.value }}개로 34개를 초과합니다. 표4 요인별 표분석결과에 데이터가 들어가지 않습니다.
         </div>
-        <div v-else class="tooltip-normal">
+        <div v-else class="text-white text-center">
           요인(식단) {{ reportData.foodItemCount.value }}개가 포함됩니다.
         </div>
       </div>
@@ -64,135 +86,26 @@ const downloadTooltipStyle = computed(() => {
     zIndex: 10000
   };
 });
+
+const sections = [
+  { id: 'section-overview', label: 'Ⅰ. 발생개요' },
+  { id: 'section-team', label: 'Ⅱ. 조사반' },
+  { id: 'section-results', label: 'Ⅳ. 결과' },
+  { id: 'section-incubation', label: 'Ⅴ. 잠복기' }
+];
+
+const scrollToSection = (id) => {
+  const element = document.getElementById(id);
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
 </script>
 
 <style scoped>
-/* Duplicate styles for preview pane */
-.preview-pane {
-  flex: 1;
-  background-color: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 20px;
-  overflow: auto;
-  min-height: 0; /* Critical for flex scroll */
-  display: flex;
-  flex-direction: column;
-}
-
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  flex-shrink: 0;
-}
-
-.pane-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.download-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.download-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  position: relative;
-}
-
-.download-btn.primary {
-  background-color: #1a73e8;
-  color: white;
-}
-
-.download-btn.primary:hover {
-  background-color: #1557b0;
-}
-
-.download-btn.warning {
-  background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
-  border: 1px solid #ffcc02;
-  color: #f57c00;
-  box-shadow: 0 1px 4px rgba(255, 193, 7, 0.2);
-}
-
-.download-btn.warning:hover {
-  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-  border-color: #ffb300;
-}
-
-.report-preview {
-  flex: 1;
-  overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  padding: 20px;
-  background-color: #fff;
-  min-height: 0; /* Critical for nested flex scroll */
-}
-
-/* Tooltip Styles */
-.tooltip {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  margin-bottom: 8px;
-  background: #000;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  font-size: 13px;
-  line-height: 1.4;
-  z-index: 1000;
-  max-width: 300px;
-  white-space: normal;
-}
-
-.tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  right: 20px;
-  border: 6px solid transparent;
-  border-top-color: #000;
-}
-
-.tooltip-warning {
-  color: #fff;
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.tooltip-normal {
-  color: #fff;
-  text-align: center;
-}
-
-.tooltip-body {
-  position: fixed !important;
-  z-index: 10000 !important;
-}
-
 /* --- Deep Styles for v-html Content --- */
 :deep(.report-wrapper) {
-  /* This class is defined in reportTemplate.js style block, 
-     but we can override or ensure it behaves correctly here if needed. */
-  margin: 0 auto; /* Center the report */
+  margin: 0 auto;
 }
 
 :deep(.section-heading) {
@@ -260,16 +173,14 @@ const downloadTooltipStyle = computed(() => {
   color: #444;
 }
 
-/* Ensure images fit and reserve space */
 :deep(img) {
   max-width: 100%;
   height: auto;
-  min-height: 200px; /* Reserve space for chart images */
+  min-height: 200px;
   object-fit: contain;
   background-color: #f5f5f5;
 }
 
-/* Placeholder chart styling */
 :deep(.placeholder-chart) {
   min-height: 200px;
   display: flex;

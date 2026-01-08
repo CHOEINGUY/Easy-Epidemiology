@@ -1,52 +1,64 @@
 <template>
-  <section class="footer-section">
-    <div class="container">
-      <div class="footer-grid">
+  <footer class="bg-slate-900 text-white py-20 pb-10">
+    <div class="max-w-[1200px] mx-auto px-6">
+      <div class="grid grid-cols-1 md:grid-cols-[2fr,1fr,1fr] gap-12 md:gap-16 mb-20">
         <!-- Brand / Contact -->
-        <div class="footer-col brand-col">
-          <h3 class="footer-brand">{{ contactInfo.title }}</h3>
-          <p class="brand-desc">감염병 역학조사 및 현장 대응 연구센터</p>
-          <div class="contact-details">
-            <div class="contact-row">
-              <span class="label">운영</span>
-              <span class="value">{{ contactInfo.organization }}</span>
+        <div class="flex flex-col">
+          <h3 class="text-2xl font-extrabold mb-3 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">{{ contactInfo.title }}</h3>
+          <p class="text-slate-400 mb-8 text-[0.95rem]">감염병 역학조사 및 현장 대응 연구센터</p>
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-3 text-sm">
+              <span class="text-slate-500 w-10">운영</span>
+              <span class="text-slate-300">{{ contactInfo.organization }}</span>
             </div>
-            <div class="contact-row">
-              <span class="label">부서</span>
-              <span class="value">{{ contactInfo.department }}</span>
+            <div class="flex gap-3 text-sm">
+              <span class="text-slate-500 w-10">부서</span>
+              <span class="text-slate-300">{{ contactInfo.department }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Direct Contact -->
-        <div class="footer-col">
-          <h4 class="col-title">기술 지원</h4>
-          <ul class="footer-links">
-            <li>
-              <span class="link-label">양정호 책임</span>
-              <span class="link-val">061-379-2630</span>
-            </li>
-            <li>
-              <span class="link-label">최인규 연구원</span>
-              <span class="link-val">061-372-4175</span>
-            </li>
+        <!-- Technical Support -->
+        <div class="flex flex-col">
+          <h4 class="text-[0.95rem] font-bold uppercase tracking-wider text-slate-400 mb-6">기술 지원</h4>
+          <ul class="flex flex-col gap-4">
+            <template v-if="contactInfo.support && contactInfo.support.length > 0">
+              <li v-for="(person, idx) in contactInfo.support" :key="idx" class="flex flex-col gap-0.5">
+                <span class="text-[0.8rem] text-slate-500">{{ person.name }} {{ person.role }}</span>
+                <span class="text-slate-200 text-[0.95rem]">{{ person.phone }}</span>
+              </li>
+            </template>
+            <template v-else>
+              <li class="flex flex-col gap-0.5">
+                <span class="text-[0.8rem] text-slate-500">양정호 책임</span>
+              </li>
+              <li class="flex flex-col gap-0.5">
+                <span class="text-[0.8rem] text-slate-500">최인규 연구원</span>
+                <span class="text-slate-200 text-[0.95rem]">061-372-4175</span>
+              </li>
+            </template>
           </ul>
         </div>
         
-        <div class="footer-col">
-          <h4 class="col-title">이메일 문의</h4>
-          <ul class="footer-links">
-            <li>st15231@naver.com</li>
-            <li>chldlsrb07@gmail.com</li>
+        <!-- Email Support -->
+        <div class="flex flex-col">
+          <h4 class="text-[0.95rem] font-bold uppercase tracking-wider text-slate-400 mb-6">이메일 문의</h4>
+          <ul class="flex flex-col gap-3">
+            <template v-if="contactInfo.emails && contactInfo.emails.length > 0">
+              <li v-for="(email, idx) in contactInfo.emails" :key="idx" class="text-slate-200 text-[0.95rem]">{{ email }}</li>
+            </template>
+            <template v-else>
+              <li class="text-slate-200 text-[0.95rem]">chldlsrb07@gmail.com</li>
+            </template>
           </ul>
         </div>
       </div>
       
-      <div class="footer-bottom">
+      <div class="border-t border-slate-800 pt-8 text-center text-slate-500 text-[0.85rem]">
         <p>&copy; 2025 Easy-Epidemiology Web. All rights reserved.</p>
       </div>
     </div>
-  </section>
+  </footer>
 </template>
 
 <script setup>
@@ -58,104 +70,26 @@ defineProps({
 </script>
 
 <style scoped>
-.footer-section {
-  background-color: #0f172a;
-  color: white;
-  padding: 80px 0 40px;
+/* 반복 스타일 추출 - @apply 활용 */
+.footer-heading {
+  @apply text-[0.95rem] font-bold uppercase tracking-wider text-slate-400 mb-6;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
+.contact-item {
+  @apply flex flex-col gap-0.5;
 }
 
-.footer-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 60px;
-  margin-bottom: 80px;
+.contact-label {
+  @apply text-[0.8rem] text-slate-500;
 }
 
-.footer-brand {
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin-bottom: 12px;
-  background: linear-gradient(to right, #ffffff, #94a3b8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.contact-value {
+  @apply text-slate-200 text-[0.95rem];
 }
 
-.brand-desc {
-  color: #94a3b8;
-  margin-bottom: 32px;
-  font-size: 0.95rem;
-}
-
-.contact-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.contact-row {
-  display: flex;
-  gap: 12px;
-  font-size: 0.9rem;
-}
-
-.contact-row .label {
-  color: #64748b;
-  width: 40px;
-}
-
-.contact-row .value {
-  color: #cbd5e1;
-}
-
-.col-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #94a3b8;
-  margin-bottom: 24px;
-}
-
-.footer-links {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.footer-links li {
-  color: #e2e8f0;
-  font-size: 0.95rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.link-label {
-  font-size: 0.8rem;
-  color: #64748b;
-}
-
-.footer-bottom {
-  border-top: 1px solid #1e293b;
-  padding-top: 32px;
-  text-align: center;
-  color: #64748b;
-  font-size: 0.85rem;
-}
-
-@media (max-width: 768px) {
-  .footer-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
+/* 이메일 호버 효과 */
+.email-link {
+  @apply text-slate-200 text-[0.95rem] transition-colors duration-300 hover:text-blue-400;
 }
 </style>
+

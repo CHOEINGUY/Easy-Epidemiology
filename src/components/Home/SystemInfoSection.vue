@@ -1,55 +1,85 @@
 <template>
-  <section class="system-section">
-    <div class="container">
+  <section class="py-20 bg-slate-50 border-t border-slate-200">
+    <div class="max-w-[1200px] mx-auto px-6">
       
-      <!-- Dashboard Stats Bar -->
+      <!-- Dashboard Stats Bar (Light Theme & Grid Layout) -->
       <div class="stats-bar">
-        <div class="stat-item">
-          <span class="stat-label">System Status</span>
-          <div class="stat-value-row">
-            <span class="status-indicator online"></span>
-            <span class="stat-value">Operational</span>
+        <!-- Decoration Background -->
+        <div class="absolute inset-0 bg-white/40 backdrop-blur-3xl z-0"></div>
+        
+        <!-- #1 System Status -->
+        <div class="stat-group relative z-10">
+          <div class="stat-icon-box bg-emerald-50 text-emerald-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </div>
+          <div class="flex flex-col">
+            <span class="stat-label">System Status</span>
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span class="stat-value text-emerald-700">Operational</span>
+            </div>
           </div>
         </div>
-        <div class="stat-separator"></div>
-        <div class="stat-item">
-          <span class="stat-label">Version</span>
-          <span class="stat-value">{{ basicConfig.version }}</span>
+
+        <!-- #2 Version -->
+        <div class="stat-group relative z-10">
+          <div class="stat-icon-box bg-blue-50 text-blue-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="flex flex-col">
+            <span class="stat-label">Version</span>
+            <span class="stat-value text-slate-900">{{ basicConfig.version }}</span>
+          </div>
         </div>
-        <div class="stat-separator"></div>
-        <div class="stat-item">
-          <span class="stat-label">Last Update</span>
-          <span class="stat-value">{{ basicConfig.lastUpdate }}</span>
+
+        <!-- #3 Last Update -->
+        <div class="stat-group relative z-10">
+          <div class="stat-icon-box bg-indigo-50 text-indigo-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </div>
+          <div class="flex flex-col">
+            <span class="stat-label">Last Update</span>
+            <span class="stat-value text-slate-900">{{ basicConfig.lastUpdate }}</span>
+          </div>
         </div>
-        <div class="stat-separator"></div>
-        <div class="stat-item">
-          <span class="stat-label">Platform</span>
-          <span class="stat-value">{{ basicConfig.platform }}</span>
+
+        <!-- #4 Platform -->
+        <div class="stat-group relative z-10">
+          <div class="stat-icon-box bg-violet-50 text-violet-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          </div>
+          <div class="flex flex-col">
+            <span class="stat-label">Platform</span>
+            <span class="stat-value text-slate-900">{{ basicConfig.platform }}</span>
+          </div>
         </div>
       </div>
 
-      <div class="info-layout">
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr,1.5fr] gap-8">
         <!-- Left: Organization & Contact -->
-        <div class="info-col left-col">
-          <div class="glass-card org-card">
-            <div class="card-header">
-              <h3 class="card-title">운영 기관</h3>
-              <div class="org-badge">{{ organization.name }}</div>
+        <div class="flex flex-col h-full">
+          <div class="info-card">
+            <div class="info-card-header">
+              <h3 class="info-card-title keep-all">운영 기관</h3>
+              <div class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[0.85rem] font-bold shadow-sm">{{ organization.name }}</div>
             </div>
-            <div class="card-body">
-              <div class="org-details">
-                <p class="org-dept">{{ organization.department }}</p>
-                <p class="org-center">{{ organization.center }}</p>
+            <div class="p-8">
+              <div class="mb-8">
+                <p class="text-[1.35rem] font-black text-slate-900 mb-2 keep-all tracking-tight">{{ organization.department }}</p>
+                <p class="text-slate-500 font-medium">{{ organization.center }}</p>
               </div>
               
-              <div class="team-list">
+              <div class="flex flex-col gap-3">
                 <div 
                   v-for="member in organization.team" 
                   :key="member.role"
-                  class="team-row"
+                  class="flex justify-between items-center p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-sm transition-all duration-300"
                 >
-                  <span class="member-role">{{ member.role }}</span>
-                  <span class="member-name">{{ member.name }}</span>
+                  <span class="text-slate-500 text-sm font-bold bg-white px-2 py-1 rounded-md shadow-sm border border-slate-100">{{ member.role }}</span>
+                  <span class="text-slate-900 font-bold tracking-tight">{{ member.name }}</span>
                 </div>
               </div>
             </div>
@@ -57,26 +87,26 @@
         </div>
 
         <!-- Right: Education & Features -->
-        <div class="info-col right-col">
-          <div class="glass-card education-card">
-            <div class="card-header">
-              <h3 class="card-title">교육과정 연계</h3>
+        <div class="flex flex-col h-full">
+          <div class="info-card">
+            <div class="info-card-header">
+              <h3 class="info-card-title">교육과정 연계</h3>
             </div>
-            <div class="card-body">
-              <ul class="edu-list">
-                <li v-for="item in education.timeline" :key="item.title" class="edu-item">
-                  <div class="edu-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+            <div class="p-8">
+              <ul class="space-y-6 mb-8">
+                <li v-for="item in education.timeline" :key="item.title" class="flex gap-5 group">
+                  <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110 duration-300 border border-blue-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
                   </div>
-                  <div class="edu-content">
-                    <span class="edu-title">{{ item.title }}</span>
-                    <span class="edu-sub">{{ item.subtitle }}</span>
+                  <div class="flex flex-col justify-center">
+                    <span class="text-[1.05rem] font-bold text-slate-800 mb-0.5 keep-all tracking-tight group-hover:text-blue-700 transition-colors">{{ item.title }}</span>
+                    <span class="text-sm text-slate-500 font-medium">{{ item.subtitle }}</span>
                   </div>
                 </li>
               </ul>
               
-              <div class="feature-tags">
-                <span v-for="feature in systemFeatures" :key="feature" class="feature-pill">
+              <div class="flex flex-wrap gap-2.5">
+                <span v-for="feature in systemFeatures" :key="feature" class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 font-semibold hover:bg-white hover:border-blue-200 hover:text-blue-600 hover:shadow-sm transition-all cursor-default">
                   {{ feature }}
                 </span>
               </div>
@@ -103,226 +133,42 @@ defineProps({
 </script>
 
 <style scoped>
-.system-section {
-  padding: 80px 0;
-  background-color: #ffffff;
-  border-top: 1px solid #f1f5f9;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-/* Stats Bar */
+/* Scoped CSS removed as all styles are now handled by Tailwind utility classes */
 .stats-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #0f172a;
-  color: white;
-  padding: 24px 40px;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.3);
-  margin-bottom: 60px;
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-white 
+         rounded-[2.5xl] p-8 lg:p-10 shadow-xl shadow-slate-200/50 mb-20 relative overflow-hidden
+         border border-slate-100;
 }
 
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.stat-group {
+  @apply flex items-center gap-5 p-2 rounded-xl transition-all duration-300;
+}
+
+.stat-icon-box {
+  @apply w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 
+         shadow-inner-soft transition-transform duration-300 group-hover:scale-110;
 }
 
 .stat-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #94a3b8;
-  font-weight: 600;
+  @apply text-[11px] uppercase tracking-widest text-slate-400 font-bold mb-1;
 }
 
 .stat-value {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #f8fafc;
+  @apply text-[1.1rem] font-black tracking-tight leading-none;
 }
 
-.stat-value-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.info-card {
+  @apply bg-white border border-slate-200 rounded-[2.5xl] 
+         overflow-hidden h-full shadow-sm hover:shadow-xl hover:-translate-y-1 
+         transition-all duration-500 hover:border-blue-200/50 relative z-10;
 }
 
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #10b981;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+.info-card-header {
+  @apply p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50;
 }
 
-.stat-separator {
-  width: 1px;
-  height: 40px;
-  background-color: #334155;
-}
-
-/* Info Layout */
-.info-layout {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 32px;
-}
-
-/* Glass Cards */
-.glass-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  overflow: hidden;
-  height: 100%;
-}
-
-.card-header {
-  padding: 24px 32px;
-  border-bottom: 1px solid #f1f5f9;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0;
-}
-
-.card-body {
-  padding: 32px;
-}
-
-/* Organization */
-.org-details {
-  margin-bottom: 32px;
-}
-
-.org-badge {
-  background: #eff6ff;
-  color: #3b82f6;
-  padding: 4px 12px;
-  border-radius: 99px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.org-dept {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 4px;
-}
-
-.org-center {
-  color: #64748b;
-}
-
-.team-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.team-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-}
-
-.member-role {
-  color: #64748b;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.member-name {
-  color: #0f172a;
-  font-weight: 700;
-}
-
-/* Education */
-.edu-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 32px 0;
-}
-
-.edu-item {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.edu-icon {
-  width: 40px;
-  height: 40px;
-  background: #f0f9ff;
-  color: #0ea5e9;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.edu-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.edu-title {
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 2px;
-}
-
-.edu-sub {
-  font-size: 0.9rem;
-  color: #64748b;
-}
-
-.feature-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.feature-pill {
-  padding: 6px 14px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  color: #475569;
-}
-
-@media (max-width: 900px) {
-  .info-layout {
-    grid-template-columns: 1fr;
-  }
-  .stats-bar {
-    flex-wrap: wrap;
-    gap: 24px;
-  }
-  .stat-separator {
-    display: none;
-  }
-  .stat-item {
-    width: 45%;
-  }
+.info-card-title {
+  @apply text-[1.2rem] font-bold text-slate-900 tracking-tight;
 }
 </style>
+

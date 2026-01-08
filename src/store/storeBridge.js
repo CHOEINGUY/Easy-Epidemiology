@@ -479,8 +479,19 @@ export function useStoreBridge(legacyStore = null, validationManager = null, opt
     clearRowData: (p) => bridge.clearRowData(p),
     clearMultipleRowsData: (p) => bridge.clearMultipleRowsData(p),
     clearIndividualRowsData: (p) => bridge.clearIndividualRowsData(p),
-    updateSingleHeader: (p) => bridge.updateSingleHeader(p),
     clearCellData: (p) => bridge.clearCellData(p),
-    clearAllFilters: () => bridge.clearAllFilters()
+    clearAllFilters: () => bridge.clearAllFilters(),
+    
+    // Filter methods required by ContextMenu
+    togglePatientFilter: (v) => bridge.togglePatientFilter(v),
+    toggleClinicalFilter: (c, v) => bridge.toggleClinicalFilter(c, v),
+    toggleDietFilter: (c, v) => bridge.toggleDietFilter(c, v),
+    toggleBasicFilter: (c, v) => bridge.toggleBasicFilter(c, v),
+    toggleConfirmedFilter: (c, v) => bridge.toggleConfirmedFilter(c, v),
+    toggleDateTimeFilter: (c, v) => bridge.toggleDateTimeFilter(c, v),
+    removeFilter: (c) => bridge.removeFilter(c),
+    matchesFilter: (row, colIndex, config) => bridge.matchesFilter(row, colIndex, config),
+    setFilterState: (s) => bridge.setFilterState(s),
+    _captureSnapshot: (a, m) => bridge._captureSnapshot(a, m)
   };
 }

@@ -1,13 +1,13 @@
 <template>
-  <div class="register-step">
+  <div class="animate-in fade-in slide-in-from-right-3 duration-300">
     <StepIndicator :current-step="2" :total-steps="3" />
-    <h3 class="step-title">비밀번호 설정</h3>
+    <h3 class="text-center text-xl font-bold text-slate-900 mb-7 tracking-tight">비밀번호 설정</h3>
     
-    <form @submit.prevent="handleSubmit" class="register-form">
+    <form @submit.prevent="handleSubmit" class="space-y-5">
       <!-- 비밀번호 -->
-      <div class="form-group" :class="{ 'has-error': errors.password, 'success': formData.password && !errors.password }">
-        <label for="register-password">비밀번호</label>
-        <div class="password-input-container">
+      <div class="group/field">
+        <label for="register-password" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">비밀번호</label>
+        <div class="relative">
           <input
             id="register-password"
             v-model="formData.password"
@@ -16,33 +16,42 @@
             required
             :disabled="isLoading"
             @blur="validateField('password')"
-            ref="passwordInput"
+            ref="passwordInputRef"
+            class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[15px] transition-all duration-300 focus:outline-none focus:ring-4 focus:bg-white pr-20"
+            :class="[
+              errors.password ? 'border-red-500 focus:ring-red-500/10' : 
+              (formData.password && !errors.password ? 'border-emerald-500 focus:ring-emerald-500/10' : 'focus:border-primary-500 focus:ring-primary-500/10')
+            ]"
           />
-          <button
-            type="button"
-            class="password-toggle"
-            :class="{ 'shifted': formData.password }"
-            @click="showPassword = !showPassword"
-            tabindex="0"
-          >
-            <span class="material-icons">
-              {{ showPassword ? 'visibility' : 'visibility_off' }}
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-1 pr-1.5">
+            <button
+              type="button"
+              class="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all duration-200 active:scale-90"
+              @click="showPassword = !showPassword"
+              tabindex="0"
+              title="비밀번호 보기/숨기기"
+            >
+              <span class="material-icons text-xl">
+                {{ showPassword ? 'visibility' : 'visibility_off' }}
+              </span>
+            </button>
+            <span v-if="errors.password" class="text-red-500 flex items-center pointer-events-none">
+              <span class="material-icons text-xl">error</span>
             </span>
-          </button>
-          <span v-if="errors.password" class="error-icon">
-            <span class="material-icons">error</span>
-          </span>
-          <span v-else-if="formData.password && !errors.password" class="success-icon">
-            <span class="material-icons">check_circle</span>
-          </span>
+            <span v-else-if="formData.password && !errors.password" class="text-emerald-500 flex items-center pointer-events-none">
+              <span class="material-icons text-xl">check_circle</span>
+            </span>
+          </div>
         </div>
-        <small v-if="errors.password" class="form-error">{{ errors.password }}</small>
+        <div class="h-6 mt-1">
+          <small v-if="errors.password" class="block text-xs font-bold text-red-500 px-1 animate-slideIn">{{ errors.password }}</small>
+        </div>
       </div>
       
       <!-- 비밀번호 확인 -->
-      <div class="form-group" :class="{ 'has-error': errors.confirmPassword, 'success': formData.confirmPassword && !errors.confirmPassword }">
-        <label for="register-confirm-password">비밀번호 확인</label>
-        <div class="password-input-container">
+      <div class="group/field">
+        <label for="register-confirm-password" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">비밀번호 확인</label>
+        <div class="relative">
           <input
             id="register-confirm-password"
             v-model="formData.confirmPassword"
@@ -51,33 +60,42 @@
             required
             :disabled="isLoading"
             @blur="validateField('confirmPassword')"
-            ref="confirmPasswordInput"
+            ref="confirmPasswordInputRef"
+            class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[15px] transition-all duration-300 focus:outline-none focus:ring-4 focus:bg-white pr-20"
+            :class="[
+              errors.confirmPassword ? 'border-red-500 focus:ring-red-500/10' : 
+              (formData.confirmPassword && !errors.confirmPassword ? 'border-emerald-500 focus:ring-emerald-500/10' : 'focus:border-primary-500 focus:ring-primary-500/10')
+            ]"
           />
-          <button
-            type="button"
-            class="password-toggle"
-            :class="{ 'shifted': formData.confirmPassword }"
-            @click="showConfirmPassword = !showConfirmPassword"
-            tabindex="0"
-          >
-            <span class="material-icons">
-              {{ showConfirmPassword ? 'visibility' : 'visibility_off' }}
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-1 pr-1.5">
+            <button
+              type="button"
+              class="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all duration-200 active:scale-90"
+              @click="showConfirmPassword = !showConfirmPassword"
+              tabindex="0"
+              title="비밀번호 보기/숨기기"
+            >
+              <span class="material-icons text-xl">
+                {{ showConfirmPassword ? 'visibility' : 'visibility_off' }}
+              </span>
+            </button>
+            <span v-if="errors.confirmPassword" class="text-red-500 flex items-center pointer-events-none">
+              <span class="material-icons text-xl">error</span>
             </span>
-          </button>
-          <span v-if="errors.confirmPassword" class="error-icon">
-            <span class="material-icons">error</span>
-          </span>
-          <span v-else-if="formData.confirmPassword && !errors.confirmPassword" class="success-icon">
-            <span class="material-icons">check_circle</span>
-          </span>
+            <span v-else-if="formData.confirmPassword && !errors.confirmPassword" class="text-emerald-500 flex items-center pointer-events-none">
+              <span class="material-icons text-xl">check_circle</span>
+            </span>
+          </div>
         </div>
-        <small v-if="errors.confirmPassword" class="form-error">{{ errors.confirmPassword }}</small>
+        <div class="h-6 mt-1">
+          <small v-if="errors.confirmPassword" class="block text-xs font-bold text-red-500 px-1 animate-slideIn">{{ errors.confirmPassword }}</small>
+        </div>
       </div>
       
-      <div class="form-actions">
+      <div class="flex gap-4 pt-4">
         <button 
           type="button" 
-          class="secondary-btn"
+          class="flex-1 py-4 px-6 bg-white text-slate-500 font-bold rounded-2xl text-[15px] border border-slate-200 transition-all duration-300 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300 active:scale-[0.98] disabled:opacity-50"
           @click="$emit('prev')"
           :disabled="isLoading"
         >
@@ -85,82 +103,84 @@
         </button>
         <button 
           type="submit" 
-          class="primary-btn"
+          class="flex-[2] py-4 bg-gradient-to-br from-slate-900 to-slate-800 text-white font-bold rounded-2xl text-[15px] shadow-premium transition-all duration-300 hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-[0.98] disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2 group relative overflow-hidden"
           :disabled="isLoading || !formData.password || !formData.confirmPassword"
         >
-          <span>다음 단계</span>
-          <span class="material-icons btn-icon">arrow_forward</span>
+          <span class="relative z-10">다음 단계</span>
+          <span class="material-icons text-xl relative z-10 transition-transform duration-300 group-hover:translate-x-1">arrow_forward</span>
+          <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
         </button>
       </div>
     </form>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, watch, onMounted, nextTick, defineProps, defineEmits } from 'vue';
 import StepIndicator from './StepIndicator.vue';
 
-export default {
-  name: 'Step2Password',
-  components: { StepIndicator },
-  props: {
-    isLoading: { type: Boolean, default: false },
-    initialData: { type: Object, default: () => ({}) }
-  },
-  emits: ['next', 'prev', 'update:data'],
-  data() {
-    return {
-      formData: {
-        password: this.initialData.password || '',
-        confirmPassword: this.initialData.confirmPassword || ''
-      },
-      errors: { password: '', confirmPassword: '' },
-      showPassword: false,
-      showConfirmPassword: false
-    };
-  },
-  watch: {
-    formData: {
-      deep: true,
-      handler(val) {
-        this.$emit('update:data', val);
-      }
-    },
-    'formData.password'() {
-      if (this.errors.password) this.validateField('password');
-      if (this.errors.confirmPassword) this.validateField('confirmPassword');
-    },
-    'formData.confirmPassword'() {
-      if (this.errors.confirmPassword) this.validateField('confirmPassword');
-    }
-  },
-  mounted() {
-    this.$nextTick(() => this.$refs.passwordInput?.focus());
-  },
-  methods: {
-    validateField(field) {
-      if (field === 'password') {
-        if (!this.formData.password) this.errors.password = '비밀번호를 입력해주세요.';
-        else if (this.formData.password.length < 6) this.errors.password = '비밀번호는 최소 6자 이상이어야 합니다.';
-        else this.errors.password = '';
-      } else if (field === 'confirmPassword') {
-        if (!this.formData.confirmPassword) this.errors.confirmPassword = '비밀번호를 다시 입력해주세요.';
-        else if (this.formData.password !== this.formData.confirmPassword) this.errors.confirmPassword = '비밀번호가 일치하지 않습니다.';
-        else this.errors.confirmPassword = '';
-      }
-    },
-    
-    handleSubmit() {
-      this.validateField('password');
-      this.validateField('confirmPassword');
-      
-      if (this.errors.password || this.errors.confirmPassword) return;
-      
-      this.$emit('next', this.formData);
-    }
+const props = defineProps({
+  isLoading: { type: Boolean, default: false },
+  initialData: { type: Object, default: () => ({}) }
+});
+
+const emit = defineEmits(['next', 'prev', 'update:data']);
+
+// Refs
+const passwordInputRef = ref(null);
+const confirmPasswordInputRef = ref(null);
+
+// State
+const formData = ref({
+  password: props.initialData.password || '',
+  confirmPassword: props.initialData.confirmPassword || ''
+});
+const errors = ref({ password: '', confirmPassword: '' });
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+
+// Watch
+watch(formData, (val) => {
+  emit('update:data', val);
+}, { deep: true });
+
+watch(() => formData.value.password, () => {
+  if (errors.value.password) validateField('password');
+  if (errors.value.confirmPassword) validateField('confirmPassword');
+});
+
+watch(() => formData.value.confirmPassword, () => {
+  if (errors.value.confirmPassword) validateField('confirmPassword');
+});
+
+// Mounted
+onMounted(() => {
+  nextTick(() => passwordInputRef.value?.focus());
+});
+
+// Methods
+function validateField(field) {
+  if (field === 'password') {
+    if (!formData.value.password) errors.value.password = '비밀번호를 입력해주세요.';
+    else if (formData.value.password.length < 6) errors.value.password = '비밀번호는 최소 6자 이상이어야 합니다.';
+    else errors.value.password = '';
+  } else if (field === 'confirmPassword') {
+    if (!formData.value.confirmPassword) errors.value.confirmPassword = '비밀번호를 다시 입력해주세요.';
+    else if (formData.value.password !== formData.value.confirmPassword) errors.value.confirmPassword = '비밀번호가 일치하지 않습니다.';
+    else errors.value.confirmPassword = '';
   }
-};
+}
+
+function handleSubmit() {
+  validateField('password');
+  validateField('confirmPassword');
+  
+  if (errors.value.password || errors.value.confirmPassword) return;
+  
+  emit('next', formData.value);
+}
 </script>
 
 <style scoped>
-@import './register-shared.css';
+/* All styles handled via Tailwind */
 </style>

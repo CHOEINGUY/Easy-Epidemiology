@@ -1,6 +1,12 @@
 <template>
-  <div class="auth-form">
-    <transition name="step-transition" mode="out-in">
+  <div class="animate-fadeUp [animation-delay:0.4s] [animation-fill-mode:backwards]">
+    <transition 
+      enter-active-class="transition-all duration-300 ease-out"
+      leave-active-class="transition-all duration-300 ease-in"
+      enter-from-class="opacity-0 translate-x-5"
+      leave-to-class="opacity-0 -translate-x-5"
+      mode="out-in"
+    >
       <!-- Step 1: Basic Info -->
       <Step1BasicInfo
         v-if="currentStep === 1"
@@ -9,7 +15,7 @@
         :initial-data="formData"
         @next="handleStep1Next"
         @update:data="updateFormData"
-        ref="step1"
+        ref="step1Ref"
       />
       
       <!-- Step 2: Password -->
@@ -38,143 +44,116 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, watch, defineProps, defineEmits } from 'vue';
+import { useAuthStore } from '../../../../stores/authStore';
 import { authApi } from '../../../../services/authApi';
 import Step1BasicInfo from './Step1BasicInfo.vue';
 import Step2Password from './Step2Password.vue';
 import Step3Affiliation from './Step3Affiliation.vue';
 
-export default {
-  name: 'AuthRegister',
-  components: {
-    Step1BasicInfo,
-    Step2Password,
-    Step3Affiliation
-  },
-  props: {
-    isLoading: { type: Boolean, default: false },
-    error: { type: String, default: '' }
-  },
-  emits: ['register', 'update:error'],
-  data() {
-    return {
-      currentStep: 1,
-      isChecking: false,
-      formData: {
-        name: '',
-        email: '',
-        phone: '',
-        password: '',
-        confirmPassword: '',
-        affiliationType: '',
-        affiliation: ''
-      }
-    };
-  },
-  watch: {
-    '$store.state.auth.isAuthenticated'(newValue, oldValue) {
-      if (oldValue === true && newValue === false) {
-        this.resetForm();
-      }
-    }
-  },
-  methods: {
-    updateFormData(data) {
-      this.formData = { ...this.formData, ...data };
-    },
-    
-    async handleStep1Next(data) {
-      this.updateFormData(data);
-      this.isChecking = true;
-      this.$emit('update:error', '');
-      
-      try {
-        // Check Email availability
-        try {
-          const emailCheck = await authApi.checkEmailAvailability(this.formData.email);
-          if (emailCheck.data?.available === false) {
-            this.$refs.step1?.setError('email', '이미 사용 중인 이메일 주소입니다.');
-            this.isChecking = false;
-            return;
-          }
-        } catch (e) {
-          this.$refs.step1?.setError('local', '이메일 확인 중 오류가 발생했습니다.');
-          this.isChecking = false;
-          return;
-        }
-        
-        // Check Phone availability
-        try {
-          const cleanPhone = this.formData.phone.replace(/[^0-9]/g, '');
-          const phoneCheck = await authApi.checkPhoneAvailability(cleanPhone);
-          if (phoneCheck.data?.available === false) {
-            this.$refs.step1?.setError('phone', '이미 사용 중인 전화번호입니다.');
-            this.isChecking = false;
-            return;
-          }
-        } catch (e) {
-          this.$refs.step1?.setError('local', '전화번호 확인 중 오류가 발생했습니다.');
-          this.isChecking = false;
-          return;
-        }
-        
-        this.currentStep = 2;
-      } catch (err) {
-        this.$refs.step1?.setError('local', '확인 중 오류가 발생했습니다.');
-      } finally {
-        this.isChecking = false;
-      }
-    },
-    
-    handleStep2Next(data) {
-      this.updateFormData(data);
-      this.currentStep = 3;
-    },
-    
-    handleSubmit(data) {
-      this.updateFormData(data);
-      this.$emit('register', this.formData);
-    },
-    
-    resetForm() {
-      this.currentStep = 1;
-      this.formData = {
-        name: '',
-        email: '',
-        phone: '',
-        password: '',
-        confirmPassword: '',
-        affiliationType: '',
-        affiliation: ''
-      };
-    }
+defineProps({
+  isLoading: { type: Boolean, default: false },
+  error: { type: String, default: '' }
+});
+
+const emit = defineEmits(['register', 'update:error']);
+
+const authStore = useAuthStore();
+const step1Ref = ref(null);
+
+// State
+const currentStep = ref(1);
+const isChecking = ref(false);
+const formData = ref({
+  name: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  affiliationType: '',
+  affiliation: ''
+});
+
+// Watch
+watch(() => authStore.isAuthenticated, (newValue, oldValue) => {
+  if (oldValue === true && newValue === false) {
+    resetForm();
   }
-};
+});
+
+// Methods
+function updateFormData(data) {
+  formData.value = { ...formData.value, ...data };
+}
+
+async function handleStep1Next(data) {
+  updateFormData(data);
+  isChecking.value = true;
+  emit('update:error', '');
+  
+  try {
+    // Check Email availability
+    try {
+      const emailCheck = await authApi.checkEmailAvailability(formData.value.email);
+      if (emailCheck.data?.available === false) {
+        step1Ref.value?.setError('email', '이미 사용 중인 이메일 주소입니다.');
+        isChecking.value = false;
+        return;
+      }
+    } catch (e) {
+      step1Ref.value?.setError('local', '이메일 확인 중 오류가 발생했습니다.');
+      isChecking.value = false;
+      return;
+    }
+    
+    // Check Phone availability
+    try {
+      const cleanPhone = formData.value.phone.replace(/[^0-9]/g, '');
+      const phoneCheck = await authApi.checkPhoneAvailability(cleanPhone);
+      if (phoneCheck.data?.available === false) {
+        step1Ref.value?.setError('phone', '이미 사용 중인 전화번호입니다.');
+        isChecking.value = false;
+        return;
+      }
+    } catch (e) {
+      step1Ref.value?.setError('local', '전화번호 확인 중 오류가 발생했습니다.');
+      isChecking.value = false;
+      return;
+    }
+    
+    currentStep.value = 2;
+  } catch (err) {
+    step1Ref.value?.setError('local', '확인 중 오류가 발생했습니다.');
+  } finally {
+    isChecking.value = false;
+  }
+}
+
+function handleStep2Next(data) {
+  updateFormData(data);
+  currentStep.value = 3;
+}
+
+function handleSubmit(data) {
+  updateFormData(data);
+  emit('register', formData.value);
+}
+
+function resetForm() {
+  currentStep.value = 1;
+  formData.value = {
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    affiliationType: '',
+    affiliation: ''
+  };
+}
 </script>
 
 <style scoped>
-.auth-form {
-  animation: fadeUp 0.8s ease-out 0.4s backwards;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(15px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Step Transition */
-.step-transition-enter-active,
-.step-transition-leave-active {
-  transition: all 0.3s ease;
-}
-
-.step-transition-enter-from {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-.step-transition-leave-to {
-  opacity: 0;
-  transform: translateX(-20px);
-}
+/* Scoped styles replaced by Tailwind utilities */
 </style>

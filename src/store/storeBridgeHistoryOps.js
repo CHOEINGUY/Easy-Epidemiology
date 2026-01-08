@@ -3,6 +3,8 @@
  * Undo/Redo 및 스냅샷 관련 메서드
  */
 
+import { getColumnUniqueKey, parseErrorKey } from '../components/DataInputVirtualScroll/utils/validationUtils.js';
+
 export const historyOperations = {
   /**
    * 실행 취소
@@ -58,13 +60,39 @@ export const historyOperations = {
       });
       
       currentErrors.forEach((error, key) => {
-        const [rowIndex, colIndex] = key.split('_').map(Number);
+        // [Fix] 고유 식별자 키 파싱 로직 개선
+        const parsed = parseErrorKey(key);
+        let rowIndex, colIndex;
+        let foundColumn = false;
+
+        if (parsed) {
+          rowIndex = parsed.rowIndex;
+          const uniqueKey = parsed.uniqueKey;
+          
+          // 1. 고유 키로 컬럼 찾기
+          const colMeta = columnMetas.find(c => getColumnUniqueKey(c) === uniqueKey);
+          if (colMeta) {
+            colIndex = colMeta.colIndex;
+            foundColumn = true;
+          } else {
+            // 2. Fallback: 고유 키가 숫자인지 확인 (구버전 키: row_col)
+            const parsedCol = parseInt(uniqueKey, 10);
+            if (!isNaN(parsedCol)) {
+              colIndex = parsedCol;
+              foundColumn = true;
+            }
+          }
+        } 
+
+        // 컬럼을 찾지 못했거나 rowIndex가 유효하지 않으면 스킵
+        if (!foundColumn || rowIndex === undefined || colIndex === undefined) return;
         
         if (prevState.rows[rowIndex] && currentRows[rowIndex]) {
           const prevValue = this._getCellValueByIndex(prevState.rows[rowIndex], colIndex, columnMetas);
           const currentValue = this._getCellValueByIndex(currentRows[rowIndex], colIndex, columnMetas);
           
           if (prevValue === currentValue && !restoredErrors.has(key)) {
+            // 값이 변하지 않았다면 오류 유지
             restoredErrors.set(key, error);
           }
         }
@@ -133,13 +161,39 @@ export const historyOperations = {
       });
       
       currentErrors.forEach((error, key) => {
-        const [rowIndex, colIndex] = key.split('_').map(Number);
+        // [Fix] 고유 식별자 키 파싱 로직 개선
+        const parsed = parseErrorKey(key);
+        let rowIndex, colIndex;
+        let foundColumn = false;
+
+        if (parsed) {
+          rowIndex = parsed.rowIndex;
+          const uniqueKey = parsed.uniqueKey;
+          
+          // 1. 고유 키로 컬럼 찾기
+          const colMeta = columnMetas.find(c => getColumnUniqueKey(c) === uniqueKey);
+          if (colMeta) {
+            colIndex = colMeta.colIndex;
+            foundColumn = true;
+          } else {
+            // 2. Fallback: 고유 키가 숫자인지 확인 (구버전 키: row_col)
+            const parsedCol = parseInt(uniqueKey, 10);
+            if (!isNaN(parsedCol)) {
+              colIndex = parsedCol;
+              foundColumn = true;
+            }
+          }
+        } 
+
+        // 컬럼을 찾지 못했거나 rowIndex가 유효하지 않으면 스킵
+        if (!foundColumn || rowIndex === undefined || colIndex === undefined) return;
         
         if (nextState.rows[rowIndex] && currentRows[rowIndex]) {
           const nextValue = this._getCellValueByIndex(nextState.rows[rowIndex], colIndex, columnMetas);
           const currentValue = this._getCellValueByIndex(currentRows[rowIndex], colIndex, columnMetas);
           
           if (nextValue === currentValue && !restoredErrors.has(key)) {
+            // 값이 변하지 않았다면 오류 유지
             restoredErrors.set(key, error);
           }
         }

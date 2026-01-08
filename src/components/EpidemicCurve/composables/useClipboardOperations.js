@@ -11,8 +11,9 @@ export function useClipboardOperations() {
 
   // 증상 테이블 복사
   const copySymptomTableToClipboard = async () => {
-    const tableEl = document.querySelector('.output-row .table-container .frequency-table');
+    const tableEl = document.getElementById('symptom-onset-table');
     if (!tableEl) {
+      console.warn('증상 테이블을 찾을 수 없습니다: #symptom-onset-table');
       isSymptomTableCopied.value = false;
       return;
     }
@@ -62,8 +63,9 @@ export function useClipboardOperations() {
 
   // 잠복기 테이블 복사
   const copyIncubationTableToClipboard = async () => {
-    const tableEl = document.querySelectorAll('.output-row .table-container .frequency-table')[1];
+    const tableEl = document.getElementById('incubation-table');
     if (!tableEl) {
+      console.warn('잠복기 테이블을 찾을 수 없습니다: #incubation-table');
       isIncubationTableCopied.value = false;
       return;
     }

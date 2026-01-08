@@ -1,599 +1,260 @@
 <template>
-  <div class="user-table-wrapper">
+  <div class="bg-white rounded-[2.5rem] border border-slate-200 shadow-premium shadow-slate-900/5 overflow-hidden transition-all duration-300">
     <!-- Loading State -->
-    <div v-if="loading" class="state-container loading-state">
-      <div class="loading-spinner">
-        <span class="material-icons spin">sync</span>
+    <div v-if="loading" class="flex flex-col items-center justify-center py-24 px-6 text-center">
+      <div class="mb-6 relative">
+        <div class="absolute inset-0 bg-primary-500/20 blur-xl rounded-full scale-150 animate-pulse"></div>
+        <span class="material-icons text-6xl text-primary-500 animate-spin relative z-10">sync</span>
       </div>
-      <h3>데이터를 불러오는 중...</h3>
-      <p>잠시만 기다려주세요</p>
+      <h3 class="text-xl font-black text-slate-900 mb-2">데이터 동기화 중...</h3>
+      <p class="text-sm font-medium text-slate-500">잠시만 기다려 주세요.</p>
     </div>
     
     <!-- Empty State -->
-    <div v-else-if="users.length === 0" class="state-container empty-state">
-      <div class="empty-icon-box" :class="mode">
-        <span class="material-icons">{{ mode === 'pending' ? 'check_circle' : 'group_off' }}</span>
+    <div v-else-if="users.length === 0" class="flex flex-col items-center justify-center py-32 px-6 text-center bg-slate-50/20">
+      <div class="w-28 h-28 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-inner shadow-slate-900/5 bg-white relative group" :class="mode === USER_STATUS.PENDING ? 'text-emerald-500 border border-emerald-100' : 'text-slate-300 border border-slate-100'">
+        <div class="absolute inset-0 bg-current transition-opacity duration-300 opacity-0 group-hover:opacity-5 rounded-inherit"></div>
+        <span class="material-icons text-6xl transition-transform duration-500 group-hover:scale-110">{{ mode === USER_STATUS.PENDING ? 'verified_user' : 'person_off' }}</span>
       </div>
-      <h3>{{ mode === 'pending' ? '승인 대기 중인 사용자가 없습니다' : '등록된 사용자가 없습니다' }}</h3>
-      <p>{{ mode === 'pending' ? '모든 사용자가 승인되었거나 아직 가입 신청이 없습니다.' : '아직 등록된 사용자가 없습니다.' }}</p>
+      <h3 class="text-2xl font-black text-slate-900 mb-3 tracking-tight">{{ mode === USER_STATUS.PENDING ? '모든 요청이 처리되었습니다' : '사용자를 찾을 수 없습니다' }}</h3>
+      <p class="text-[15px] font-medium text-slate-500 max-w-xs mx-auto leading-relaxed">{{ mode === USER_STATUS.PENDING ? '새로운 가입 요청이 발생하면 이곳에 표시됩니다.' : '시스템에 등록된 사용자가 없습니다.' }}</p>
     </div>
 
     <!-- Table -->
-    <table v-else class="modern-table">
-      <thead>
-        <tr>
-          <th v-if="mode === 'pending'" class="checkbox-col">
-            <div class="checkbox-wrapper">
-              <input 
-                type="checkbox" 
-                :checked="isAllSelected"
-                @change="toggleSelectAll"
-                class="modern-checkbox"
-                id="select-all"
-              />
-              <label for="select-all" class="checkbox-label"></label>
-            </div>
-          </th>
-          <th>이름</th>
-          <th>소속유형</th>
-          <th>소속</th>
-          <th>이메일</th>
-          <th>전화번호</th>
-          <th>상태</th>
-          <th v-if="mode === 'users'">권한</th>
-          <th>가입일</th>
-          <th class="actions-col">작업</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="user in users" :key="user.id" class="table-row">
-          <td v-if="mode === 'pending'" class="checkbox-col">
-            <div class="checkbox-wrapper">
-              <input 
-                type="checkbox" 
-                :value="user.id"
-                :checked="selectedUsers.includes(user.id)"
-                @change="updateSelection(user.id, $event.target.checked)"
-                class="modern-checkbox"
-                :id="'user-' + user.id"
-              />
-              <label :for="'user-' + user.id" class="checkbox-label"></label>
-            </div>
-          </td>
-          <td class="name-cell">
-            <div class="user-info">
-              <div class="user-avatar" :class="getAvatarClass(user)">
-                {{ getInitials(user.name) }}
+    <div v-else class="overflow-x-auto">
+      <table class="w-full border-separate border-spacing-0">
+        <thead class="sticky top-0 z-30 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-100">
+          <tr>
+            <th v-if="mode === USER_STATUS.PENDING" class="w-16 px-6 py-5 text-center">
+              <div class="relative flex items-center justify-center">
+                <input 
+                  type="checkbox" 
+                  :checked="isAllSelected"
+                  @change="toggleSelectAll"
+                  class="peer h-6 w-6 cursor-pointer appearance-none rounded-xl border-2 border-slate-200 transition-all checked:border-primary-500 checked:bg-primary-500 hover:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 shadow-sm"
+                  id="select-all"
+                />
+                <span class="material-icons absolute opacity-0 peer-checked:opacity-100 pointer-events-none text-white text-[18px] font-black">check</span>
               </div>
-              <span v-if="user.name" class="user-name">{{ user.name }}</span>
-              <span v-else class="no-name">이름 없음</span>
-            </div>
-          </td>
-          <td>
-            <span class="affiliation-badge" :class="getAffiliationTypeClass(user.affiliationType || user.organizationType)">
-              {{ getAffiliationTypeLabel(user.affiliationType || user.organizationType) }}
-            </span>
-          </td>
-          <td class="org-cell">{{ user.affiliation || user.organization || '-' }}</td>
-          <td class="email-cell">{{ user.email || '-' }}</td>
-          <td class="phone-cell">{{ user.phone || '-' }}</td>
-          <td>
-            <span :class="['status-badge', getStatusClass(user.status || (user.approved ? 'approved' : 'pending'))]">
-              <span class="status-dot"></span>
-              {{ getStatusLabel(user.status || (user.approved ? 'approved' : 'pending')) }}
-            </span>
-          </td>
-          <td v-if="mode === 'users'" class="role-cell">
-            <select 
-              v-if="currentUser && currentUser.role === 'admin' && user.id !== currentUser.id"
-              v-model="user.role" 
-              @change="$emit('change-role', user)"
-              class="role-select"
-            >
-              <option value="admin">시스템 관리자</option>
-              <option value="support">지원단</option>
-              <option value="user">일반</option>
-            </select>
-            <span v-else class="role-text">
-              {{ user.role === 'admin' ? '시스템 관리자' : user.role === 'support' ? '지원단' : '일반' }}
-            </span>
-          </td>
-          <td class="date-cell">{{ formatDate(user.createdAt) }}</td>
-          <td class="actions-cell">
-            <div v-if="mode === 'pending'" class="action-buttons">
-              <button @click="$emit('approve', user.id)" class="action-btn approve" title="승인">
-                <span class="material-icons">check</span>
-              </button>
-              <button @click="$emit('reject', user.id)" class="action-btn reject" title="거부">
-                <span class="material-icons">close</span>
-              </button>
-            </div>
-            <div v-else-if="mode === 'users'" class="action-buttons">
-              <button 
-                v-if="user.id !== currentUser?.id && user.role !== 'admin'"
-                @click="$emit('delete', user.id)" 
-                class="action-btn delete" 
-                title="삭제"
-              >
-                <span class="material-icons">delete_outline</span>
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </th>
+            <th class="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">성명</th>
+            <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">구분</th>
+            <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">소속</th>
+            <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">이메일</th>
+            <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">연락처</th>
+            <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">상태</th>
+            <th v-if="mode === 'users'" class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">권한</th>
+            <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">가입일</th>
+            <th class="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">관리</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          <tr v-for="user in users" :key="user.id" class="group transition-all hover:bg-slate-50/50">
+            <td v-if="mode === USER_STATUS.PENDING" class="px-6 py-4.5 text-center">
+              <div class="relative flex items-center justify-center">
+                <input 
+                  type="checkbox" 
+                  :value="user.id"
+                  :checked="selectedUsers.includes(user.id)"
+                  @change="updateSelection(user.id, $event.target.checked)"
+                  class="peer h-6 w-6 cursor-pointer appearance-none rounded-xl border-2 border-slate-200 transition-all checked:border-primary-500 checked:bg-primary-500 hover:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 shadow-sm"
+                  :id="'user-' + user.id"
+                />
+                <span class="material-icons absolute opacity-0 peer-checked:opacity-100 pointer-events-none text-white text-[18px] font-black">check</span>
+              </div>
+            </td>
+            <td class="px-8 py-4.5 whitespace-nowrap">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-[16px] font-black text-white shadow-premium transition-all duration-500 group-hover:scale-105 group-hover:-translate-y-1 relative overflow-hidden" :class="getAvatarBgClass(user)">
+                  <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                  {{ getInitials(user.name) }}
+                </div>
+                <div>
+                  <div v-if="user.name" class="font-bold text-slate-800 tracking-tight group-hover:text-primary-600 transition-colors text-[15px]">{{ user.name }}</div>
+                  <div v-else class="text-sm italic text-slate-400">이름 없음</div>
+                  <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">ID: {{ user.id.substring(0, 8) }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4.5 whitespace-nowrap">
+              <span class="inline-flex items-center px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] shadow-sm border" :class="getAffiliationBadgeClass(user.affiliationType || user.organizationType)">
+                {{ getAffiliationTypeLabel(user.affiliationType || user.organizationType) }}
+              </span>
+            </td>
+            <td class="px-6 py-4.5 text-[14px] font-bold text-slate-600">{{ user.affiliation || user.organization || '-' }}</td>
+            <td class="px-6 py-4.5 text-[14px] font-medium text-slate-500">{{ user.email || '-' }}</td>
+            <td class="px-6 py-4.5 text-[14px] font-bold text-slate-600 whitespace-nowrap font-mono tracking-tighter">{{ user.phone || '-' }}</td>
+            <td class="px-6 py-4.5 whitespace-nowrap">
+              <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[10px] font-black transition-all shadow-sm group-hover:shadow-md" :class="getStatusBadgeClass(user.status || (user.approved ? 'approved' : 'pending'))">
+                <span class="w-2 h-2 rounded-full shadow-sm" :class="getStatusDotClass(user.status || (user.approved ? 'approved' : 'pending'))"></span>
+                {{ getStatusLabel(user.status || (user.approved ? 'approved' : 'pending')) }}
+              </span>
+            </td>
+            <td v-if="mode === 'users'" class="px-6 py-4.5 whitespace-nowrap">
+              <div v-if="currentUser && currentUser.role === USER_ROLES.ADMIN && user.id !== currentUser.id" class="relative group/select">
+                <select 
+                  v-model="user.role" 
+                  @change="emit('change-role', user)"
+                  class="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-black rounded-xl pl-3 pr-8 py-2.5 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-400 transition-all cursor-pointer shadow-sm hover:border-slate-300"
+                >
+                  <option :value="USER_ROLES.ADMIN">시스템 관리자</option>
+                  <option :value="USER_ROLES.SUPPORT">기술 지원 팀</option>
+                  <option :value="USER_ROLES.USER">일반 사용자</option>
+                </select>
+                <span class="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-sm group-hover/select:text-primary-500 transition-colors">expand_more</span>
+              </div>
+              <span v-else class="text-[10px] font-black text-slate-500 bg-slate-100 px-3.5 py-2 rounded-xl uppercase tracking-wider inline-block">
+                {{ getUserRoleLabel(user.role) }}
+              </span>
+            </td>
+            <td class="px-6 py-4.5 text-[12px] font-bold text-slate-500 whitespace-nowrap font-mono">{{ formatDate(user.createdAt) }}</td>
+            <td class="px-8 py-4.5 whitespace-nowrap text-center">
+              <div v-if="mode === USER_STATUS.PENDING" class="flex items-center justify-center gap-3">
+                <button @click="emit('approve', user.id)" class="w-11 h-11 flex items-center justify-center bg-white text-emerald-600 border border-emerald-100 rounded-2xl transition-all duration-300 hover:bg-emerald-500 hover:text-white hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-1 active:scale-95 shadow-sm group/btn" title="Approve">
+                  <span class="material-icons text-2xl transition-transform group-hover/btn:rotate-12">check_circle</span>
+                </button>
+                <button @click="emit('reject', user.id)" class="w-11 h-11 flex items-center justify-center bg-white text-amber-600 border border-amber-100 rounded-2xl transition-all duration-300 hover:bg-amber-500 hover:text-white hover:shadow-xl hover:shadow-amber-500/30 hover:-translate-y-1 active:scale-95 shadow-sm group/btn" title="Reject">
+                  <span class="material-icons text-2xl transition-transform group-hover/btn:-rotate-12">cancel</span>
+                </button>
+              </div>
+              <div v-else-if="mode === 'users'" class="flex items-center justify-center gap-2.5">
+                <button 
+                  v-if="user.id !== currentUser?.id && user.role !== USER_ROLES.ADMIN"
+                  @click="emit('delete', user.id)" 
+                  class="w-11 h-11 flex items-center justify-center bg-white text-red-500 border border-red-100 rounded-2xl transition-all duration-300 hover:bg-red-500 hover:text-white hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-1 active:scale-95 shadow-sm group/btn" 
+                  title="삭제"
+                >
+                  <span class="material-icons text-2xl transition-transform group-hover/btn:rotate-12">delete_forever</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
-<script>
+<script setup>
+import { computed, defineProps, defineEmits } from 'vue';
 import { 
   getAffiliationTypeLabel, 
-  getAffiliationTypeClass, 
-  getStatusClass, 
-  getStatusLabel, 
-  formatDate 
+  formatDate,
+  getStatusLabel
 } from './utils.js';
+import { AFFILIATION_TYPES, USER_ROLES, USER_ROLE_LABELS, USER_STATUS } from '../../constants';
 
-export default {
-  name: 'UserTable',
-  props: {
-    users: {
-      type: Array,
-      required: true
-    },
-    mode: {
-      type: String,
-      required: true
-    },
-    selectedUsers: {
-      type: Array,
-      default: () => []
-    },
-    currentUser: {
-      type: Object,
-      default: null
-    },
-    loading: {
-      type: Boolean,
-      default: false
-    }
+// Props definition
+const props = defineProps({
+  users: {
+    type: Array,
+    required: true
   },
-  computed: {
-    isAllSelected() {
-      return this.users.length > 0 && 
-             this.users.every(user => this.selectedUsers.includes(user.id));
-    }
+  mode: {
+    type: String,
+    required: true
   },
-  methods: {
-    getAffiliationTypeLabel,
-    getAffiliationTypeClass,
-    getStatusClass,
-    getStatusLabel,
-    formatDate,
-    
-    toggleSelectAll(event) {
-      if (event.target.checked) {
-        const allIds = this.users.map(user => user.id);
-        this.$emit('update:selectedUsers', allIds);
-      } else {
-        this.$emit('update:selectedUsers', []);
-      }
-    },
-    
-    updateSelection(userId, checked) {
-      let newSelection = [...this.selectedUsers];
-      if (checked) {
-        if (!newSelection.includes(userId)) {
-          newSelection.push(userId);
-        }
-      } else {
-        newSelection = newSelection.filter(id => id !== userId);
-      }
-      this.$emit('update:selectedUsers', newSelection);
-    },
-
-    getInitials(name) {
-      if (!name) return '?';
-      return name.charAt(0).toUpperCase();
-    },
-
-    getAvatarClass(user) {
-      const types = ['hospital', 'clinic', 'public_health', 'university', 'research', 'government', 'other'];
-      const type = user.affiliationType || user.organizationType || 'other';
-      return types.includes(type) ? type : 'other';
-    }
+  selectedUsers: {
+    type: Array,
+    default: () => []
+  },
+  currentUser: {
+    type: Object,
+    default: null
+  },
+  loading: {
+    type: Boolean,
+    default: false
   }
-};
+});
+
+// Emits symbol definition
+const emit = defineEmits(['update:selectedUsers', 'approve', 'reject', 'delete', 'change-role']);
+
+// Computeds
+const isAllSelected = computed(() => {
+  return props.users.length > 0 && 
+         props.users.every(user => props.selectedUsers.includes(user.id));
+});
+
+// Selection helpers
+function toggleSelectAll(event) {
+  if (event.target.checked) {
+    const allIds = props.users.map(user => user.id);
+    emit('update:selectedUsers', allIds);
+  } else {
+    emit('update:selectedUsers', []);
+  }
+}
+
+function updateSelection(userId, checked) {
+  let newSelection = [...props.selectedUsers];
+  if (checked) {
+    if (!newSelection.includes(userId)) {
+      newSelection.push(userId);
+    }
+  } else {
+    newSelection = newSelection.filter(id => id !== userId);
+  }
+  emit('update:selectedUsers', newSelection);
+}
+
+// Visual helpers
+function getInitials(name) {
+  if (!name) return '?';
+  return name.charAt(0).toUpperCase();
+}
+
+function getAvatarBgClass(user) {
+  const type = user.affiliationType || user.organizationType || AFFILIATION_TYPES.OTHER;
+  switch (type) {
+  case 'hospital': return 'bg-gradient-to-br from-blue-500 to-blue-600';
+  case 'clinic': return 'bg-gradient-to-br from-violet-500 to-violet-600';
+  case 'public_health': return 'bg-gradient-to-br from-emerald-500 to-emerald-600';
+  case 'university': return 'bg-gradient-to-br from-amber-500 to-amber-600';
+  case 'research': return 'bg-gradient-to-br from-pink-500 to-pink-600';
+  case 'government': return 'bg-gradient-to-br from-cyan-500 to-cyan-600';
+  default: return 'bg-gradient-to-br from-slate-500 to-slate-600';
+  }
+}
+
+function getAffiliationBadgeClass(type) {
+  switch (type) {
+  case 'hospital': return 'bg-blue-50 text-blue-600';
+  case 'clinic': return 'bg-violet-50 text-violet-600';
+  case 'public_health': return 'bg-emerald-50 text-emerald-600';
+  case 'university': return 'bg-amber-50 text-amber-600';
+  case 'research': return 'bg-pink-50 text-pink-600';
+  case 'government': return 'bg-cyan-50 text-cyan-600';
+  default: return 'bg-slate-50 text-slate-600';
+  }
+}
+
+function getStatusBadgeClass(status) {
+  switch (status) {
+  case 'approved': return 'bg-emerald-50 text-emerald-700';
+  case 'pending': return 'bg-amber-50 text-amber-700';
+  case 'rejected': return 'bg-red-50 text-red-700';
+  case 'suspended': return 'bg-slate-50 text-slate-600';
+  default: return 'bg-slate-50 text-slate-600';
+  }
+}
+
+function getStatusDotClass(status) {
+  switch (status) {
+  case 'approved': return 'bg-emerald-500';
+  case 'pending': return 'bg-amber-500 animate-pulse';
+  case 'rejected': return 'bg-red-500';
+  case 'suspended': return 'bg-slate-400';
+  default: return 'bg-slate-400';
+  }
+}
+
+function getUserRoleLabel(role) {
+  return USER_ROLE_LABELS[role] || '알 수 없음';
+}
 </script>
 
 <style scoped>
-.user-table-wrapper {
-  background: white;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-}
-
-/* Modern Table */
-.modern-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.modern-table th {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 16px 20px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 700;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid #e2e8f0;
-  white-space: nowrap;
-}
-
-.modern-table td {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 14px;
-  color: #334155;
-  vertical-align: middle;
-}
-
-.table-row {
-  transition: all 0.2s ease;
-}
-
-.table-row:hover {
-  background: linear-gradient(135deg, #f8fafc 0%, #fafbfc 100%);
-}
-
-.table-row:last-child td {
-  border-bottom: none;
-}
-
-/* Checkbox Styling */
-.checkbox-col {
-  width: 48px;
-  text-align: center;
-}
-
-.checkbox-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modern-checkbox {
-  display: none;
-}
-
-.checkbox-label {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #cbd5e1;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.checkbox-label:hover {
-  border-color: #3b82f6;
-}
-
-.modern-checkbox:checked + .checkbox-label {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-color: #2563eb;
-}
-
-.modern-checkbox:checked + .checkbox-label::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 6px;
-  width: 5px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-/* User Info with Avatar */
-.name-cell {
-  min-width: 160px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: white;
-  flex-shrink: 0;
-}
-
-.user-avatar.hospital { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-.user-avatar.clinic { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-.user-avatar.public_health { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-.user-avatar.university { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-.user-avatar.research { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
-.user-avatar.government { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
-.user-avatar.other { background: linear-gradient(135deg, #64748b 0%, #475569 100%); }
-
-.user-name {
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.no-name {
-  color: #94a3b8;
-  font-style: italic;
-  font-size: 13px;
-}
-
-/* Affiliation Badges */
-.affiliation-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.affiliation-hospital { background: #dbeafe; color: #1d4ed8; }
-.affiliation-clinic { background: #ede9fe; color: #6d28d9; }
-.affiliation-public_health { background: #d1fae5; color: #047857; }
-.affiliation-university { background: #fef3c7; color: #b45309; }
-.affiliation-research { background: #fce7f3; color: #be185d; }
-.affiliation-government { background: #ccfbf1; color: #0f766e; }
-.affiliation-other { background: #f1f5f9; color: #475569; }
-
-/* Status Badges */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.status-badge.approved {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge.approved .status-dot {
-  background: #22c55e;
-}
-
-.status-badge.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.status-badge.pending .status-dot {
-  background: #f59e0b;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.status-badge.rejected {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.status-badge.rejected .status-dot {
-  background: #ef4444;
-}
-
-.status-badge.suspended {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.status-badge.suspended .status-dot {
-  background: #94a3b8;
-}
-
-/* Role Select */
-.role-cell {
-  min-width: 140px;
-}
-
-.role-select {
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  background: white;
-  color: #334155;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.role-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-.role-text {
-  color: #64748b;
-  font-size: 13px;
-}
-
-/* Date Cell */
-.date-cell {
-  color: #64748b;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-/* Actions */
-.actions-col {
-  width: 100px;
-  text-align: center;
-}
-
-.actions-cell {
-  text-align: center;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-btn .material-icons {
-  font-size: 18px;
-}
-
-.action-btn.approve {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.action-btn.approve:hover {
-  background: #16a34a;
-  color: white;
-  transform: scale(1.1);
-}
-
-.action-btn.reject {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.action-btn.reject:hover {
-  background: #d97706;
-  color: white;
-  transform: scale(1.1);
-}
-
-.action-btn.delete {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.action-btn.delete:hover {
-  background: #dc2626;
-  color: white;
-  transform: scale(1.1);
-}
-
-/* State Containers */
-.state-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-  text-align: center;
-}
-
-.state-container h3 {
-  margin: 0 0 8px 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.state-container p {
-  margin: 0;
-  font-size: 14px;
-  color: #64748b;
-}
-
-/* Loading State */
-.loading-spinner {
-  margin-bottom: 20px;
-}
-
-.loading-spinner .material-icons {
-  font-size: 48px;
-  color: #3b82f6;
-}
-
-.material-icons.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  100% { transform: rotate(360deg); }
-}
-
-/* Empty State */
-.empty-icon-box {
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.empty-icon-box .material-icons {
-  font-size: 40px;
-}
-
-.empty-icon-box.pending {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #16a34a;
-}
-
-.empty-icon-box.users {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #64748b;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .modern-table {
-    display: block;
-    overflow-x: auto;
-  }
-}
+/* All styles handled via Tailwind */
 </style>

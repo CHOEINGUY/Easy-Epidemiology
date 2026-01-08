@@ -230,11 +230,10 @@ export const tokenManager = {
     localStorage.removeItem('authToken');
   },
 
-  // 토큰 유효성 확인 (개발 모드: 항상 true 반환)
+  // 토큰 유효성 확인
   async validateToken() {
-    // 개발 모드에서는 API 호출 없이 항상 성공 반환
-    console.log('🔓 개발 모드: 토큰 검증 우회');
-    return true;
+    const token = this.getToken();
+    return !!token;
   }
 };
 
@@ -245,23 +244,10 @@ export const userManager = {
     localStorage.setItem('user', JSON.stringify(user));
   },
 
-  // 사용자 정보 가져오기 (개발 모드: 더미 사용자 반환)
+  // 사용자 정보 가져오기
   getUser() {
     const userStr = localStorage.getItem('user');
-    if (userStr) {
-      return JSON.parse(userStr);
-    }
-    // 개발 모드: 더미 사용자 반환
-    return {
-      id: 'dev-user-001',
-      email: 'dev@example.com',
-      name: '개발자',
-      organization: '개발팀',
-      role: 'admin',
-      isApproved: true,
-      approved: true,
-      createdAt: new Date().toISOString()
-    };
+    return userStr ? JSON.parse(userStr) : null;
   },
 
   // 사용자 정보 삭제
@@ -269,11 +255,9 @@ export const userManager = {
     localStorage.removeItem('user');
   },
 
-  // 로그인 상태 확인 (개발 모드: 항상 true 반환)
+  // 로그인 상태 확인
   isLoggedIn() {
-    // 개발 모드에서는 항상 로그인 상태로 간주
-    console.log('🔓 개발 모드: 항상 로그인 상태');
-    return true;
+    return !!localStorage.getItem('authToken');
   },
 
   // 관리자 권한 확인

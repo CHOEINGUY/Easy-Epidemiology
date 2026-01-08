@@ -122,6 +122,14 @@ export function useSuspectedFood() {
   // 드롭다운 함수
   const toggleDropdown = () => {
     if (!hasAnalysisResults.value) return;
+    
+    // 드롭다운 열 때 현재 입력된 텍스트와 체크박스 상태 동기화
+    if (!isDropdownOpen.value) {
+      const currentString = suspectedFood.value || '';
+      const currentItems = currentString.split(',').map(s => s.trim()).filter(s => s);
+      selectedFoods.value = new Set(currentItems);
+    }
+    
     isDropdownOpen.value = !isDropdownOpen.value;
   };
 

@@ -17,42 +17,45 @@ export const siteConfig = {
     {
       icon: '📊',
       title: '데이터 입력 & 검증',
-      description: '실시간 유효성 검증과 함께 다차원 역학조사 데이터를 효율적으로 입력'
+      description: 'Web Worker 기반 비동기 처리와 가상 스크롤 기술로 대용량 데이터를 지연 없이 입력하며 실시간 유효성 검증 수행'
     },
     {
       icon: '👥',
       title: '대상자 특성 분석',
-      description: '동적 시각화와 라벨 매핑을 통한 대상자 분포 분석 및 패턴 발견'
+      description: '변수별 빈도분포와 발병률(AR) 자동 계산, 라벨 매핑 시스템을 통한 직관적인 범주 처러 및 동적 시각화'
     },
     {
       icon: '🩺',
       title: '임상증상 분석',
-      description: '증상별 빈도 분석과 인터랙티브 차트로 임상 패턴 파악'
+      description: 'ECharts 기반의 고성능 인터랙티브 차트, 다중 정렬 알고리즘과 실시간 필터링을 통한 증상 패턴 정밀 분석'
     },
     {
       icon: '📈',
-      title: '유행곡선 생성',
-      description: '시간대별 발병 패턴 분석과 잠복기 통계로 전파 양상 추적'
+      title: '유행곡선 & 잠복기',
+      description: '잠복기 통계량(최소/최대/평균/중앙값) 자동 산출 및 노출일자 추정을 위한 역학적 곡선 시각화'
     },
     {
       icon: '🔬',
       title: '환자대조군 연구',
-      description: '오즈비(OR) 계산과 95% 신뢰구간으로 위험요인 통계분석'
+      description: 'Fisher 정확검정(기대빈도<5), Yates 연속성 보정 자동 적용 및 Log-scale 변환을 통한 OR 95% 신뢰구간 정밀 산출'
     },
     {
       icon: '📋',
       title: '코호트 연구',
-      description: '상대위험도(RR) 분석으로 전향적 연구 결과 해석'
+      description: '상대위험도(RR) 및 발병률(Incidence Rate) 산출, 0셀 발생 시 Haldane 보정(0.5)을 적용한 로버스트한 통계 분석'
     }
   ],
 
   // 시스템 특징
   systemFeatures: [
-    '실시간 데이터 입력 및 유효성 검증',
-    '직관적인 차트 기반 시각화',
-    '통계분석 자동화 (OR, RR, 95% CI)',
-    '다양한 형식의 데이터 내보내기',
-    '브라우저 기반 접근성'
+    '가상 스크롤 & Web Worker 기반 대용량 처리',
+    '입력 데이터 실시간 유효성 검증 (Debounced)',
+    'jStat 라이브러리 활용 정밀 통계분석',
+    '교차분석: Fisher 정확검정 / Yates 보정 자동 선택',
+    '구간추정: Log-scale 변환 95% 신뢰구간 (CI)',
+    '보고서 자동 생성 및 실시간 미리보기',
+    'ECharts 기반 고성능 데이터 시각화',
+    '반응형 웹 디자인 (PC/Tablet 지원)'
   ],
 
   // 대상 사용자
@@ -88,8 +91,8 @@ export const siteConfig = {
     department: '예방의학교실',
     center: '감염병 역학조사 및 현장 대응 연구센터',
     team: [
-      { role: '책임개발자', name: '양정호' },
-      { role: '기술개발자', name: '최인규' }
+      { role: '통계 검증 및 자문 (전문의)', name: '양정호' },
+      { role: '총괄 시스템 개발 및 설계', name: '최인규' }
     ]
   },
 
@@ -126,7 +129,16 @@ export const siteConfig = {
   contact: {
     title: '운영 기관',
     organization: '전남대학교 의과대학',
-    department: '예방의학교실'
+    department: '예방의학교실',
+    // 기술 지원 팀
+    support: [
+      { name: '양정호', role: '책임' },
+      { name: '최인규', role: '연구원', phone: '061-372-4175' }
+    ],
+    // 이메일 문의 목록
+    emails: [
+      'chldlsrb07@gmail.com'
+    ]
   }
 };
 
@@ -147,13 +159,21 @@ export function updateSiteConfig(newConfig) {
 export function loadSiteConfig() {
   try {
     const savedConfig = localStorage.getItem('siteConfig');
-    if (savedConfig) {
-      return JSON.parse(savedConfig);
-    }
-    return siteConfig;
+    if (!savedConfig) return { ...siteConfig };
+    
+    const parsed = JSON.parse(savedConfig);
+    
+    // Deep merge to ensure schema safety for new fields
+    return {
+      ...siteConfig,
+      ...parsed,
+      basic: { ...siteConfig.basic, ...parsed.basic },
+      organization: { ...siteConfig.organization, ...parsed.organization },
+      contact: { ...siteConfig.contact, ...parsed.contact }
+    };
   } catch (error) {
     console.error('설정 로드 실패:', error);
-    return siteConfig;
+    return { ...siteConfig };
   }
 }
 

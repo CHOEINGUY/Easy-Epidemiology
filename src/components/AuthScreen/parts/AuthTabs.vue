@@ -1,106 +1,43 @@
 <template>
-  <div class="tab-navigation">
-    <div class="tab-container">
+  <div class="mb-8 animate-fadeUp [animation-delay:0.3s] [animation-fill-mode:backwards]">
+    <div class="relative flex bg-slate-100/80 p-1.5 rounded-2xl w-full max-w-[400px] mx-auto border border-slate-200/50 backdrop-blur-sm">
       <button 
-        class="tab-btn" 
-        :class="{ active: !showRegister }"
+        class="flex-1 relative z-10 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300" 
+        :class="!showRegister ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
         @click="$emit('update:showRegister', false)"
       >
-        <span class="tab-icon material-icons">login</span>
+        <span class="material-icons text-lg">login</span>
         로그인
       </button>
       <button 
-        class="tab-btn" 
-        :class="{ active: showRegister }"
+        class="flex-1 relative z-10 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300" 
+        :class="showRegister ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
         @click="$emit('update:showRegister', true)"
       >
-        <span class="tab-icon material-icons">person_add</span>
+        <span class="material-icons text-lg">person_add</span>
         회원가입
       </button>
       
       <!-- Active Indicator -->
-      <div class="tab-indicator" :class="{ 'register-active': showRegister }"></div>
+      <div 
+        class="absolute top-1.5 left-1.5 w-[calc(50%-6px)] h-[calc(100%-12px)] bg-blue-600 rounded-xl shadow-lg shadow-blue-500/30 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0"
+        :class="{ 'translate-x-full': showRegister }"
+      ></div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'AuthTabs',
-  props: {
-    showRegister: {
-      type: Boolean,
-      required: true
-    }
+<script setup>
+defineProps({
+  showRegister: {
+    type: Boolean,
+    required: true
   }
-};
+});
+
+defineEmits(['update:showRegister']);
 </script>
 
 <style scoped>
-.tab-navigation {
-  margin-bottom: 32px;
-  animation: fadeUp 0.8s ease-out 0.3s backwards;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(15px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.tab-container {
-  display: flex;
-  position: relative;
-  background: #f1f5f9;
-  border-radius: 12px;
-  padding: 4px;
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  font-size: 14px;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border-radius: 8px;
-}
-
-.tab-btn:hover:not(.active) {
-  color: #475569;
-}
-
-.tab-btn.active {
-  color: #0f172a;
-}
-
-.tab-icon {
-  font-size: 18px;
-}
-
-/* Sliding Active Indicator */
-.tab-indicator {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: calc(50% - 4px);
-  height: calc(100% - 8px);
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 1;
-}
-
-.tab-indicator.register-active {
-  transform: translateX(100%);
-}
+/* All styles handled via Tailwind */
 </style>

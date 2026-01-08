@@ -1,33 +1,32 @@
-<!-- CalendarPicker.vue -->
 <template>
-  <div class="calendar-section">
-    <div class="month-year-header">
-      <button @click.stop="prevMonth" class="nav-btn">‹</button>
+  <div class="flex-1 p-5 border-r border-gray-100 font-['Noto_Sans_KR',_sans-serif]">
+    <div class="flex items-center justify-between mb-4">
+      <button @click.stop="prevMonth" class="bg-transparent border-none text-lg cursor-pointer p-2 rounded-md transition-colors hover:bg-gray-100">‹</button>
       
-      <div class="date-selectors">
-        <select v-model="currentYear" class="year-select" @click.stop>
+      <div class="flex gap-2 items-center">
+        <select v-model="currentYear" class="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm bg-white cursor-pointer min-w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 hover:border-blue-600" @click.stop>
           <option v-for="year in availableYears" :key="year" :value="year"
-                  :class="{ 'current-year': year === new Date().getFullYear() }">
+                  :class="{ 'bg-blue-50 text-blue-600 font-semibold': year === new Date().getFullYear() }">
             {{ year }}년
           </option>
         </select>
         
-        <select v-model="currentMonth" class="month-select" @click.stop>
+        <select v-model="currentMonth" class="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm bg-white cursor-pointer min-w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 hover:border-blue-600" @click.stop>
           <option v-for="m in 12" :key="m" :value="m">{{ m }}월</option>
         </select>
       </div>
       
-      <button @click.stop="nextMonth" class="nav-btn">›</button>
+      <button @click.stop="nextMonth" class="bg-transparent border-none text-lg cursor-pointer p-2 rounded-md transition-colors hover:bg-gray-100">›</button>
     </div>
     
     <!-- 요일 헤더 -->
-    <div class="weekday-header">
-      <span v-for="day in weekdays" :key="day" class="weekday">{{ day }}</span>
+    <div class="grid grid-cols-7 gap-1 mb-2">
+      <span v-for="day in weekdays" :key="day" class="text-center text-sm text-gray-500 py-2 font-medium">{{ day }}</span>
     </div>
     
     <!-- 날짜 그리드 -->
     <div 
-      class="date-grid"
+      class="grid grid-cols-7 gap-1"
       role="grid"
       aria-label="달력"
     >
@@ -156,23 +155,33 @@ const calendarDates = computed(() => {
 
 // 날짜 클래스 계산
 const getDateClass = (date) => {
-  const classes = ['date-cell'];
+  const baseClasses = 'bg-transparent border-none py-2.5 px-1 cursor-pointer rounded-lg text-sm transition-all min-h-[36px] flex items-center justify-center';
+  const classes = [baseClasses];
   
   if (date.disabled) {
-    classes.push('disabled');
+    classes.push('text-gray-300 cursor-not-allowed');
+  } else {
+    // Standard hover for enabled dates (excluding selected)
+    // Note: 'hover:bg-gray-100' is applied conditionally below to avoid overriding selection style
   }
   
-  if (date.isCurrentMonth) {
-    classes.push('current-month');
+  if (date.isCurrentMonth && !date.disabled) {
+    classes.push('text-gray-800');
   }
   
   if (isSelected(date)) {
-    classes.push('selected');
+    classes.push('bg-blue-600 text-white font-semibold');
+  } else if (!date.disabled) {
+    // Only apply hover if not selected
+    classes.push('hover:bg-gray-100');
   }
   
   // 키보드 포커스된 날짜 표시
   if (isFocused(date)) {
-    classes.push('focused');
+    classes.push('ring-2 ring-blue-600 ring-offset-0 z-[1]');
+    if (isSelected(date)) {
+      classes.push('ring-white ring-offset-0');
+    }
   }
   
   // 오늘 날짜 표시
@@ -180,10 +189,13 @@ const getDateClass = (date) => {
   if (date.year === today.getFullYear() && 
       date.month === today.getMonth() + 1 && 
       date.day === today.getDate()) {
-    classes.push('today');
+    // 오늘이지만 선택되지 않은 경우에만 표시
+    if (!isSelected(date)) {
+      classes.push('bg-blue-50 text-blue-600 font-semibold');
+    }
   }
   
-  return classes;
+  return classes.join(' ');
 };
 
 const isSelected = (date) => {
@@ -390,133 +402,5 @@ defineExpose({
 </script>
 
 <style scoped>
-.calendar-section {
-  flex: 1;
-  padding: 20px;
-  border-right: 1px solid #eee;
-}
-
-.month-year-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.nav-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: background-color 0.2s;
-}
-
-.nav-btn:hover {
-  background-color: #f5f5f5;
-}
-
-.date-selectors {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.month-select, .year-select {
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  background: white;
-  cursor: pointer;
-  min-width: 60px;
-}
-
-.month-select:focus, .year-select:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
-}
-
-.month-select:hover, .year-select:hover {
-  border-color: #1976d2;
-}
-
-.year-select option.current-year {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  font-weight: 600;
-}
-
-.weekday-header {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.weekday {
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  padding: 8px 4px;
-  font-weight: 500;
-}
-
-.date-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.date-cell {
-  background: none;
-  border: none;
-  padding: 10px 4px;
-  cursor: pointer;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: all 0.2s;
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.date-cell.current-month {
-  color: #333;
-}
-
-.date-cell.disabled {
-  color: #ccc;
-  cursor: not-allowed;
-}
-
-.date-cell.today {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  font-weight: 600;
-}
-
-.date-cell.selected {
-  background-color: #1976d2;
-  color: white;
-  font-weight: 600;
-}
-
-.date-cell.focused {
-  outline: 2px solid #1976d2;
-  outline-offset: -2px;
-  z-index: 1;
-}
-
-.date-cell.selected.focused {
-  outline: 2px solid white;
-  outline-offset: -2px;
-}
-
-.date-cell:hover:not(.disabled):not(.selected) {
-  background-color: #f5f5f5;
-}
+/* No styles needed, using Tailwind classes */
 </style>

@@ -1,6 +1,6 @@
 <template>
   <header class="app-header">
-    <h1 class="app-title">Easy-Epidemiology Web v2.0</h1>
+    <CommonHeader />
     <button 
       v-if="errorCount > 0"
       class="validation-error-button"
@@ -19,6 +19,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue';
+import CommonHeader from '../../Common/CommonHeader.vue';
 defineProps({
   errorCount: { type: Number, default: 0 }
 });
@@ -37,13 +38,7 @@ defineEmits(['focusFirstError']);
   z-index: 4;
 }
 
-.app-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 300;
-  font-family: "Noto Sans KR", sans-serif;
-  color: #202124;
-}
+
 
 .validation-error-button {
   background: #ffeaea;
@@ -82,4 +77,4 @@ defineEmits(['focusFirstError']);
   margin-left: 4px;
   font-weight: bold;
 }
-</style> 
+</style>

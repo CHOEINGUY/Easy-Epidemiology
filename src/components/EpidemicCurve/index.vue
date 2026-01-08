@@ -1,44 +1,60 @@
 <template>
-  <div class="app">
-    <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v2.0</h1>
+  <div class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <header class="flex items-center justify-between px-4 py-2 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-glass z-[4] sticky top-0">
+      <CommonHeader />
     </header>
 
-    <div class="dashboard">
-      <SummaryBar />
+    <div class="flex flex-col p-6 max-w-[1600px] mx-auto w-full">
+      <div class="mb-6">
+        <SummaryBar title="유행곡선 및 잠복기 분석" />
+      </div>
 
-      <div class="output-area">
+      <div class="flex flex-col gap-8">
         <!-- 첫 번째 행: 증상 발현 테이블 + 유행곡선 차트 -->
-        <div class="output-row">
-          <div class="table-container analysis-table-container">
-            <SuspectedFoodSelector />
-            <SymptomOnsetTable
-              :tableData="symptomOnsetTableData"
-              :firstOnsetTime="formattedFirstOnsetTime"
-              :lastOnsetTime="formattedLastOnsetTime"
-            />
+        <div class="flex gap-6 items-stretch flex-wrap xl:flex-nowrap">
+          <div class="flex-1 min-w-[500px] bg-white rounded-2xl shadow-premium border border-slate-100 overflow-hidden flex flex-col xl:max-w-[450px]">
+            <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-6 bg-blue-500 rounded-full"></span>
+                증상 발현 분석
+              </h3>
+            </div>
+            <div class="p-4">
+            <div class="px-5">
+              <SuspectedFoodSelector />
+            </div>
+              <div class="mt-4">
+                <SymptomOnsetTable
+                  :tableData="symptomOnsetTableData"
+                  :firstOnsetTime="formattedFirstOnsetTime"
+                  :lastOnsetTime="formattedLastOnsetTime"
+                />
+              </div>
+            </div>
           </div>
 
-          <div class="controls-and-chart-wrapper">
+          <div class="flex-[2] min-w-[600px] bg-white rounded-2xl shadow-premium border border-slate-100 p-6 flex flex-col gap-6">
             <EpiCurveControls
               :selectedInterval="selectedSymptomInterval"
-              :fontSizeButtonText="epiFontSizeButtonText"
-              :chartWidthButtonText="epiChartWidthButtonText"
+              :chartFontSize="epiChartFontSize"
+              :chartWidth="epiChartWidth"
               :barColor="epiBarColor"
               :displayMode="chartDisplayMode"
+              
+              :fontSizes="fontSizes"
+              :fontSizeLabels="fontSizeLabels"
+              :chartWidths="chartWidths"
+              :barColors="barColors"
+              
               :showConfirmedCaseToggle="isConfirmedCaseColumnVisible"
               :showConfirmedCaseLine="showConfirmedCaseLine"
               @update:selectedInterval="onSymptomIntervalChange"
-              @cycleFontSize="handleCycleEpiFontSize"
-              @cycleChartWidth="handleCycleEpiChartWidth"
-              @cycleBarColor="handleCycleEpiBarColor"
-              @selectDisplayMode="handleSelectDisplayMode"
+              @update:chartFontSize="setEpiFontSize"
+              @update:chartWidth="setEpiChartWidth"
+              @update:barColor="setEpiBarColor"
+              @update:displayMode="setChartDisplayMode"
               @toggleConfirmedCaseLine="toggleConfirmedCaseLine"
-              @resetSettings="handleResetEpiSettings"
-              @fontSizeMouseEnter="handleEpiFontSizeMouseEnter"
-              @fontSizeMouseLeave="handleEpiFontSizeMouseLeave"
-              @chartWidthMouseEnter="handleEpiChartWidthMouseEnter"
-              @chartWidthMouseLeave="handleEpiChartWidthMouseLeave"
+              @resetSettings="resetEpiChartSettings"
             />
             <EpiCurveChart
               ref="epiCurveChartRef"
@@ -55,39 +71,49 @@
         </div>
 
         <!-- 두 번째 행: 잠복기 테이블 + 잠복기 차트 -->
-        <div class="output-row">
-          <div class="table-container">
-            <IncubationTable
-              :tableData="incubationPeriodTableData"
-              :minIncubation="minIncubationPeriodFormatted"
-              :maxIncubation="maxIncubationPeriodFormatted"
-              :avgIncubation="avgIncubationPeriodFormatted"
-              :medianIncubation="medianIncubationPeriodFormatted"
-              :hasExposureDateTime="!!exposureDateTime"
-              :isIndividualExposureColumnVisible="isIndividualExposureColumnVisible"
-            />
+        <div class="flex gap-6 items-stretch flex-wrap xl:flex-nowrap">
+          <div class="flex-1 min-w-[500px] bg-white rounded-2xl shadow-premium border border-slate-100 overflow-hidden flex flex-col xl:max-w-[450px]">
+            <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
+                잠복기 분석
+              </h3>
+            </div>
+            <div class="p-4">
+              <IncubationTable
+                :tableData="incubationPeriodTableData"
+                :minIncubation="minIncubationPeriodFormatted"
+                :maxIncubation="maxIncubationPeriodFormatted"
+                :avgIncubation="avgIncubationPeriodFormatted"
+                :medianIncubation="medianIncubationPeriodFormatted"
+                :hasExposureDateTime="!!exposureDateTime"
+                :isIndividualExposureColumnVisible="isIndividualExposureColumnVisible"
+              />
+            </div>
           </div>
 
-          <div class="controls-and-chart-wrapper">
+          <div class="flex-[2] min-w-[600px] bg-white rounded-2xl shadow-premium border border-slate-100 p-6 flex flex-col gap-6">
             <IncubationControls
               :selectedInterval="selectedIncubationInterval"
-              :fontSizeButtonText="incubationFontSizeButtonText"
-              :chartWidthButtonText="incubationChartWidthButtonText"
+              :chartFontSize="incubationChartFontSize"
+              :chartWidth="incubationChartWidth"
               :barColor="incubationBarColor"
               :displayMode="incubationChartDisplayMode"
+              
+              :fontSizes="fontSizes"
+              :fontSizeLabels="fontSizeLabels"
+              :chartWidths="chartWidths"
+              :barColors="barColors"
+              
               :formattedExposureDateTime="formattedExposureDateTime"
               :isIndividualExposureColumnVisible="isIndividualExposureColumnVisible"
               @update:selectedInterval="onIncubationIntervalChange"
-              @cycleFontSize="handleCycleIncubationFontSize"
-              @cycleChartWidth="handleCycleIncubationChartWidth"
-              @cycleBarColor="handleCycleIncubationBarColor"
-              @selectDisplayMode="handleSelectIncubationDisplayMode"
-              @resetSettings="handleResetIncubationSettings"
+              @update:chartFontSize="setIncubationFontSize"
+              @update:chartWidth="setIncubationChartWidth"
+              @update:barColor="setIncubationBarColor"
+              @update:displayMode="setIncubationDisplayMode"
+              @resetSettings="resetIncubationChartSettings"
               @showExposureDateTimePicker="showExposureDateTimePicker($event)"
-              @fontSizeMouseEnter="handleIncubationFontSizeMouseEnter"
-              @fontSizeMouseLeave="handleIncubationFontSizeMouseLeave"
-              @chartWidthMouseEnter="handleIncubationChartWidthMouseEnter"
-              @chartWidthMouseLeave="handleIncubationChartWidthMouseLeave"
             />
             <IncubationChart
               ref="incubationChartRef"
@@ -134,6 +160,7 @@ import EpiCurveChart from './components/SymptomOnsetSection/EpiCurveChart.vue';
 import IncubationTable from './components/IncubationSection/IncubationTable.vue';
 import IncubationControls from './components/IncubationSection/IncubationControls.vue';
 import IncubationChart from './components/IncubationSection/IncubationChart.vue';
+import CommonHeader from '../Common/CommonHeader.vue';
 import DateTimePicker from '../DataInputVirtualScroll/parts/DateTimePicker.vue';
 
 // Composables
@@ -172,36 +199,32 @@ const {
 } = useIncubationStats();
 
 const {
+  fontSizes,
+  fontSizeLabels,
+  chartWidths,
+  barColors,
+
   epiChartFontSize,
   epiChartWidth,
   epiBarColor,
   chartDisplayMode,
-  epiFontSizeButtonText,
-  epiChartWidthButtonText,
+  
   incubationChartFontSize,
   incubationChartWidth,
   incubationBarColor,
   incubationChartDisplayMode,
-  incubationFontSizeButtonText,
-  incubationChartWidthButtonText,
-  cycleEpiFontSize,
-  cycleEpiChartWidth,
-  cycleEpiBarColor,
-  selectDisplayMode,
+  
+  setEpiFontSize,
+  setEpiChartWidth,
+  setEpiBarColor,
+  setChartDisplayMode,
   resetEpiChartSettings,
-  cycleIncubationFontSize,
-  cycleIncubationChartWidth,
-  cycleIncubationBarColor,
-  selectIncubationDisplayMode,
-  resetIncubationChartSettings,
-  handleEpiFontSizeMouseEnter,
-  handleEpiFontSizeMouseLeave,
-  handleEpiChartWidthMouseEnter,
-  handleEpiChartWidthMouseLeave,
-  handleIncubationFontSizeMouseEnter,
-  handleIncubationFontSizeMouseLeave,
-  handleIncubationChartWidthMouseEnter,
-  handleIncubationChartWidthMouseLeave
+  
+  setIncubationFontSize,
+  setIncubationChartWidth,
+  setIncubationBarColor,
+  setIncubationDisplayMode,
+  resetIncubationChartSettings
 } = useChartSettings();
 
 const { suspectedFood } = useSuspectedFood();
@@ -282,17 +305,7 @@ const onIncubationIntervalChange = (value) => {
   storeBridge.updateIncubationInterval(value);
 };
 
-const handleCycleEpiFontSize = () => cycleEpiFontSize();
-const handleCycleEpiChartWidth = () => cycleEpiChartWidth();
-const handleCycleEpiBarColor = () => cycleEpiBarColor();
-const handleSelectDisplayMode = (mode) => selectDisplayMode(mode);
-const handleResetEpiSettings = () => resetEpiChartSettings();
 
-const handleCycleIncubationFontSize = () => cycleIncubationFontSize();
-const handleCycleIncubationChartWidth = () => cycleIncubationChartWidth();
-const handleCycleIncubationBarColor = () => cycleIncubationBarColor();
-const handleSelectIncubationDisplayMode = (mode) => selectIncubationDisplayMode(mode);
-const handleResetIncubationSettings = () => resetIncubationChartSettings();
 
 const toggleConfirmedCaseLine = () => {
   showConfirmedCaseLine.value = !showConfirmedCaseLine.value;
@@ -446,114 +459,3 @@ onActivated(() => {
   });
 });
 </script>
-
-<style scoped>
-.app { 
-  font-family: "Noto Sans KR", sans-serif; 
-  width: 100%; 
-  margin: 0; 
-  padding: 0; 
-  background-color: #f0f0f0; 
-  min-height: 100vh; 
-}
-
-.app-header { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  padding: 8px 16px; 
-  background-color: white; 
-  border-bottom: 1px solid #e0e0e0; 
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); 
-  z-index: 4; 
-}
-
-.app-title { 
-  margin: 0; 
-  font-size: 1.5rem; 
-  font-weight: 300; 
-  font-family: "Noto Sans KR", sans-serif; 
-  color: #202124; 
-}
-
-.dashboard { 
-  display: flex; 
-  flex-direction: column; 
-  text-align: center; 
-  width: 97%; 
-  margin: 20px auto; 
-  background-color: #f0f0f0; 
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
-}
-
-.output-area { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 30px; 
-  margin: 20px 30px 30px 30px; 
-  align-items: stretch; /* 아이템들이 가로로 꽉 차게 */
-  padding: 0;
-}
-
-.output-row { 
-  display: flex; 
-  gap: 30px; 
-  align-items: stretch;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  /* height: 700px; - Removed fixed height to allow flexibility like PatientCharacteristics, but keeping stretch behavior for row consistency */
-}
-
-.table-container { 
-  margin: 0; 
-  display: flex; 
-  flex-direction: column; 
-  background-color: #fff; 
-  box-sizing: border-box; 
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
-  border-radius: 12px; 
-  overflow-x: auto; 
-  flex: 0 0 400px; 
-  align-self: stretch; /* 부모 높이에 맞춤 */
-}
-
-.analysis-table-container,
-.controls-and-chart-wrapper {
-  /* height: 100%; - 제거: stretch와 충돌 가능성 */
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.controls-and-chart-wrapper {
-  flex: 1;
-  gap: 15px;
-  min-width: 600px;
-  display: flex;
-  flex-direction: column;
-  align-self: stretch; /* 부모 높이에 맞춤 */
-}
-
-/* 차트 컴포넌트 자체가 남은 공간을 다 비우도록 강제 */
-.controls-and-chart-wrapper > :last-child {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 반응형 디자인 */
-@media (max-width: 1200px) {
-  .output-row {
-    flex-direction: column;
-    height: auto;
-  }
-  
-  .table-container,
-  .controls-and-chart-wrapper {
-    flex-basis: auto;
-    width: 100%;
-    min-width: 0;
-  }
-}
-</style>

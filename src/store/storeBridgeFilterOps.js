@@ -415,6 +415,30 @@ export const filterOperations = {
   },
 
   /**
+   * 필터 상태 강제 설정 (Undo/Redo 시 동기화용)
+   * @param {Object} newState 
+   */
+  setFilterState(newState) {
+    if (!newState) return;
+    
+    this.filterState.activeFilters = new Map(newState.activeFilters || []);
+    this.filterState.isFiltered = newState.isFiltered || false;
+    this.filterState.filteredRowCount = newState.filteredRowCount || 0;
+    this.filterState.originalRowCount = newState.originalRowCount || 0;
+    this.filterState.lastAppliedAt = newState.lastAppliedAt || null;
+    
+    this._updateFilteredRows();
+    this._saveFilterState();
+    
+    if (this.debug) {
+      console.log('[Filter] 상태 강제 설정 완료:', {
+        isFiltered: this.filterState.isFiltered,
+        activeFiltersCount: this.filterState.activeFilters.size
+      });
+    }
+  },
+
+  /**
    * Public 필터 매칭 메서드
    */
   matchesFilter(row, colIndex, filterConfig) {

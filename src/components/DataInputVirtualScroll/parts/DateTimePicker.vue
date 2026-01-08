@@ -1,8 +1,7 @@
-<!-- DateTimePicker.vue -->
 <template>
   <div 
     v-if="visible" 
-    class="datetime-picker-overlay"
+    class="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] font-['Noto_Sans_KR',_sans-serif] outline-none select-none"
     :style="pickerStyle"
     @click.stop
     @mousedown.stop
@@ -14,7 +13,7 @@
     aria-modal="true"
     aria-label="날짜 및 시간 선택"
   >
-    <div class="datetime-picker-container">
+    <div class="flex min-w-[480px] max-w-[600px]">
       <!-- 캘린더 부분 -->
       <CalendarPicker
         ref="calendarPickerRef"
@@ -46,7 +45,6 @@ import { ref, reactive, computed, watch, nextTick } from 'vue';
 import CalendarPicker from './CalendarPicker.vue';
 import TimePicker from './TimePicker.vue';
 
-// eslint-disable-next-line no-undef
 const props = defineProps({
   visible: {
     type: Boolean,
@@ -62,7 +60,6 @@ const props = defineProps({
   }
 });
 
-// eslint-disable-next-line no-undef
 const emit = defineEmits(['confirm', 'cancel', 'update:visible']);
 
 const pickerRef = ref(null);
@@ -263,26 +260,9 @@ const handleOutsideClick = (event) => {
   }
 };
 
-// eslint-disable-next-line no-undef
 defineExpose({ confirm, cancel });
 </script>
 
 <style scoped>
-.datetime-picker-overlay {
-  position: fixed;
-  z-index: 9999;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  outline: none;
-  user-select: none;
-}
-
-.datetime-picker-container {
-  display: flex;
-  min-width: 450px;
-  max-width: 600px;
-}
+/* No styles needed, using Tailwind classes */
 </style>

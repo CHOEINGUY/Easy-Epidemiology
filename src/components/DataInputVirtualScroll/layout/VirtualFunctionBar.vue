@@ -731,4 +731,4 @@ function onFilterButtonClick() {
 .filter-button.active .filter-badge {
   background: #1967d2;
 }
-</style> 
+</style>

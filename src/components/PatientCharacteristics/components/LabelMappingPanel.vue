@@ -1,21 +1,23 @@
 <template>
-  <div class="mapping-container">
-    <div class="mapping-title">
-      <span class="selected-variable-details__title-dot"></span>&nbsp;라벨 매핑
+  <div class="p-5 border-t border-slate-100 bg-slate-50/50 h-auto">
+    <div class="flex items-center text-slate-700 font-semibold mb-4">
+      <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2"></span>
+      라벨 매핑
     </div>
-    <div v-if="categories.length > 0" class="mapping-items">
-      <div v-for="category in categories" :key="category" class="mapping-item">
-        <span class="mapping-original-label">{{ category }} :</span>
+    
+    <div v-if="categories.length > 0" class="flex flex-col gap-3">
+      <div v-for="category in categories" :key="category" class="grid grid-cols-[auto_1fr] items-center gap-3">
+        <span class="text-sm font-medium text-slate-600 min-w-[80px] break-keep">{{ category }} :</span>
         <input 
           type="text" 
           :value="modelValue[category] || ''" 
           @change="handleChange(category, $event.target.value)"
           placeholder="차트에 표시될 새 라벨" 
-          class="mapping-input" 
+          class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-slate-400 placeholder:italic placeholder:text-xs" 
         />
       </div>
     </div>
-    <div v-else class="mapping-nodata">
+    <div v-else class="text-sm text-slate-400 italic py-2">
       매핑할 카테고리가 없습니다.
     </div>
   </div>
@@ -42,82 +44,3 @@ const handleChange = (category, value) => {
   emit('change');
 };
 </script>
-
-<style scoped>
-.mapping-container {
-  padding: 15px 20px;
-  margin: 0px 0px 10px 0px;
-  border-top: 1px solid #eee;
-  background-color: #fff;
-  max-height: 300px;
-  overflow-y: auto;
-  box-sizing: border-box;
-}
-
-.mapping-title { 
-  margin: 0px 10px 20px 0px; 
-  font-size: 1.1em; 
-  color: #333; 
-  font-weight: 500; 
-  text-align: left; 
-  display: flex; 
-  align-items: center; 
-}
-
-.mapping-items {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
-.mapping-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.mapping-original-label {
-  font-size: 14px;
-  white-space: nowrap;
-  text-align: left;
-  font-weight: 500;
-}
-
-.mapping-input {
-  max-width: 300px;
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  box-sizing: border-box;
-}
-
-.mapping-input::placeholder {
-  color: #aaa;
-  font-style: italic;
-  font-size: 0.8rem;
-}
-
-.mapping-input:focus {
-  outline: none;
-  border-color: #1a73e8;
-  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
-}
-
-.mapping-nodata {
-  font-size: 0.85rem;
-  color: #888;
-  text-align: left;
-  padding: 15px 0;
-}
-
-.selected-variable-details__title-dot { 
-  display: inline-block; 
-  width: 0.3em; 
-  height: 0.3em; 
-  background-color: currentColor; 
-  margin-right: 0.3em; 
-  vertical-align: middle; 
-}
-</style>

@@ -1,13 +1,13 @@
 <template>
   <div 
-    class="grid-body-virtual" 
-    :class="{ 'filtered': isFiltered }"
+    class="grid-body-virtual overflow-auto relative h-full bg-slate-50 will-change-scroll" 
+    :class="{ 'relative': isFiltered }"
     ref="bodyContainer" 
     @scroll.passive="handleScroll"
   >
           <div :style="{ height: containerHeight + 'px', position: 'relative', width: tableWidth }">
         <table 
-          class="data-table" 
+          class="border-collapse table-fixed absolute top-0 left-0 z-[1] w-full" 
           :style="{ 
             transform: `translateY(${paddingTop}px)`,
             width: tableWidth
@@ -25,13 +25,18 @@
             v-for="(item, index) in visibleRows" 
             :key="item.originalIndex"
             :data-row="item.originalIndex"
+            class="h-[35px] max-h-[35px] min-h-[35px]"
           >
             <td 
               v-for="column in allColumnsMeta" 
               :key="column.colIndex"
               :data-row="item.originalIndex"
               :data-col="column.colIndex"
-              :class="getCellClasses(item.originalIndex, column.colIndex)"
+              :class="[
+                'border border-gray-300 px-2 text-sm whitespace-nowrap overflow-hidden text-ellipsis box-border bg-clip-padding text-center align-middle cursor-default h-[35px] !p-0',
+                getCellClasses(item.originalIndex, column.colIndex),
+                { '!bg-white': !isCellEditing(item.originalIndex, column.colIndex) }
+              ]"
               :data-validation-message="getValidationMessage(item.originalIndex, column.colIndex)"
               :contenteditable="isCellEditing(item.originalIndex, column.colIndex)"
               @input="handleCellInput($event, item, column.colIndex)"
@@ -50,7 +55,7 @@
       </table>
       <!-- AddRowsControls positioned just below last data row -->
       <div 
-        class="add-rows-wrapper" 
+        class="py-1.5 bg-transparent z-[2]" 
         :style="{ position: 'absolute', top: addRowsTop + 'px', left: 0, width: '100%' }"
       >
         <AddRowsControls 
@@ -64,7 +69,7 @@
     <!-- Validation Tooltip -->
     <div 
       v-if="tooltipVisible" 
-      class="validation-tooltip"
+      class="fixed bg-[#333] text-white px-2.5 py-1.5 rounded text-xs whitespace-nowrap z-[1000] pointer-events-none shadow-lg after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-t-[#333] after:border-transparent"
       :style="tooltipStyle"
     >
       {{ tooltipMessage }}
@@ -109,15 +114,14 @@ const bodyContainer = ref(null);
 // 필터 + 행 변경 통합 매니저 인스턴스
 const filterRowValidationManager = new FilterRowValidationManager();
 
-// AddRowsControls 위치 및 컨테이너 높이 계산
-const ADD_ROWS_HEIGHT = 20; // px (controls 자체 높이)
-const ROW_HEIGHT = 5;      // Must match useVirtualScroll rowHeight
+const ADD_ROWS_HEIGHT = 40;  
+const CONTROL_SPACING = 6;   // 마지막 행에서 6px 띄움 (기존 5)
 
-// 테이블이 렌더링하는 버퍼 행까지 고려하여 AddRowsControls를 충분히 아래로 내려 배치
-const addRowsTop = computed(() => props.totalHeight + props.bufferSize * ROW_HEIGHT);
+// 테이블이 렌더링하는 버퍼 행을 무시하고 마지막 데이터 행 바로 뒤에 약간의 간격을 두고 배치
+const addRowsTop = computed(() => props.totalHeight + CONTROL_SPACING);
 
-// 스크롤 컨테이너 높이 = 데이터 전체 높이 + 버퍼 영역 + AddRowsControls 높이
-const containerHeight = computed(() => props.totalHeight + props.bufferSize * ROW_HEIGHT + ADD_ROWS_HEIGHT);
+// 스크롤 컨테이너 높이 = 데이터 전체 높이 + 간격 + AddRowsControls 높이
+const containerHeight = computed(() => props.totalHeight + CONTROL_SPACING + ADD_ROWS_HEIGHT);
 
 // Validation Tooltip 상태
 const tooltipVisible = ref(false);
@@ -132,11 +136,16 @@ function isCellInRange(rowIndex, colIndex) {
   const { start, end } = props.selectedRange;
   if (start.rowIndex === null || end.rowIndex === null) return false;
 
+  const minRow = Math.min(start.rowIndex, end.rowIndex);
+  const maxRow = Math.max(start.rowIndex, end.rowIndex);
+  const minCol = Math.min(start.colIndex, end.colIndex);
+  const maxCol = Math.max(start.colIndex, end.colIndex);
+
   return (
-    rowIndex >= start.rowIndex &&
-    rowIndex <= end.rowIndex &&
-    colIndex >= start.colIndex &&
-    colIndex <= end.colIndex
+    rowIndex >= minRow &&
+    rowIndex <= maxRow &&
+    colIndex >= minCol &&
+    colIndex <= maxCol
   );
 }
 
@@ -153,7 +162,11 @@ function getCellClasses(rowIndex, colIndex) {
   const classes = [];
   
   if (colIndex === 0) {
-    classes.push('serial-cell');
+    if (props.isFiltered) {
+      classes.push('!bg-blue-500/20 !text-blue-700 !font-medium !border-gray-300 z-[2]');
+    } else {
+      classes.push('!bg-slate-100 !font-medium !border-gray-300 z-[2]');
+    }
   }
 
   const lastColIndex = props.allColumnsMeta.length - 1;
@@ -189,11 +202,17 @@ function getCellClasses(rowIndex, colIndex) {
       if (isMultiCellSelection(props.selectedRange)) {
         classes.push('cell-range-selected');
       }
+      
       const { start, end } = props.selectedRange;
-      if (rowIndex === start.rowIndex) classes.push('border-top');
-      if (rowIndex === end.rowIndex) classes.push('border-bottom');
-      if (colIndex === start.colIndex) classes.push('border-left');
-      if (colIndex === end.colIndex) classes.push('border-right');
+      const minRow = Math.min(start.rowIndex, end.rowIndex);
+      const maxRow = Math.max(start.rowIndex, end.rowIndex);
+      const minCol = Math.min(start.colIndex, end.colIndex);
+      const maxCol = Math.max(start.colIndex, end.colIndex);
+
+      if (rowIndex === minRow) classes.push('border-top');
+      if (rowIndex === maxRow) classes.push('border-bottom');
+      if (colIndex === minCol) classes.push('border-left');
+      if (colIndex === maxCol) classes.push('border-right');
     }
   }
 
@@ -203,7 +222,11 @@ function getCellClasses(rowIndex, colIndex) {
     props.selectedCell.rowIndex === rowIndex &&
     props.selectedCell.colIndex === colIndex
   ) {
-    classes.push('cell-selected');
+    if (isMultiCellSelection(props.selectedRange)) {
+      classes.push('cell-active-in-range');
+    } else {
+      classes.push('cell-selected');
+    }
   }
 
   // --- Validation error (통합 시스템 사용) ---
@@ -383,179 +406,43 @@ defineExpose({ bodyContainer });
 </script>
 
 <style scoped>
-.grid-body-virtual {
-  overflow: auto;
-  position: relative;
-  height: 100%;
-  will-change: scroll-position;
-  background-color: #f8f9fa; /* 헤더와 동일한 배경색 */
-}
-
-/* 필터가 적용되었을 때는 전체 배경 변경 없음 */
-.grid-body-virtual.filtered {
-  position: relative;
-}
-
-/* 필터된 상태에서 유효성 에러 셀의 배경색 조정 */
-.grid-body-virtual.filtered .validation-error {
-  background-color: rgba(255, 68, 68, 0.15) !important; /* 필터 상태에서는 더 진한 빨간색 */
-}
-
-
-
-.data-table {
-  border-collapse: collapse;
-  table-layout: fixed;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-
-tr {
-  height: 35px; /* Must be same as rowHeight in useVirtualScroll */
-}
-
-td {
-  border: 1px solid #ced4da;
-  padding: 8px;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-sizing: border-box;
-  background-clip: padding-box;
-  text-align: center;
-  vertical-align: middle;
-  cursor: default;
-  background-color: white; /* 명시적으로 흰색 배경 설정 */
-}
-
-
-
-.serial-cell {
-  background-color: #f1f3f4;
-}
-
-.cell-range-selected {
-  background-color: rgba(26, 115, 232, 0.1) !important;
-}
-
-.cell-editing {
-  background-color: #fff !important;
-  box-shadow: 0 0 0 2px #1a73e8 inset !important;
-  z-index: 10;
-  outline: none;
-  cursor: text;
-}
-
-.add-rows-cell {
-  text-align: left;
-  padding: 6px 10px;
-  background-color: transparent;
-}
-
-.add-rows-wrapper {
-  padding: 6px 0;
-  background-color: transparent;
-  z-index: 0;
-}
-
+/* Validation Error Styles - kept customized for clarity */
 .validation-error {
-  /* Show clear red border with light red background */
   box-shadow: 0 0 0 2px #ff4444 inset !important;
   background-color: rgba(255, 68, 68, 0.1) !important;
   position: relative;
-  z-index: 5; /* 필터 배경보다 위에 표시 */
+  z-index: 5;
 }
 
-/* When the cell is also in editing state, layer red border inside blue border */
-.cell-editing.validation-error {
-  box-shadow: 0 0 0 2px #1a73e8 inset, 0 0 0 1px #ff4444 inset !important;
-}
-
-/* When the cell is selected or in range selection */
-.cell-selected.validation-error,
-.cell-range-selected.validation-error,
-.cell-multi-selected.validation-error {
-  box-shadow: 0 0 0 1.5px #1a73e8 inset, 0 0 0 1px #ff4444 inset !important;
-}
-
-/* Validation tooltip - JavaScript 기반으로 변경 */
-.validation-tooltip {
-  position: fixed;
-  background: #333333;
-  color: white;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.validation-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 6px solid #333333;
-}
-
-.grid-body-virtual.filtered td.serial-cell {
-  background-color: rgba(26, 115, 232, 0.2) !important; /* 더 진한 파란색 */
-  border-right: 1px solid #ced4da !important; /* 기존 테두리 */
-  border-left: 1px solid #ced4da !important;
-  color: #185abc;
-  font-weight: 600;
-  z-index: 2;
-}
-</style>
-
-<style>
-/* MacOS style scrollbar with expand-on-hover effect */
-/* Global Scope for .grid-body-virtual */
-
-/* 1. Base Scrollbar Dimensions (Fixed to prevent layout shift) */
-.grid-body-virtual::-webkit-scrollbar {
-  width: 12px;  /* Reduced from 14px for a sleeker look */
+/* Scrollbar Customization */
+div::-webkit-scrollbar {
+  width: 12px;
   height: 12px;
   background-color: transparent;
 }
 
-.grid-body-virtual::-webkit-scrollbar-track {
+div::-webkit-scrollbar-track {
   background-color: transparent;
 }
 
-/* 2. Scrollbar Thumb (The moving part) */
-.grid-body-virtual::-webkit-scrollbar-thumb {
-  /* Color */
-  background-color: rgba(0, 0, 0, 0.3); /* Slightly darker base for better visibility */
-  
-  /* Shape & Transparency Trick for "Thin" look */
+div::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
   border-radius: 12px;
-  border: 3px solid transparent; /* default: 12 - 3 - 3 = 6px visible width */
+  border: 3px solid transparent;
   background-clip: content-box;
-  
-  /* Smoother Transition with cubic-bezier */
   transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
               border-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* 3. Hover State (Expand) */
-/* When hovering over the scrollbar THUMB, decrease border width to make thumb larger */
-.grid-body-virtual::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(95, 99, 104, 0.7); /* Dark grey with high opacity on hover */
-  border-width: 1px; /* expansion: 12 - 1 - 1 = 10px visible width */
+div::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(95, 99, 104, 0.7);
+  border-width: 1px;
 }
 
-/* Corner */
-.grid-body-virtual::-webkit-scrollbar-corner {
+div::-webkit-scrollbar-corner {
   background-color: transparent;
 }
 </style>
+
+
  

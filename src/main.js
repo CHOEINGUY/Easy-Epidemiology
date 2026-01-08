@@ -3,6 +3,7 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import { createPinia } from 'pinia';
 import router from './router/index.js'; // Vue Router
+import './assets/styles/tailwind.css'; // Tailwind CSS
 
 // StoreBridge import
 import { StoreBridge } from './store/storeBridge.js';

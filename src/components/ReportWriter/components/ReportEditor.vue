@@ -1,141 +1,117 @@
 <template>
-  <div class="editor-pane">
-    <h2 class="pane-title">보고서 항목</h2>
+  <div class="flex-none w-[320px] bg-white rounded-[10px] shadow-md p-5 overflow-y-auto flex flex-col gap-6">
+    <div class="flex flex-col gap-2 w-full mb-2">
+      <div class="flex justify-between items-end px-1">
+        <h2 class="m-0 text-lg font-bold text-gray-800">보고서 항목</h2>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-xl font-bold text-slate-700 font-numeric">{{ Math.round(completionRate) }}%</span>
+          <span class="text-[11px] font-medium text-slate-400">완료</span>
+        </div>
+      </div>
+      
+      <!-- Linear Progress Bar -->
+      <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div 
+          class="h-full bg-slate-600 transition-all duration-1000 ease-out rounded-full"
+          :style="{ width: `${completionRate}%` }"
+        ></div>
+      </div>
+    </div>
     
     <!-- 차트 이미지는 EpidemicCurve 탭 "보고서 저장" 버튼으로 자동 생성됨 -->
 
-    <ul class="item-list">
-      <li class="design-item">
-        <div class="design-header">
-          <span class="item-label">조사 디자인</span>
+    <ul class="list-none p-0 m-0 flex flex-col gap-1">
+      <li class="flex flex-col items-start py-3 border-b border-gray-100 group">
+        <div class="flex justify-between items-center w-full mb-2">
+          <span class="flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors">
+            <span class="material-icons text-lg text-slate-400">assignment</span>
+            조사 디자인
+          </span>
           <div 
             v-if="!reportData.studyDesign.value" 
-            class="design-notice-inline" 
-            :class="getNoticeClass()"
+            class="design-notice-inline flex items-center gap-1 text-xs font-bold text-rose-500 cursor-help relative animate-fadeInScale" 
             @mouseenter="showDesignNoticeTooltip = true"
             @mouseleave="showDesignNoticeTooltip = false"
-            style="cursor: help; position: relative;"
           >
-            <span class="material-icons">{{ getNoticeIcon() }}</span>
-            {{ getNoticeText() }}
+            <span class="material-icons text-sm">error_outline</span>
+            선택 필요
             <div ref="designNoticeTooltipRef"></div>
           </div>
+          <span v-else class="text-xs font-bold text-blue-600">선택됨</span>
         </div>
-        <div class="design-options">
+        <div class="flex gap-2 w-full">
           <button
-            :class="['design-card-btn', { 
-              active: reportData.studyDesign.value === 'case-control',
-              'unselected': !reportData.studyDesign.value 
-            }]"
+            :class="[
+              'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 border rounded bg-white cursor-pointer transition-all duration-200',
+              { 
+                'border-slate-600 text-slate-800 bg-slate-50 font-bold': reportData.studyDesign.value === 'case-control',
+                'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600': reportData.studyDesign.value !== 'case-control'
+              }
+            ]"
             @click="reportData.handleStudyDesignChange('case-control')"
           >
-            <span class="material-icons card-icon">compare_arrows</span>
-            <span class="card-text">환자-대조군 연구</span>
+            <span class="text-xs">환자-대조군</span>
           </button>
           <button
-            :class="['design-card-btn', { 
-              active: reportData.studyDesign.value === 'cohort',
-              'unselected': !reportData.studyDesign.value 
-            }]"
+            :class="[
+              'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 border rounded bg-white cursor-pointer transition-all duration-200',
+              { 
+                'border-slate-600 text-slate-800 bg-slate-50 font-bold': reportData.studyDesign.value === 'cohort',
+                'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600': reportData.studyDesign.value !== 'cohort'
+              }
+            ]"
             @click="reportData.handleStudyDesignChange('cohort')"
           >
-            <span class="material-icons card-icon">timeline</span>
-            <span class="card-text">후향적 코호트 연구</span>
+            <span class="text-xs">후향적 코호트</span>
           </button>
         </div>
       </li>
-      <li class="plain-item">
-        <span class="item-label"><span class="material-icons icon">stacked_bar_chart</span> 사례 발병률</span>
-        <span :class="['badge', { empty: !reportData.caseAttackRate.value }]">
-          {{ reportData.caseAttackRate.value ? reportData.caseAttackRate.value + '%' : '미입력' }}
+      <!-- Items with Refined Status -->
+      <component :is="'li'" v-for="item in statusItems" :key="item.label" class="flex justify-between items-center py-2.5 border-b border-gray-50 group cursor-default hover:bg-gray-50 px-1 rounded transition-colors">
+        <span class="flex items-center gap-2 text-sm text-slate-600 group-hover:text-slate-900 transition-colors">
+          <span class="material-icons text-lg text-slate-300 group-hover:text-slate-500 transition-colors">{{ item.icon }}</span> 
+          {{ item.label }}
         </span>
-      </li>
-      <li class="plain-item">
-        <span class="item-label"><span class="material-icons icon">bar_chart</span> 환자 발병률</span>
-        <span :class="['badge', { empty: !reportData.patientAttackRate.value }]">
-          {{ reportData.patientAttackRate.value ? reportData.patientAttackRate.value + '%' : '미입력' }}
-        </span>
-      </li>
-      <li class="plain-item column">
-        <div class="item-label"><span class="material-icons icon">event</span> 추정 노출일시</div>
-        <div class="value-row"><span :class="['badge', { empty: !reportData.exposureDate.value }]">{{ reportData.exposureDate.value || '미입력' }}</span></div>
-      </li>
-      <li class="plain-item column">
-        <div class="item-label"><span class="material-icons icon">medical_services</span> 최초사례 발생</div>
-        <div class="value-row"><span :class="['badge', { empty: !reportData.firstCaseDate.value }]">{{ reportData.firstCaseDate.value || '미입력' }}</span></div>
-      </li>
-      <li class="plain-item">
-        <span class="item-label"><span class="material-icons icon">timer</span> 평균 잠복기(시간)</span>
-        <span :class="['badge', { empty: !reportData.meanIncubation.value }]">
-          {{ reportData.meanIncubation.value ? reportData.meanIncubation.value + '시간' : '미입력' }}
-        </span>
-      </li>
-      <li class="plain-item">
-        <span class="item-label"><span class="material-icons icon">science</span> 추정 감염원</span>
-        <span :class="['badge', { empty: !reportData.suspectedSource.value }]">
-          {{ reportData.suspectedSource.value || '미입력' }}
-        </span>
-      </li>
-      <li class="plain-item">
-        <span class="item-label">
-          <span class="material-icons icon">restaurant</span> 
-          식품 섭취력 분석
-        </span>
-        <div class="badge-container">
+        <div class="flex items-center gap-1.5">
+          <!-- Warning for food analysis > 34 items -->
           <span 
-            v-if="reportData.hasTooManyFoodItems.value && reportData.foodIntakeAnalysis.value"
-            class="warning-indicator"
+            v-if="item.warning"
+            class="relative cursor-help"
             @mouseenter="showFoodAnalysisTooltip = true"
             @mouseleave="showFoodAnalysisTooltip = false"
-            style="position: relative; cursor: help;"
           >
-            <span class="material-icons">warning</span>
-            <div ref="foodAnalysisTooltipRef"></div>
+            <span class="material-icons text-lg text-amber-500">warning_amber</span>
+            <div v-if="item.label === '식품 섭취력 분석'" ref="foodAnalysisTooltipRef"></div>
           </span>
-          <span :class="['badge', { 
-            empty: !reportData.foodIntakeAnalysis.value, 
-            warning: reportData.hasTooManyFoodItems.value && reportData.foodIntakeAnalysis.value 
-          }]">
-            {{ reportData.foodIntakeAnalysis.value ? '입력됨' : '미입력' }}
+
+          <span :class="[
+            'text-xs font-medium transition-all duration-300',
+            item.status === 'complete' ? 'text-blue-600 font-bold' :
+            item.status === 'warning' ? 'text-amber-600 font-bold' :
+            item.status === 'analysis-required' ? 'text-rose-500 font-bold' :
+            'text-gray-300'
+          ]">
+            {{ item.statusText }}
           </span>
         </div>
-      </li>
-      <li class="plain-item">
-        <span class="item-label"><span class="material-icons icon">show_chart</span> 유행곡선 차트</span>
-        <span :class="['badge', { empty: !reportData.hasEpidemicChart.value }]">
-          {{ reportData.hasEpidemicChart.value ? '입력됨' : '미입력' }}
-        </span>
-      </li>
-      <li class="plain-item">
-        <span class="item-label"><span class="material-icons icon">timeline</span> 잠복기 차트</span>
-        <span :class="['badge', { empty: !reportData.hasIncubationChart.value }]">
-          {{ reportData.hasIncubationChart.value ? '입력됨' : '미입력' }}
-        </span>
-      </li>
-      <li class="plain-item">
-        <span class="item-label"><span class="material-icons icon">table_chart</span> 주요증상 표</span>
-        <span :class="['badge', { empty: !reportData.hasMainSymptomsTable.value }]">
-          {{ reportData.hasMainSymptomsTable.value ? '입력됨' : '미입력' }}
-        </span>
-      </li>
-
+      </component>
     </ul>
     
     <!-- Tooltips -->
     <Teleport to="body">
        <div v-if="showFoodAnalysisTooltip && foodAnalysisTooltipRef" 
-            class="item-tooltip tooltip-body" 
+            class="fixed bg-black border border-gray-700 rounded-lg p-3 shadow-xl text-[13px] leading-relaxed max-w-xs text-white flex items-start gap-1.5 z-[10000]" 
             :style="foodAnalysisTooltipStyle">
-         <div class="tooltip-text">
-           <div>요인(식단)이 {{ reportData.foodItemCount.value }}개로 34개를 초과합니다.</div>
+         <div>
+           <div class="mb-0.5">요인(식단)이 {{ reportData.foodItemCount.value }}개로 34개를 초과합니다.</div>
            <div>표4 요인별 표분석결과에 데이터가 들어가지 않습니다.</div>
          </div>
        </div>
 
        <div v-if="showDesignNoticeTooltip && designNoticeTooltipRef"
-            class="item-tooltip tooltip-body"
+            class="fixed bg-black border border-gray-700 rounded-lg p-3 shadow-xl text-[13px] leading-relaxed max-w-xs text-white flex items-start gap-1.5 z-[10000]"
             :style="designNoticeTooltipStyle">
-         <div class="tooltip-text">
+         <div>
            <div>조사 디자인을 먼저 선택해주세요.</div>
          </div>
        </div>
@@ -187,228 +163,41 @@ const designNoticeTooltipStyle = computed(() => {
   };
 });
 
+const statusItems = computed(() => [
+  { label: '사례 발병률', icon: 'stacked_bar_chart', status: props.reportData.caseAttackRate.value ? 'complete' : 'pending', statusText: props.reportData.caseAttackRate.value ? '입력됨' : '대기' },
+  { label: '환자 발병률', icon: 'bar_chart', status: props.reportData.patientAttackRate.value ? 'complete' : 'pending', statusText: props.reportData.patientAttackRate.value ? '입력됨' : '대기' },
+  { label: '추정 노출일시', icon: 'event', status: props.reportData.exposureDate.value ? 'complete' : 'pending', statusText: props.reportData.exposureDate.value ? '입력됨' : '대기' },
+  { label: '최초사례 발생', icon: 'medical_services', status: props.reportData.firstCaseDate.value ? 'complete' : 'pending', statusText: props.reportData.firstCaseDate.value ? '입력됨' : '대기' },
+  { label: '평균 잠복기', icon: 'timer', status: props.reportData.meanIncubation.value ? 'complete' : 'pending', statusText: props.reportData.meanIncubation.value ? '입력됨' : '대기' },
+  { label: '추정 감염원', icon: 'science', status: props.reportData.suspectedSource.value ? 'complete' : 'pending', statusText: props.reportData.suspectedSource.value ? '입력됨' : '대기' },
+  { 
+    label: '식품 섭취력 분석', 
+    icon: 'restaurant', 
+    status: !props.reportData.studyDesign.value ? 'analysis-required' : (props.reportData.foodIntakeAnalysis.value ? (props.reportData.hasTooManyFoodItems.value ? 'warning' : 'complete') : 'pending'),
+    statusText: !props.reportData.studyDesign.value ? '디자인 선택필요' : (props.reportData.foodIntakeAnalysis.value ? '입력됨' : '대기'),
+    warning: props.reportData.hasTooManyFoodItems.value && props.reportData.foodIntakeAnalysis.value
+  },
+  { label: '유행곡선 차트', icon: 'show_chart', status: props.reportData.hasEpidemicChart.value ? 'complete' : 'pending', statusText: props.reportData.hasEpidemicChart.value ? '입력됨' : '대기' },
+  { label: '잠복기 차트', icon: 'timeline', status: props.reportData.hasIncubationChart.value ? 'complete' : 'pending', statusText: props.reportData.hasIncubationChart.value ? '입력됨' : '대기' },
+  { label: '주요증상 표', icon: 'table_chart', status: props.reportData.hasMainSymptomsTable.value ? 'complete' : 'pending', statusText: props.reportData.hasMainSymptomsTable.value ? '입력됨' : '대기' }
+]);
+
+const completedCount = computed(() => {
+  let count = props.reportData.studyDesign.value ? 1 : 0;
+  statusItems.value.forEach(item => {
+    if (item.status === 'complete' || item.status === 'warning') count++;
+  });
+  return count;
+});
+
+const totalSteps = computed(() => statusItems.value.length + 1);
+const completionRate = computed(() => (completedCount.value / totalSteps.value) * 100);
+
 // Helpers
-function getNoticeClass() {
-  const status = props.reportData.analysisStatus.value;
-  if (status === 'no-analysis' || status === 'no-valid-data') {
-    return 'design-notice-inline analysis-required';
-  }
-  return 'design-notice-inline selection-required';
-}
 
-function getNoticeIcon() {
-  const status = props.reportData.analysisStatus.value;
-  if (status === 'no-analysis' || status === 'no-valid-data') {
-    return 'science';
-  }
-  return 'info';
-}
-
-function getNoticeText() {
-  const status = props.reportData.analysisStatus.value;
-  if (status === 'no-analysis' || status === 'no-valid-data') {
-    return '분석 필요';
-  }
-  return '선택 필요';
-}
 </script>
 
 <style scoped>
-/* Inherited styles from parent (need to be duplicated or global, sticking to scoped duplication for now as requested by user to keep refactor clean visually) */
-.editor-pane {
-  flex: 0 0 280px; /* 좌측 폭 고정 */
-  background-color: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 20px 20px 20px 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.pane-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 20px;
-}
-
-.item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.design-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.design-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 6px;
-}
-
-.item-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #5f6368;
-}
-
-.item-label .icon {
-  font-size: 18px;
-  color: #5f6368;
-}
-
-.design-options {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.design-card-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 10px 4px;
-  border: 1px solid #dadce0;
-  border-radius: 8px;
-  background-color: #fff;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.design-card-btn.active {
-  border-color: #1a73e8;
-  background-color: #e8f0fe;
-  color: #1967d2;
-}
-
-.design-card-btn.unselected:hover {
-  background-color: #f8f9fa;
-  border-color: #202124;
-}
-
-.design-card-btn .card-icon {
-  font-size: 20px;
-}
-
-.design-card-btn .card-text {
-  font-size: 11px;
-  font-weight: 500;
-  text-align: center;
-}
-
-.plain-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed #e0e0e0;
-}
-
-.plain-item.column {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.plain-item.column .value-row {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 12px;
-  background-color: #e6f4ea;
-  color: #137333;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.badge.empty {
-  background-color: #f1f3f4;
-  color: #5f6368;
-}
-
-.badge.warning {
-  background-color: #fff8e1;
-  color: #f57c00;
-  border: 1px solid #ffcc02;
-}
-
-.badge-container {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.warning-indicator .material-icons {
-  font-size: 18px;
-  color: #f57c00;
-}
-
-.design-notice-inline {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
-  border: 1px solid #ffcc02;
-  border-radius: 12px;
-  color: #f57c00;
-  font-size: 12px;
-  font-weight: 500;
-  box-shadow: 0 1px 4px rgba(255, 193, 7, 0.2);
-  animation: fadeInScale 0.3s ease-out;
-}
-
-.design-notice-inline .material-icons {
-  font-size: 14px;
-  color: #f57c00;
-}
-
-.design-notice-inline.analysis-required {
-  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-  border: 1px solid #ef5350;
-  color: #d32f2f;
-  box-shadow: 0 1px 4px rgba(239, 83, 80, 0.2);
-}
-
-.design-notice-inline.analysis-required .material-icons {
-  color: #d32f2f;
-}
-
-.design-notice-inline.selection-required {
-  background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
-  border: 1px solid #ffcc02;
-  color: #f57c00;
-  box-shadow: 0 1px 4px rgba(255, 193, 7, 0.2);
-}
-
-.design-notice-inline.selection-required .material-icons {
-  color: #f57c00;
-}
-
 @keyframes fadeInScale {
   from {
     opacity: 0;
@@ -420,45 +209,7 @@ function getNoticeText() {
   }
 }
 
-/* Tooltip styles duplication for component self-sufficiency */
-.item-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 8px;
-  background: #000;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  font-size: 13px;
-  line-height: 1.4;
-  z-index: 1000;
-  max-width: 320px;
-  white-space: normal;
-  color: #fff;
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.item-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #000;
-}
-
-.tooltip-body {
-  position: fixed !important;
-  z-index: 10000 !important;
-}
-
-.tooltip-text > div {
-  margin-bottom: 2px;
+.animate-fadeInScale {
+  animation: fadeInScale 0.3s ease-out;
 }
 </style>

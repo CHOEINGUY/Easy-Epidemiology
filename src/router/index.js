@@ -1,19 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { isAuthRequired } from '../utils/environmentUtils.js';
 
-// Component Imports
-import DataInputVirtual from '../components/DataInputVirtualScroll/DataInputVirtual.vue';
-import PatientCharacteristics from '../components/PatientCharacteristics/index.vue';
-import EpidemicCurve from '../components/EpidemicCurve/index.vue';
-import CaseControl from '../components/CaseControl/index.vue';
-import CohortStudy from '../components/CohortStudy/index.vue';
-import HomePage from '../components/Home/index.vue';
-import ClinicalSymptoms from '../components/ClinicalSymptoms/index.vue';
-import CaseSeries from '../components/CaseSeries/index.vue';
-import ReportWriter from '../components/ReportWriter/index.vue';
-import AuthScreen from '../components/AuthScreen/index.vue';
-import AdminPanel from '../components/AdminPanel/index.vue';
-
 const routes = [
   {
     path: '/',
@@ -30,67 +17,67 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: AuthScreen,
+    component: () => import(/* webpackChunkName: "auth" */ '../components/AuthScreen/index.vue'),
     meta: { guestOnly: true }
   },
   {
     path: '/input',
     name: 'DataInputVirtual',
-    component: DataInputVirtual,
+    component: () => import(/* webpackChunkName: "input" */ '../components/DataInputVirtualScroll/DataInputVirtual.vue'),
     meta: { title: '데이터 입력' }
   },
   {
     path: '/patient',
     name: 'PatientCharacteristics',
-    component: PatientCharacteristics,
+    component: () => import(/* webpackChunkName: "patient" */ '../components/PatientCharacteristics/index.vue'),
     meta: { title: '환자 특성' }
   },
   {
     path: '/curve',
     name: 'EpidemicCurve',
-    component: EpidemicCurve,
+    component: () => import(/* webpackChunkName: "curve" */ '../components/EpidemicCurve/index.vue'),
     meta: { title: '유행 곡선' }
   },
   {
     path: '/symptoms',
     name: 'ClinicalSymptoms',
-    component: ClinicalSymptoms,
+    component: () => import(/* webpackChunkName: "symptoms" */ '../components/ClinicalSymptoms/index.vue'),
     meta: { title: '임상 증상' }
   },
   {
     path: '/case-control',
     name: 'CaseControl',
-    component: CaseControl,
+    component: () => import(/* webpackChunkName: "case-control" */ '../components/CaseControl/index.vue'),
     meta: { title: '환자-대조군 연구' }
   },
   {
     path: '/cohort',
     name: 'CohortStudy',
-    component: CohortStudy,
+    component: () => import(/* webpackChunkName: "cohort" */ '../components/CohortStudy/index.vue'),
     meta: { title: '코호트 연구' }
   },
   {
     path: '/case-series',
     name: 'CaseSeries',
-    component: CaseSeries,
+    component: () => import(/* webpackChunkName: "case-series" */ '../components/CaseSeries/index.vue'),
     meta: { title: '사례군 조사' }
   },
   {
     path: '/report',
     name: 'ReportWriter',
-    component: ReportWriter,
+    component: () => import(/* webpackChunkName: "report" */ '../components/ReportWriter/index.vue'),
     meta: { title: '보고서 작성' }
   },
   {
     path: '/info',
     name: 'HomePage',
-    component: HomePage,
+    component: () => import(/* webpackChunkName: "info" */ '../components/Home/index.vue'),
     meta: { title: '웹페이지 정보' }
   },
   {
     path: '/admin',
     name: 'AdminPanel',
-    component: AdminPanel,
+    component: () => import(/* webpackChunkName: "admin" */ '../components/AdminPanel/index.vue'),
     meta: { requiresAdmin: true, title: '관리자 패널' }
   }
 ];

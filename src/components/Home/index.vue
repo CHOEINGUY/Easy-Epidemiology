@@ -1,5 +1,5 @@
 <template>
-  <div class="home-page">
+  <div class="w-full min-h-screen bg-white font-['Noto_Sans_KR',sans-serif]">
     <HeroSection 
       :title="config.basic.title"
       :subtitle="config.basic.subtitle"
@@ -46,10 +46,5 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.home-page {
-  width: 100%;
-  min-height: 100vh;
-  background-color: #ffffff;
-  font-family: "Noto Sans KR", sans-serif;
-}
+/* Scoped styles replaced by Tailwind utilities */
 </style>

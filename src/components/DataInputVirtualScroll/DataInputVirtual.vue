@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="data-input-virtual-container"
+    class="h-full grid grid-rows-[auto_auto_1fr] bg-white overflow-hidden outline-none pb-[37px]"
     tabindex="0"
     @keydown="onKeyDown"
     ref="dataContainerRef"
@@ -33,7 +33,7 @@
       @redo="onRedo"
       @clear-all-filters="onClearAllFilters"
     />
-    <div class="grid-container" ref="gridContainerRef">
+    <div class="flex flex-col overflow-hidden bg-white min-h-0 relative z-10" ref="gridContainerRef">
       <VirtualGridHeader 
         ref="gridHeaderRef"
         :headerGroups="headerGroups"
@@ -92,13 +92,7 @@
     />
     <DragOverlay :visible="isDragOver" :progress="excelUploadProgress" />
     <ToastContainer />
-    <AddRowsControls 
-      :is-filtered="storeBridge.filterState.isFiltered"
-      @add-rows="onAddRows" 
-      @delete-empty-rows="onDeleteEmptyRows" 
-      @clear-selection="onClearSelection"
-    />
-    
+
     <!-- DateTimePicker 추가 -->
     <DateTimePicker 
       ref="dateTimePickerRef"
@@ -122,7 +116,6 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
-// import { useStore } from 'vuex'; // Removed
 import VirtualAppHeader from './layout/VirtualAppHeader.vue';
 import VirtualFunctionBar from './layout/VirtualFunctionBar.vue';
 import VirtualGridHeader from './layout/VirtualGridHeader.vue';
@@ -134,7 +127,6 @@ import DateTimePicker from './parts/DateTimePicker.vue';
 import { useStoreBridge } from '../../store/storeBridge.js';
 import { useCellInputState } from '../../store/cellInputState.js';
 import ToastContainer from './parts/ToastContainer.vue';
-import AddRowsControls from './parts/AddRowsControls.vue';
 import { useContextMenu } from './logic/useContextMenu.js';
 import { useVirtualSelectionSystem, setColumnsMeta } from './logic/virtualSelectionSystem.js';
 import { showToast } from './logic/toast.js';
@@ -167,9 +159,6 @@ import { useDateTimePicker } from './composables/useDateTimePicker.js';
 
 // --- 스토어 및 상태 ---
 // --- 스토어 및 상태 ---
-// const store = useStore(); // Vuex Removal
-// const getters = store.getters; // Vuex Removal
-
 // --- Template Refs (Must be defined at the top to avoid TDZ in composables) ---
 const dataContainerRef = ref(null);
 const gridContainerRef = ref(null);
@@ -676,110 +665,102 @@ function handleFocusFirstError() {
 </script>
 
 <style scoped>
-.data-input-virtual-container {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  height: 100%;
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  background-color: #fff;
-  overflow: hidden;
-  /* padding-bottom removed because AddRowsControls now inside table */
-  box-sizing: border-box;
-  outline: none; /* 포커스 시 외곽선 제거 */
-}
+/* Grid Selection & Border Styles */
+/* These use specific box-shadows for pixel-perfect grid borders which are difficult to replicate with standard border utilities */
 
-
-
-.grid-container {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  overflow: hidden;
-  background-color: white;
-  min-height: 0;
-}
-
-/* 딥 셀렉터를 사용하여 자식 컴포넌트의 클래스에 스타일 적용 */
+/* Deep selectors to apply styles to child grid components */
 :deep(.cell-selected) {
-  box-shadow: 0 0 0 1.5px #1a73e8 inset !important;
-  z-index: 10;
+  @apply z-10;
+  box-shadow: 0 0 0 1.5px theme('colors.blue.600') inset !important;
 }
 
-/* 범위 선택 테두리 스타일 */
+/* Range Selection Borders */
 :deep(.border-top) {
-  box-shadow: inset 0 1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 0 1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-bottom) {
-  box-shadow: inset 0 -1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 0 -1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-left) {
-  box-shadow: inset 1.5px 0 0 0 #1a73e8 !important;
+  box-shadow: inset 1.5px 0 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-right) {
-  box-shadow: inset -1.5px 0 0 0 #1a73e8 !important;
+  box-shadow: inset -1.5px 0 0 0 theme('colors.blue.600') !important;
 }
 
-/* 테두리 조합 스타일 */
+/* Border Combinations */
 :deep(.border-top.border-left) {
-  box-shadow: inset 1.5px 1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 1.5px 1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-top.border-right) {
-  box-shadow: inset -1.5px 1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset -1.5px 1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-bottom.border-left) {
-  box-shadow: inset 1.5px -1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 1.5px -1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-bottom.border-right) {
-  box-shadow: inset -1.5px -1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset -1.5px -1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-top.border-bottom) {
-  box-shadow: inset 0 1.5px 0 0 #1a73e8, inset 0 -1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 0 1.5px 0 0 theme('colors.blue.600'), inset 0 -1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-left.border-right) {
-  box-shadow: inset 1.5px 0 0 0 #1a73e8, inset -1.5px 0 0 0 #1a73e8 !important;
+  box-shadow: inset 1.5px 0 0 0 theme('colors.blue.600'), inset -1.5px 0 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-top.border-left.border-right) {
-  box-shadow: inset 1.5px 1.5px 0 0 #1a73e8, inset -1.5px 1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 1.5px 1.5px 0 0 theme('colors.blue.600'), inset -1.5px 1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-bottom.border-left.border-right) {
-  box-shadow: inset 1.5px -1.5px 0 0 #1a73e8, inset -1.5px -1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 1.5px -1.5px 0 0 theme('colors.blue.600'), inset -1.5px -1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-top.border-bottom.border-left) {
-  box-shadow: inset 1.5px 1.5px 0 0 #1a73e8, inset 1.5px -1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 1.5px 1.5px 0 0 theme('colors.blue.600'), inset 1.5px -1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-top.border-bottom.border-right) {
-  box-shadow: inset -1.5px 1.5px 0 0 #1a73e8, inset -1.5px -1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset -1.5px 1.5px 0 0 theme('colors.blue.600'), inset -1.5px -1.5px 0 0 theme('colors.blue.600') !important;
 }
 
 :deep(.border-top.border-bottom.border-left.border-right) {
-  box-shadow: inset 1.5px 1.5px 0 0 #1a73e8, inset -1.5px 1.5px 0 0 #1a73e8, inset 1.5px -1.5px 0 0 #1a73e8, inset -1.5px -1.5px 0 0 #1a73e8 !important;
+  box-shadow: inset 1.5px 1.5px 0 0 theme('colors.blue.600'), inset -1.5px 1.5px 0 0 theme('colors.blue.600'), inset 1.5px -1.5px 0 0 theme('colors.blue.600'), inset -1.5px -1.5px 0 0 theme('colors.blue.600') !important;
 }
 
-/* 개별 셀 선택(다중) 배경 및 테두리 */
+/* Multi-select Background */
 :deep(.cell-multi-selected) {
-  background-color: rgba(26, 115, 232, 0.18) !important;
-  box-shadow: 0 0 0 1.5px #1a73e8 inset !important;
-  z-index: 9;
+  background-color: rgba(37, 99, 235, 0.1) !important; /* blue-600 with opacity */
+  box-shadow: 0 0 0 1.5px theme('colors.blue.600') inset !important;
+  @apply z-[9];
 }
 
-/* 개별 행 선택 배경 */
+/* Row Selection */
 :deep(.row-individual-selected) {
-  background-color: rgba(26, 115, 232, 0.08) !important;
+  background-color: rgba(37, 99, 235, 0.05) !important;
 }
 
-/* Body 영역에서 AddRowsControls(5px) 여백만 제외하여 스크롤 영역 설정 */
-:deep(.grid-body-virtual) {
-  height: calc(100% - 6px);
+/* Range Active Cell */
+:deep(.cell-active-in-range) {
+  @apply bg-white z-[15];
 }
-</style> 
+
+/* Header & Body Layout Fixes */
+:deep(.grid-header-virtual) {
+  @apply flex-none relative z-10 shadow-sm border-b border-gray-200;
+  padding-bottom: 2px;
+}
+
+:deep(.grid-body-virtual) {
+  @apply flex-1 min-h-0 z-[1] h-auto;
+}
+</style>
+ 

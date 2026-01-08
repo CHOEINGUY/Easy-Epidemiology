@@ -1,18 +1,18 @@
 <template>
-  <div class="app">
-    <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v2.0</h1>
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <header class="flex items-center justify-between px-4 py-2 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-glass z-[4] sticky top-0">
+      <CommonHeader />
     </header>
 
-    <div class="dashboard">
-      <div class="summary-bar">
-        <div class="summary-bar__title">
-          <span class="material-icons summary-bar__logo">insights</span>
+    <div class="flex flex-col p-5 max-w-[1400px] mx-auto">
+      <div class="inline-flex self-start w-fit items-center justify-between bg-white/60 backdrop-blur-sm border border-white/40 px-5 py-3 rounded-2xl shadow-glass mb-6">
+        <div class="flex items-center text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
+          <span class="material-icons mr-3 text-[28px] text-blue-500">insights</span>
           사례군 조사
         </div>
       </div>
 
-      <div class="analysis-card">
+      <div class="flex flex-col overflow-hidden bg-white rounded-2xl shadow-premium border border-slate-100 transition-all duration-300 hover:shadow-xl">
         <CaseSeriesControls 
           v-model:fontSize="tableFontSize"
           :rowCount="rowCount"
@@ -29,6 +29,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import CommonHeader from '../Common/CommonHeader.vue';
 import CaseSeriesControls from './components/CaseSeriesControls.vue';
 import CaseSeriesTable from './components/CaseSeriesTable.vue';
 import { useCaseSeriesAnalysis } from './composables/useCaseSeriesAnalysis';
@@ -36,70 +37,3 @@ import { useCaseSeriesAnalysis } from './composables/useCaseSeriesAnalysis';
 const tableFontSize = ref(14);
 const { caseSeriesResults, rowCount } = useCaseSeriesAnalysis();
 </script>
-
-<style scoped>
-/* --- 기본 앱 및 대시보드 스타일 --- */
-.app {
-  background-color: #f0f0f0;
-  min-height: 100vh;
-}
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background-color: white;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  z-index: 4;
-}
-.app-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 300;
-  font-family: "Noto Sans KR", sans-serif;
-  color: #202124;
-}
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-.summary-bar {
-  display: inline-flex;
-  align-self: flex-start;
-  width: fit-content;
-  align-items: center;
-  justify-content: space-between;
-  background-color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-}
-
-.summary-bar__title {
-  display: flex;
-  align-items: center;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1a73e8;
-}
-
-.summary-bar__logo {
-  margin-right: 12px;
-  font-size: 28px;
-  color: #1a73e8;
-}
-
-.analysis-card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-</style>

@@ -1,13 +1,15 @@
 <template>
-  <div class="app">
-    <header class="app-header">
-      <h1 class="app-title">Easy-Epidemiology Web v2.0</h1>
+  <div class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <header class="flex items-center justify-between px-4 py-2 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-glass z-[4] sticky top-0">
+      <CommonHeader />
     </header>
 
-    <div class="dashboard">
-      <SummaryBar />
+    <div class="flex flex-col p-6 max-w-[1600px] mx-auto w-full">
+      <div class="mb-6">
+        <SummaryBar />
+      </div>
 
-      <div class="top-section">
+      <div class="bg-white/60 backdrop-blur-sm border border-white/40 rounded-2xl shadow-glass p-5 mb-6 flex justify-between items-center flex-wrap gap-4">
         <VariableSelector 
           :headers="headers.basic || []" 
           :selectedIndex="selectedVariableIndex" 
@@ -22,11 +24,13 @@
         />
       </div>
 
-      <div v-if="selectedVariableIndex !== null" class="main-content-area">
-        <div class="table-container">
+      <div v-if="selectedVariableIndex !== null" class="flex gap-6 items-start flex-wrap lg:flex-nowrap">
+        <div class="flex-1 min-w-[500px] bg-white rounded-2xl shadow-premium border border-slate-100 overflow-hidden flex flex-col h-fit lg:max-w-[550px]">
           <FrequencyTable 
             :headerName="currentHeaderName"
             :frequencyData="currentFrequencyData"
+            :is-table-copied="isTableCopied"
+            @copy="copyTableToClipboard"
           />
           <LabelMappingPanel 
             :categories="currentCategories"
@@ -34,7 +38,7 @@
             @change="handleLabelMappingChange"
           />
         </div>
-        <div class="right-column">
+        <div class="flex-[1.5] min-w-[600px] bg-white rounded-2xl shadow-premium border border-slate-100 p-6 flex flex-col gap-6 relative">
           <ChartControlPanel 
             v-model:chartType="selectedChartType"
             v-model:dataType="selectedDataType"
@@ -60,7 +64,7 @@
           />
         </div>
       </div>
-      <div v-else class="no-data-message">
+      <div v-else class="p-10 text-center text-slate-500 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/40 shadow-glass">
         <DataGuideMessage
           icon="analytics"
           title="분석할 변수를 선택해주세요"
@@ -82,6 +86,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import DataGuideMessage from '../DataGuideMessage.vue';
 
 // 하위 컴포넌트 임포트
+import CommonHeader from '../Common/CommonHeader.vue';
 import SummaryBar from './components/SummaryBar.vue';
 import VariableSelector from './components/VariableSelector.vue';
 import ParticipantSummary from './components/ParticipantSummary.vue';
@@ -92,6 +97,7 @@ import BarChart from './components/BarChart.vue';
 
 // Composable 임포트
 import { usePatientStats } from './composables/usePatientStats';
+import { useClipboardOperations } from './composables/useClipboardOperations';
 
 // 통계 데이터
 const {
@@ -103,6 +109,8 @@ const {
   confirmedRate,
   frequencyData
 } = usePatientStats();
+
+const { isTableCopied, copyTableToClipboard } = useClipboardOperations();
 
 // UI 상태
 const selectedVariableIndex = ref(null);
@@ -177,99 +185,3 @@ watch(selectedVariableIndex, (newIndex, oldIndex) => {
   }
 });
 </script>
-
-<style scoped>
-/* === 기본 레이아웃 === */
-.app { 
-  background-color: #f0f0f0; 
-  min-height: 100vh; 
-}
-
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background-color: white;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  z-index: 4;
-}
-
-.app-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 300;
-  font-family: "Noto Sans KR", sans-serif;
-  color: #202124;
-}
-
-.dashboard { 
-  display: flex; 
-  flex-direction: column; 
-  text-align: center; 
-  width: 97%; 
-  margin: 20px auto; 
-  background-color: #f0f0f0; 
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
-}
-
-.top-section { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  margin: 20px 30px 20px 30px; 
-  flex-wrap: wrap; 
-}
-
-.main-content-area { 
-  display: flex; 
-  gap: 30px; 
-  margin: 0 30px 30px 30px; 
-  align-items: flex-start; 
-  flex-wrap: wrap; 
-}
-
-.table-container { 
-  margin: 0; 
-  display: flex; 
-  flex-direction: column; 
-  background-color: #fff; 
-  box-sizing: border-box; 
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
-  border-radius: 12px; 
-  overflow-x: auto; 
-  flex: 0 0 550px; 
-  height: fit-content; 
-}
-
-.right-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 500px;
-  position: relative;
-}
-
-.no-data-message { 
-  padding: 20px; 
-  text-align: center; 
-  color: #666; 
-}
-
-/* === 반응형 디자인 === */
-@media (max-width: 1100px) {
-  .main-content-area { 
-    flex-direction: column; 
-    gap: 20px; 
-  }
-  
-  .table-container,
-  .right-column { 
-    flex-basis: auto; 
-    width: 100%; 
-    min-width: 0; 
-  }
-}
-</style>

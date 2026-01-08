@@ -1,11 +1,15 @@
 <template>
-  <div class="variable-selection">
+  <div class="flex flex-wrap gap-2 items-center">
     <button 
       v-for="(header, index) in headers" 
       :key="index" 
       @click="$emit('select', index)" 
-      :class="{ 'variable-selection__button--active': selectedIndex === index }" 
-      class="variable-selection__button"
+      class="px-6 py-2.5 rounded-full text-base font-medium transition-all duration-200 border shadow-sm select-none"
+      :class="[
+        selectedIndex === index 
+          ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-100' 
+          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
+      ]"
     >
       {{ header === "" ? "(없음)" : header }}
     </button>
@@ -27,29 +31,3 @@ defineProps({
 
 defineEmits(['select']);
 </script>
-
-<style scoped>
-.variable-selection { 
-  display: flex; 
-  gap: 20px; 
-  justify-content: flex-start; 
-  flex-wrap: wrap; 
-  height: 46px; 
-}
-
-.variable-selection__button { 
-  padding: 5px 15px; 
-  border: 1px solid #ccc; 
-  border-radius: 12px; 
-  background-color: white; 
-  cursor: pointer; 
-  font-family: "Noto Sans KR", sans-serif; 
-  font-size: 20px; 
-}
-
-.variable-selection__button--active { 
-  background-color: #1a73e8; 
-  color: white; 
-  border-color: #1a73e8; 
-}
-</style>

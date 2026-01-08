@@ -1,19 +1,18 @@
-<!-- TimePicker.vue -->
 <template>
-  <div class="time-section">
-    <div class="time-header">
+  <div class="w-[210px] p-5 flex flex-col justify-between shrink-0 font-['Noto_Sans_KR',_sans-serif]">
+    <div class="font-semibold mb-4 text-[#333]">
       <span>시간 선택</span>
     </div>
     
-    <div class="time-content">
-      <div class="time-inputs">
-        <div class="time-input-group">
-          <label for="hour-select">시</label>
+    <div class="flex-1">
+      <div class="flex items-center justify-center gap-2 mb-5">
+        <div class="flex flex-col items-center gap-1">
+          <label for="hour-select" class="text-xs text-gray-500 font-medium">시</label>
           <select 
             id="hour-select"
             :value="hour"
             @change="$emit('update:hour', $event.target.value)"
-            class="time-select"
+            class="px-1.5 py-2 border border-gray-200 rounded-md text-sm bg-white cursor-pointer w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
             aria-label="시간 선택"
             @click.stop
           >
@@ -23,15 +22,15 @@
           </select>
         </div>
         
-        <div class="time-separator">:</div>
+        <div class="text-lg font-semibold text-[#333] mt-4">:</div>
         
-        <div class="time-input-group">
-          <label for="minute-select">분</label>
+        <div class="flex flex-col items-center gap-1">
+          <label for="minute-select" class="text-xs text-gray-500 font-medium">분</label>
           <select 
             id="minute-select"
             :value="minute"
             @change="$emit('update:minute', $event.target.value)"
-            class="time-select"
+            class="px-1.5 py-2 border border-gray-200 rounded-md text-sm bg-white cursor-pointer w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
             aria-label="분 선택"
             @click.stop
           >
@@ -43,16 +42,16 @@
       </div>
       
       <!-- 직접 입력 필드 -->
-      <div class="direct-input-section">
-        <div class="input-header">
+      <div class="hidden">
+        <div class="font-semibold mb-2 text-[#333] text-sm">
           <span>직접 입력</span>
         </div>
-        <div class="input-field">
+        <div class="mb-3">
           <input
             ref="directInputRef"
             v-model="directInputValue"
             type="text"
-            class="datetime-input"
+            class="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-white transition-all focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 hover:border-blue-600 placeholder-gray-400"
             placeholder="YYYY-MM-DD HH:MM"
             @keydown="handleDirectInputKeydown"
             @input="handleDirectInput"
@@ -64,16 +63,16 @@
       </div>
     </div>
     
-    <div class="bottom-section">
-      <div class="current-selection">
-        <div class="selection-display">
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center justify-center">
+        <div class="bg-gray-50 px-2 py-3 rounded-lg text-[15px] font-['Noto_Sans_KR',_sans-serif] text-gray-600 border border-gray-200 w-full text-center">
           {{ formatCurrentSelection() }}
         </div>
       </div>
       
-      <div class="action-buttons">
-        <button @click.stop="$emit('cancel')" class="cancel-btn">취소</button>
-        <button @click.stop="confirm" class="confirm-btn">확인</button>
+      <div class="flex gap-2">
+        <button @click.stop="$emit('cancel')" class="flex-1 py-2.5 px-4 border-none rounded-lg cursor-pointer text-sm font-medium transition-all bg-gray-100 text-[#333] hover:bg-gray-200">취소</button>
+        <button @click.stop="confirm" class="flex-1 py-2.5 px-4 border-none rounded-lg cursor-pointer text-sm font-medium transition-all bg-blue-600 text-white hover:bg-blue-700">확인</button>
       </div>
     </div>
   </div>
@@ -206,167 +205,5 @@ watch(
 </script>
 
 <style scoped>
-.time-section {
-  width: 180px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.time-header {
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #333;
-}
-
-.time-content {
-  flex: 1;
-}
-
-.time-inputs {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.time-input-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.time-input-group label {
-  font-size: 12px;
-  color: #666;
-  font-weight: 500;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-
-.time-select {
-  padding: 8px 6px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  background: white;
-  cursor: pointer;
-  width: 60px;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-
-.time-select:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
-}
-
-.time-separator {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin-top: 16px;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-
-.bottom-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.current-selection {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.selection-display {
-  background-color: #f8f9fa;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-family: 'Noto Sans KR', sans-serif;
-  color: #495057;
-  border: 1px solid #e9ecef;
-  width: 100%;
-  text-align: center;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.direct-input-section {
-  display: none;
-}
-
-.input-header {
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #333;
-  font-size: 14px;
-}
-
-.input-field {
-  margin-bottom: 12px;
-}
-
-.datetime-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: 'Noto Sans KR', sans-serif;
-  background: white;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.datetime-input:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
-}
-
-.datetime-input:hover {
-  border-color: #1976d2;
-}
-
-.datetime-input::placeholder {
-  color: #999;
-  font-family: inherit;
-}
-
-.cancel-btn, .confirm-btn {
-  flex: 1;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.cancel-btn {
-  background-color: #f5f5f5;
-  color: #333;
-}
-
-.cancel-btn:hover {
-  background-color: #e9ecef;
-}
-
-.confirm-btn {
-  background-color: #1976d2;
-  color: white;
-}
-
-.confirm-btn:hover {
-  background-color: #1565c0;
-}
+/* No styles needed, using Tailwind classes */
 </style>

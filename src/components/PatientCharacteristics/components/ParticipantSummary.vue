@@ -1,43 +1,49 @@
 <template>
-  <div class="participant-summary">
-    <div class="participant-summary__item">
-      <span class="summary-bar__label">조사 대상자 수&nbsp;</span>
-      <span class="summary-bar__value">{{ totalParticipants }}</span>
-      <span class="summary-bar__unit">명</span>
+  <div class="flex flex-wrap gap-4 items-center justify-end">
+    <div class="flex items-baseline bg-white px-4 py-2 rounded-xl shadow border border-slate-100">
+      <span class="text-xs text-slate-500 font-medium mr-2">조사 대상자 수</span>
+      <span class="text-2xl font-bold text-slate-800 tracking-tight">{{ totalParticipants }}</span>
+      <span class="text-xs text-slate-500 ml-1">명</span>
     </div>
-    <div class="participant-summary__item">
-      <span class="summary-bar__label">총 환자 수&nbsp;</span>
-      <span class="summary-bar__value">{{ totalPatients }}</span>
-      <span class="summary-bar__unit">명</span>
+    <div class="flex items-baseline bg-white px-4 py-2 rounded-xl shadow border border-slate-100">
+      <span class="text-xs text-slate-500 font-medium mr-2">총 환자 수</span>
+      <span class="text-2xl font-bold text-slate-800 tracking-tight">{{ totalPatients }}</span>
+      <span class="text-xs text-slate-500 ml-1">명</span>
     </div>
-    <div class="participant-summary__item">
-      <div class="control-button-wrapper">
-        <div 
-          class="attack-rate-display"
-          @mouseenter="showTooltip('attackRate', '발병률 = (환자여부에 1을 입력한 사람 수 ÷ 전체 조사 대상자 수) × 100')"
-          @mouseleave="hideTooltip"
-        >
-          <span class="summary-bar__label">발병률&nbsp;</span>
-          <span class="summary-bar__value">{{ attackRate }}</span>
-          <span class="summary-bar__unit">%</span>
-        </div>
-        <div v-if="activeTooltip === 'attackRate'" class="control-tooltip attack-rate-tooltip">{{ tooltipText }}</div>
+    <div class="relative group">
+      <div 
+        class="flex items-baseline bg-white px-4 py-2 rounded-xl shadow border border-slate-100 cursor-help"
+        @mouseenter="showTooltip('attackRate', '발병률 = (환자여부에 1을 입력한 사람 수 ÷ 전체 조사 대상자 수) × 100')"
+        @mouseleave="hideTooltip"
+      >
+        <span class="text-xs text-slate-500 font-medium mr-2">발병률</span>
+        <span class="text-2xl font-bold text-slate-800 tracking-tight">{{ attackRate }}</span>
+        <span class="text-xs text-slate-500 ml-1">%</span>
       </div>
+      <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
+        <div v-if="activeTooltip === 'attackRate'" class="absolute bottom-full mb-2 right-0 bg-slate-800 text-white px-3 py-2 rounded shadow-lg text-xs whitespace-nowrap z-50">
+          {{ tooltipText }}
+          <div class="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
+        </div>
+      </transition>
     </div>
     <!-- 확진율 (확진율 모드가 켜져 있을 때만 표시) -->
-    <div v-if="isConfirmedCaseColumnVisible" class="participant-summary__item">
-      <div class="control-button-wrapper">
-        <div 
-          class="confirmed-rate-display"
-          @mouseenter="showTooltip('confirmedRate', '확진율 = (확진여부에 1을 입력한 사람 수 ÷ 전체 조사 대상자 수) × 100')"
-          @mouseleave="hideTooltip"
-        >
-          <span class="summary-bar__label">확진율&nbsp;</span>
-          <span class="summary-bar__value">{{ confirmedRate }}</span>
-          <span class="summary-bar__unit">%</span>
-        </div>
-        <div v-if="activeTooltip === 'confirmedRate'" class="control-tooltip confirmed-rate-tooltip">{{ tooltipText }}</div>
+    <div v-if="isConfirmedCaseColumnVisible" class="relative group">
+      <div 
+        class="flex items-baseline bg-white px-4 py-2 rounded-xl shadow border border-slate-100 cursor-help"
+        @mouseenter="showTooltip('confirmedRate', '확진율 = (확진여부에 1을 입력한 사람 수 ÷ 전체 조사 대상자 수) × 100')"
+        @mouseleave="hideTooltip"
+      >
+        <span class="text-xs text-slate-500 font-medium mr-2">확진율</span>
+        <span class="text-2xl font-bold text-slate-800 tracking-tight">{{ confirmedRate }}</span>
+        <span class="text-xs text-slate-500 ml-1">%</span>
       </div>
+      <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
+        <div v-if="activeTooltip === 'confirmedRate'" class="absolute bottom-full mb-2 right-0 bg-slate-800 text-white px-3 py-2 rounded shadow-lg text-xs whitespace-nowrap z-50">
+          {{ tooltipText }}
+          <div class="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
+        </div>
+      </transition>
     </div>
   </div>
 </template>
@@ -71,111 +77,3 @@ defineProps({
 
 const { activeTooltip, tooltipText, showTooltip, hideTooltip } = useTooltip();
 </script>
-
-<style scoped>
-.participant-summary { 
-  display: flex; 
-  justify-content: flex-end; 
-  gap: 20px; 
-}
-
-.participant-summary__item { 
-  background-color: white; 
-  border: none; 
-  padding: 7px 15px; 
-  text-align: right; 
-  border-radius: 12px; 
-  display: flex; 
-  align-items: baseline; 
-}
-
-.summary-bar__label { 
-  font-size: 0.8rem; 
-  color: #666; 
-}
-
-.summary-bar__value { 
-  font-weight: normal; 
-  font-size: 1.5rem; 
-  color: #333; 
-  font-family: sans-serif; 
-  margin-left: 4px; 
-  margin-right: 2px; 
-}
-
-.summary-bar__unit { 
-  font-size: 0.8rem; 
-  color: #666; 
-}
-
-.control-button-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
-.control-tooltip {
-  position: absolute;
-  bottom: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #333;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1050;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  animation: tooltipFadeIn 0.2s ease-in-out;
-}
-
-.control-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: #333;
-}
-
-@keyframes tooltipFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-.attack-rate-display,
-.confirmed-rate-display {
-  cursor: help;
-  display: flex;
-  align-items: baseline;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.attack-rate-display:hover,
-.confirmed-rate-display:hover {
-  background-color: rgba(26, 115, 232, 0.1);
-}
-
-.attack-rate-tooltip,
-.confirmed-rate-tooltip {
-  left: auto !important;
-  right: 0 !important;
-  transform: none !important;
-}
-
-.attack-rate-tooltip::after,
-.confirmed-rate-tooltip::after {
-  left: auto !important;
-  right: 10px !important;
-  transform: translateX(0) !important;
-}
-</style>

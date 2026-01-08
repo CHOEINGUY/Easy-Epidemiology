@@ -1,87 +1,153 @@
 <template>
-  <section class="features-section">
-    <div class="container">
-      <div class="section-header">
-        <h2 class="section-title">강력한 분석 도구</h2>
-        <p class="section-subtitle">역학조사의 모든 단계를 위한 전문적인 솔루션</p>
+  <section class="py-32 bg-slate-50">
+    <div class="max-w-container mx-auto px-6">
+      <div class="text-center max-w-[600px] mx-auto mb-20">
+        <h2 class="text-[2.5rem] font-extrabold text-slate-900 mb-4 tracking-tight keep-all">강력한 분석 도구</h2>
+        <p class="text-body-lg text-slate-500 leading-relaxed keep-all">역학조사의 모든 단계를 위한 전문적인 솔루션</p>
       </div>
 
-      <div class="bento-grid">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-[280px] gap-6">
         <!-- #0: Data Input (Large Card) -->
-        <div class="bento-card large-card card-0">
-          <div class="card-content">
-            <div class="icon-box">
+        <!-- #0: Data Input (Large Card) -->
+        <div class="feature-card group lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3 !bg-gradient-to-br !from-white !to-slate-50">
+          <div class="flex flex-col flex-1">
+            <div class="w-12 h-12 bg-slate-200 text-slate-900 rounded-xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:bg-slate-900 group-hover:text-white">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </div>
-            <h3 class="card-title">{{ features[0].title }}</h3>
-            <p class="card-desc">{{ features[0].description }}</p>
+            <h3 class="text-xl font-bold text-slate-900 mb-3 tracking-tight">{{ features[0].title }}</h3>
+            <p class="text-[0.95rem] text-slate-500 leading-relaxed">{{ features[0].description }}</p>
           </div>
-          <div class="card-visual visual-input">
-            <!-- Abstract UI representation -->
-            <div class="ui-mockup">
-              <div class="ui-row"></div>
-              <div class="ui-row"></div>
-              <div class="ui-row short"></div>
+          <div class="mt-auto pt-8 flex justify-center">
+            <div class="w-full bg-white/80 backdrop-blur border border-slate-200 rounded-2xl p-4 shadow-sm relative overflow-hidden group-hover:border-blue-200 transition-colors duration-500">
+              <!-- Scanning Line Effect (Only on Hover) -->
+              <div class="absolute top-0 left-0 w-full h-[2px] bg-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.5)] group-hover:animate-scan-line opacity-0 group-hover:opacity-100"></div>
+
+              <!-- Input Row 1 -->
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-emerald-500 transition-colors duration-300 delay-500"></div>
+                <!-- Input Field: Dot Typing -->
+                <div class="h-6 bg-slate-100 rounded-md w-[70%] flex items-center px-3 gap-1 overflow-hidden">
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 600ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 700ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 800ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 900ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 1000ms"></div>
+                  <!-- Cursor -->
+                  <div class="w-0.5 h-4 bg-blue-500 animate-pulse hidden group-hover:block ml-0.5"></div>
+                </div>
+                <!-- Check Icon (Only on Hover) -->
+                <div class="ml-auto opacity-0 group-hover:opacity-100 transition-all duration-300 delay-[1200ms] transform translate-y-1 group-hover:translate-y-0">
+                  <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+              </div>
+
+              <!-- Input Row 2 -->
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-emerald-500 transition-colors duration-300 delay-[1500ms]"></div>
+                 <div class="h-6 bg-slate-100 rounded-md w-[50%] flex items-center px-3 gap-1 overflow-hidden">
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 1600ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 1700ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 1800ms"></div>
+                  <div class="w-0.5 h-4 bg-blue-500 animate-pulse hidden group-hover:block ml-0.5"></div>
+                </div>
+                 <div class="ml-auto opacity-0 group-hover:opacity-100 transition-all duration-300 delay-[2000ms] transform translate-y-1 group-hover:translate-y-0">
+                  <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+              </div>
+
+              <!-- Input Row 3 -->
+              <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-500 transition-colors duration-300 delay-[2500ms]"></div>
+                 <div class="h-6 bg-slate-100 rounded-md w-[85%] flex items-center px-3 gap-1 overflow-hidden">
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 2600ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 2700ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 2800ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 2900ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 3000ms"></div>
+                  <div class="w-1.5 h-1.5 bg-slate-400 rounded-full opacity-0 group-hover:animate-type-dot" style="animation-delay: 3100ms"></div>
+                  <div class="w-0.5 h-4 bg-blue-500 animate-pulse hidden group-hover:block ml-0.5"></div>
+                </div>
+                <!-- Processing Indicator (Only on Hover) -->
+                <div class="ml-auto">
+                   <div class="w-4 h-4 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin opacity-0 group-hover:opacity-100 delay-[3500ms] duration-300 transition-opacity"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- #1: Characteristics (Small Card) -->
-        <div class="bento-card small-card card-1">
-          <div class="icon-box">
+        <div class="feature-card group lg:col-start-2 lg:col-end-3 lg:row-start-1 lg:row-end-2 bg-white">
+          <div class="feature-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           </div>
-          <h3 class="card-title">{{ features[1].title }}</h3>
-          <p class="card-desc">{{ features[1].description }}</p>
+          <h3 class="feature-title">{{ features[1].title }}</h3>
+          <p class="feature-description">{{ features[1].description }}</p>
         </div>
 
         <!-- #2: Symptoms (Small Card) -->
-        <div class="bento-card small-card card-2">
-          <div class="icon-box">
+        <div class="feature-card group lg:col-start-3 lg:col-end-4 lg:row-start-1 lg:row-end-2 bg-white">
+          <div class="feature-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
           </div>
-          <h3 class="card-title">{{ features[2].title }}</h3>
-          <p class="card-desc">{{ features[2].description }}</p>
+          <h3 class="feature-title">{{ features[2].title }}</h3>
+          <p class="feature-description">{{ features[2].description }}</p>
         </div>
 
-        <!-- #3: Epidemic Curve (Wide Card) -->
-        <div class="bento-card wide-card card-3">
-          <div class="card-content-side">
-            <div class="icon-box">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+        <!-- #3: Epidemic Curve (Wide Card) with Dynamic Chart Animation -->
+        <div class="feature-card group lg:col-start-2 lg:col-end-4 lg:row-start-2 lg:row-end-3 bg-white">
+          <div class="flex flex-col md:flex-row h-full">
+            <!-- Left: Text Info -->
+            <div class="flex-1 flex flex-col justify-between p-2 md:pr-6">
+              <div>
+                <div class="w-12 h-12 bg-slate-200 text-slate-900 rounded-xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:bg-slate-900 group-hover:text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-3 tracking-tight">{{ features[3].title }}</h3>
+                <p class="text-[0.95rem] text-slate-500 leading-relaxed">{{ features[3].description }}</p>
+              </div>
             </div>
-            <div>
-              <h3 class="card-title">{{ features[3].title }}</h3>
-              <p class="card-desc">{{ features[3].description }}</p>
-            </div>
-          </div>
-          <div class="card-visual visual-chart">
-            <div class="chart-bars">
-              <div class="bar" style="height: 40%"></div>
-              <div class="bar" style="height: 70%"></div>
-              <div class="bar" style="height: 50%"></div>
-              <div class="bar" style="height: 100%"></div>
-              <div class="bar" style="height: 60%"></div>
+          
+            <!-- Right: Animated Bar Chart -->
+            <div class="flex-1 mt-6 md:mt-0 flex items-center justify-center md:justify-end">
+              <div class="w-full max-w-[200px] aspect-[16/10] bg-slate-50 rounded-2xl border border-slate-100 relative overflow-hidden group-hover:border-blue-100 transition-colors p-4 flex items-end justify-between gap-2 shadow-inner">
+                <!-- Background Grid Lines -->
+                <div class="absolute inset-0 flex flex-col justify-between p-4 opacity-30 pointer-events-none z-0">
+                  <div class="w-full h-px bg-slate-300 border-t border-dashed"></div>
+                  <div class="w-full h-px bg-slate-300 border-t border-dashed"></div>
+                  <div class="w-full h-px bg-slate-300 border-t border-dashed"></div>
+                  <div class="w-full h-px bg-slate-300 border-t border-dashed"></div>
+                </div>
+
+                <!-- Bars Container -->
+                <div class="relative z-10 w-full h-full flex items-end justify-between gap-1.5">
+                  <div class="flex-1 bg-blue-200 rounded-t-sm relative group-hover:bg-blue-500 transition-all duration-500 ease-out h-[30%] group-hover:h-[40%] delay-[0ms] shadow-sm"></div>
+                  <div class="flex-1 bg-blue-200 rounded-t-sm relative group-hover:bg-blue-500 transition-all duration-500 ease-out h-[50%] group-hover:h-[85%] delay-[100ms] shadow-sm"></div>
+                  <div class="flex-1 bg-blue-200 rounded-t-sm relative group-hover:bg-blue-500 transition-all duration-500 ease-out h-[40%] group-hover:h-[60%] delay-[200ms] shadow-sm"></div>
+                  <div class="flex-1 bg-blue-200 rounded-t-sm relative group-hover:bg-blue-500 transition-all duration-500 ease-out h-[60%] group-hover:h-[90%] delay-[150ms] shadow-sm"></div>
+                  <div class="flex-1 bg-blue-200 rounded-t-sm relative group-hover:bg-blue-500 transition-all duration-500 ease-out h-[20%] group-hover:h-[45%] delay-[300ms] shadow-sm"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- #4: Case Control (Medium Card) -->
-        <div class="bento-card medium-card card-4">
-          <div class="icon-box">
+        <div class="feature-card group lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4">
+          <div class="feature-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </div>
-          <h3 class="card-title">{{ features[4].title }}</h3>
-          <p class="card-desc">{{ features[4].description }}</p>
+          <h3 class="feature-title">{{ features[4].title }}</h3>
+          <p class="feature-description">{{ features[4].description }}</p>
         </div>
 
         <!-- #5: Cohort (Medium Card) -->
-        <div class="bento-card medium-card card-5">
-          <div class="icon-box">
+        <div class="feature-card group lg:col-start-2 lg:col-end-4 lg:row-start-3 lg:row-end-4">
+          <div class="feature-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
           </div>
-          <h3 class="card-title">{{ features[5].title }}</h3>
-          <p class="card-desc">{{ features[5].description }}</p>
+          <h3 class="feature-title">{{ features[5].title }}</h3>
+          <p class="feature-description">{{ features[5].description }}</p>
         </div>
       </div>
     </div>
@@ -97,206 +163,51 @@ defineProps({
 </script>
 
 <style scoped>
-.features-section {
-  padding: 120px 0;
-  background-color: #f8fafc;
+/* 반복 스타일 추출 - @apply 활용 */
+.feature-card {
+  @apply relative flex flex-col bg-white/50 backdrop-blur-sm rounded-[2.5xl] p-8 
+         border border-slate-200/60 transition-all duration-500 shadow-sm 
+         hover:-translate-y-2 hover:shadow-premium hover:border-blue-200/50 
+         overflow-hidden z-10;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
+/* 카드 내부 그라데이션 오버레이 */
+.feature-card::after {
+  content: '';
+  @apply absolute inset-0 opacity-0 transition-opacity duration-500 pointer-events-none;
+  background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(59, 130, 246, 0.06), transparent 40%);
 }
 
-.section-header {
-  text-align: center;
-  max-width: 600px;
-  margin: 0 auto 80px;
+.feature-card:hover::after {
+  @apply opacity-100;
 }
 
-.section-title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 16px;
-  letter-spacing: -0.03em;
+.feature-icon {
+  @apply w-14 h-14 bg-slate-100 text-slate-600 rounded-2xl 
+         flex items-center justify-center mb-6 transition-all duration-500 ease-out
+         shadow-inner-soft border border-slate-200/50;
 }
 
-.section-subtitle {
-  font-size: 1.1rem;
-  color: #64748b;
-  line-height: 1.6;
+/* 아이콘 호버 효과: 부모(.group) 호버 시 스타일 변경 */
+.group:hover .feature-icon {
+  @apply bg-blue-600 text-white scale-110 rotate-3 shadow-lg ring-4 ring-blue-100;
 }
 
-/* Bento Grid System */
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 Column Grid */
-  grid-auto-rows: minmax(280px, auto);
-  gap: 24px;
+.feature-title {
+  @apply text-[1.35rem] font-bold text-slate-900 mb-3 tracking-tight transition-colors duration-300;
 }
 
-/* Card Base */
-.bento-card {
-  background: white;
-  border-radius: 24px;
-  padding: 32px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+.group:hover .feature-title {
+  @apply text-blue-700;
 }
 
-.bento-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.05);
-  border-color: #cbd5e1;
+.feature-description {
+  @apply text-body-lg text-slate-500 leading-relaxed transition-colors duration-300;
 }
 
-/* Grid Layout Assigment */
-.card-0 { /* Data Input */
-  grid-column: span 1;
-  grid-row: span 2;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+.group:hover .feature-description {
+  @apply text-slate-600;
 }
 
-.card-1 { /* Characteristics */
-  grid-column: span 1;
-}
-
-.card-2 { /* Symptoms */
-  grid-column: span 1;
-}
-
-.card-3 { /* Epi Curve - Wide */
-  grid-column: span 2;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-4 { /* Case Control */
-  grid-column: span 1;
-}
-
-.card-5 { /* Cohort */
-  grid-column: span 2; /* Stretch to fill if needed, or modify grid */
-  /* Let's actually make row 3 fit nicely. We have 3 cols.
-     Row 1: [0(1x2)] [1] [2]
-     Row 2: [0(cont)] [3(2x1)]
-     Row 3: [4] [5(2x1)] 
-  */
-}
-
-/* Re-adjusting for 3-col layout explicitly */
-.card-0 { grid-column: 1 / 2; grid-row: 1 / 3; }
-.card-1 { grid-column: 2 / 3; grid-row: 1 / 2; }
-.card-2 { grid-column: 3 / 4; grid-row: 1 / 2; }
-.card-3 { grid-column: 2 / 4; grid-row: 2 / 3; } /* Wide across 2 cols */
-.card-4 { grid-column: 1 / 2; grid-row: 3 / 4; }
-.card-5 { grid-column: 2 / 4; grid-row: 3 / 4; }
-
-/* Content Styling */
-.icon-box {
-  width: 48px;
-  height: 48px;
-  background-color: #f1f5f9;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #0f172a;
-  margin-bottom: 24px;
-}
-
-.bento-card:hover .icon-box {
-  background-color: #0f172a;
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 12px;
-  letter-spacing: -0.01em;
-}
-
-.card-desc {
-  font-size: 0.95rem;
-  color: #64748b;
-  line-height: 1.6;
-}
-
-/* Visuals included in cards */
-.card-visual {
-  margin-top: auto;
-  padding-top: 32px;
-  display: flex;
-  justify-content: center;
-  opacity: 0.8;
-}
-
-.ui-mockup {
-  width: 100%;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.ui-row {
-  height: 8px;
-  background: #f1f5f9;
-  border-radius: 4px;
-  margin-bottom: 8px;
-  width: 100%;
-}
-.ui-row.short { width: 60%; }
-
-.chart-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  height: 100px;
-}
-
-.bar {
-  width: 20px;
-  background: #cbd5e1;
-  border-radius: 4px 4px 0 0;
-  transition: height 0.3s ease, background 0.3s ease;
-}
-
-.bento-card:hover .bar {
-  background: #3b82f6;
-}
-
-@media (max-width: 1024px) {
-  .bento-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .card-0 { grid-column: span 2; grid-row: span 1; }
-  .card-1 { grid-column: span 1; }
-  .card-2 { grid-column: span 1; }
-  .card-3 { grid-column: span 2; }
-  .card-4 { grid-column: span 1; }
-  .card-5 { grid-column: span 1; }
-}
-
-@media (max-width: 600px) {
-  .bento-grid {
-    grid-template-columns: 1fr;
-  }
-  .card-0, .card-1, .card-2, .card-3, .card-4, .card-5 {
-    grid-column: span 1;
-    grid-row: span 1;
-  }
-}
 </style>
+

@@ -1,9 +1,19 @@
 <template>
-  <div class="auth-form">
-    <form @submit.prevent="handleLogin" class="login-form">
-      <div class="form-group" :class="{ 'has-error': loginErrors.identifier }">
-        <label for="login-identifier">이메일 또는 전화번호</label>
-        <div class="input-container">
+  <div class="animate-fadeUp">
+    <form @submit.prevent="handleLogin" novalidate>
+      <!-- Portfolio Notice -->
+      <div class="mb-8 p-5 bg-slate-50 border border-slate-100 rounded-2xl flex items-start gap-3.5 group hover:bg-slate-100/80 hover:border-slate-200 transition-colors duration-300">
+        <div class="p-2 bg-white rounded-xl shadow-sm border border-slate-100 shrink-0">
+          <span class="material-icons text-slate-600 text-lg">school</span>
+        </div>
+        <div class="text-[14px] leading-relaxed text-slate-600 py-0.5">
+          <p class="font-bold text-slate-900 mb-0.5">포트폴리오 체험용 페이지입니다</p>
+          <p class="text-[13px] text-slate-500">별도의 정보 입력 없이 하단의 <strong class="text-slate-800 font-bold underline decoration-slate-300 underline-offset-2">로그인 버튼</strong>을 누르시면 자동으로 연결됩니다.</p>
+        </div>
+      </div>
+      <div class="mb-5 transition-all duration-300 ease-in-out group" :class="{ 'has-error': loginErrors.identifier }">
+        <label for="login-identifier" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight">이메일 또는 전화번호</label>
+        <div class="relative">
           <input
             id="login-identifier"
             :value="loginDisplayValue"
@@ -14,78 +24,98 @@
             @input="handleLoginIdentifierInput"
             @keydown="handleLoginIdentifierKeydown"
             @blur="validateLoginField('identifier')"
-            ref="loginIdentifier"
+            ref="loginIdentifierRef"
             autocomplete="off"
-            :class="inputFieldClass"
+            class="w-full px-4 py-3.5 border border-slate-200 rounded-xl text-[15px] transition-all duration-200 ease-out bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 pr-12"
+            :class="{
+              'border-blue-500 bg-blue-50 focus:ring-blue-500/10 focus:border-blue-500': currentInputType === 'phone',
+              'border-violet-500 bg-violet-50 focus:ring-violet-500/10 focus:border-violet-500': currentInputType === 'email',
+              'border-red-500 bg-red-50 focus:ring-red-500/10 focus:border-red-500 shadow-sm shadow-red-500/5': loginErrors.identifier,
+              'border-emerald-500 bg-emerald-50 focus:ring-emerald-500/10 focus:border-emerald-500': !loginErrors.identifier && loginData.identifier && !['phone', 'email'].includes(currentInputType), 
+              'focus:border-primary-500': currentInputType === 'ambiguous' && !loginErrors.identifier
+            }"
           />
-          <span v-if="loginErrors.identifier" class="error-icon">
-            <span class="material-icons">error</span>
+          <span v-if="loginErrors.identifier" class="absolute top-1/2 right-4 -translate-y-1/2 text-red-500 z-10 pointer-events-none">
+            <span class="material-icons text-xl">error</span>
           </span>
-          <span v-else-if="loginData.identifier && !loginErrors.identifier" class="success-icon">
-            <span class="material-icons">check_circle</span>
+          <span v-else-if="loginData.identifier && !loginErrors.identifier" class="absolute top-1/2 right-4 -translate-y-1/2 text-emerald-500 z-10 pointer-events-none">
+            <span class="material-icons text-xl">check_circle</span>
           </span>
         </div>
       </div>
       
-      <div class="form-group" :class="{ 'has-error': loginErrors.password }">
-        <label for="login-password">비밀번호</label>
-        <div class="password-input-container">
+      <div class="mb-6 transition-all duration-300 ease-in-out" :class="{ 'has-error': loginErrors.password }">
+        <label for="login-password" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight">비밀번호</label>
+        <div class="relative group/field">
           <input
             id="login-password"
             v-model="loginData.password"
             :type="showLoginPassword ? 'text' : 'password'"
-            placeholder="비밀번호를 입력하세요"
+            placeholder="비밀번호"
             required
             :disabled="isLoading"
             @keydown="handleKeydown"
             @blur="validateLoginField('password')"
-            ref="loginPassword"
+            ref="loginPasswordRef"
+            class="w-full px-4 py-3.5 border border-slate-200 rounded-xl text-[15px] transition-all duration-200 ease-out bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 pr-20"
+            :class="{
+              'border-red-500 bg-red-50 focus:ring-red-500/10 focus:border-red-500 shadow-sm shadow-red-500/5': loginErrors.password,
+              'border-emerald-500 bg-emerald-50 focus:ring-emerald-500/10 focus:border-emerald-500': !loginErrors.password && loginData.password
+            }"
           />
-          <button
-            type="button"
-            class="password-toggle"
-            @click="showLoginPassword = !showLoginPassword"
-            :disabled="isLoading"
-            tabindex="0"
-          >
-            <span class="material-icons">
-              {{ showLoginPassword ? 'visibility' : 'visibility_off' }}
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-1 pr-1.5">
+            <button
+              type="button"
+              class="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all duration-200 active:scale-90"
+              @click="showLoginPassword = !showLoginPassword"
+              :disabled="isLoading"
+              tabindex="0"
+              title="비밀번호 보기/숨기기"
+            >
+              <span class="material-icons text-xl">
+                {{ showLoginPassword ? 'visibility' : 'visibility_off' }}
+              </span>
+            </button>
+            <span v-if="loginErrors.password" class="text-red-500 pointer-events-none flex items-center">
+              <span class="material-icons text-xl">error</span>
             </span>
-          </button>
-          <span v-if="loginErrors.password" class="error-icon password-error">
-            <span class="material-icons">error</span>
-          </span>
+          </div>
         </div>
-        <small v-if="loginErrors.password" class="form-error">
-          {{ loginErrors.password }}
-        </small>
+        <div class="h-6 mt-1">
+          <small v-if="loginErrors.password" class="block text-xs text-red-500 font-bold tracking-tight px-1 transition-all duration-300 animate-slideIn">
+            {{ loginErrors.password }}
+          </small>
+        </div>
       </div>
       
-      <div v-if="error" class="error-message" role="alert">
-        <span class="material-icons">warning</span>
+      <div v-if="error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-[13px] font-bold flex items-center gap-2.5 animate-slideIn shadow-sm shadow-red-500/5" role="alert">
+        <span class="material-icons text-lg">warning</span>
         {{ error }}
       </div>
       
-      <div class="form-actions">
+      <div class="mt-8">
         <button 
           type="submit" 
-          class="login-btn primary-btn"
-          :disabled="isLoading || !loginData.identifier || !loginData.password"
-          ref="loginSubmit"
+          class="w-full px-6 py-4 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2.5 transition-all duration-300 shadow-premium hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10 active:translate-y-0 active:scale-[0.98] disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed group overflow-hidden relative"
+          :disabled="isLoading"
+          ref="loginSubmitRef"
         >
-          <span v-if="isLoading" class="loading-spinner"></span>
+          <span v-if="isLoading" class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
           <span v-if="isLoading">로그인 중...</span>
           <template v-else>
-            <span class="material-icons btn-icon">arrow_forward</span>
-            <span>로그인</span>
+            <span class="material-icons text-xl transition-transform duration-300 group-hover:translate-x-1">login</span>
+            <span>체험용 자동 로그인</span>
           </template>
+          <!-- Subtle shine effect -->
+          <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
         </button>
       </div>
     </form>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { 
   isValidEmail, 
   isValidPhone, 
@@ -94,500 +124,229 @@ import {
   formatPhoneNumber
 } from '../logic/inputHandlers';
 
-export default {
-  name: 'AuthLogin',
-  props: {
-    isLoading: {
-      type: Boolean,
-      default: false
-    },
-    error: {
-      type: String,
-      default: ''
-    }
-  },
-  data() {
-    return {
-      loginData: {
-        identifier: '',
-        password: ''
-      },
-      showLoginPassword: false,
-      
-      // Auto-completion state
-      loginUserInput: '',
-      loginSuggestion: '',
-      
-      // Input type detection
-      currentInputType: 'ambiguous', // 'phone', 'email', 'ambiguous'
-      previousInputType: 'ambiguous',
-      identifierType: '',
-      
-      loginErrors: {
-        identifier: '',
-        password: ''
-      }
-    };
-  },
-  computed: {
-    loginDisplayValue() {
-      return this.loginUserInput + this.loginSuggestion;
-    },
-    inputFieldClass() {
-      return {
-        'input-field': true,
-        'phone-mode': this.currentInputType === 'phone',
-        'email-mode': this.currentInputType === 'email',
-        'ambiguous-mode': this.currentInputType === 'ambiguous',
-        'has-suggestion': !!this.loginSuggestion
-      };
-    },
-    placeholderText() {
-      switch (this.currentInputType) {
-      case 'phone':
-        return '전화번호를 입력하세요 (예: 01012345678)';
-      case 'email':
-        return '이메일 주소를 입력하세요';
-      default:
-        return '이메일 또는 전화번호를 입력하세요';
-      }
-    }
-  },
-  watch: {
-    'loginData.password'() {
-      if (this.loginErrors.password) {
-        this.validateLoginField('password');
-      }
-    }
-  },
-  mounted() {
-    this.$nextTick(() => {
-      this.$refs.loginIdentifier?.focus();
-    });
-  },
-  methods: {
-    handleKeydown(event) {
-      if (this.isLoading) return;
-      
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        if (event.target.id === 'login-password') {
-          this.handleLogin();
-        }
-      }
-    },
-    
-    handleLoginIdentifierKeydown(e) {
-      // Backspace: Remove suggestion if exists
-      if (e.key === 'Backspace' && this.loginSuggestion) {
-        e.preventDefault();
-        this.loginUserInput = this.loginUserInput.slice(0, -1);
-        this.loginSuggestion = '';
-        this.loginData.identifier = this.loginUserInput;
-        
-        this.$nextTick(() => {
-          if (this.$refs.loginIdentifier) {
-            this.$refs.loginIdentifier.setSelectionRange(
-              this.loginUserInput.length,
-              this.loginUserInput.length
-            );
-          }
-        });
-        return;
-      }
-      
-      // Accept suggestion on Tab, Enter, ArrowRight
-      if ((e.key === 'Tab' || e.key === 'Enter' || e.key === 'ArrowRight') && this.loginSuggestion) {
-        // Only if cursor is at the end of user input
-        if (e.target.selectionStart === this.loginUserInput.length) {
-          e.preventDefault();
-          this.loginUserInput = this.loginDisplayValue;
-          this.loginSuggestion = '';
-          this.loginData.identifier = this.loginDisplayValue;
-          
-          this.$nextTick(() => {
-            if (this.$refs.loginIdentifier) {
-              const fullLength = this.loginDisplayValue.length;
-              this.$refs.loginIdentifier.setSelectionRange(fullLength, fullLength);
-            }
-          });
-          
-          if (e.key === 'Tab') {
-            setTimeout(() => {
-              this.$refs.loginPassword?.focus();
-            }, 100);
-          }
-        }
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        this.$refs.loginPassword?.focus();
-      }
-    },
-    
-    handleLoginIdentifierInput(e) {
-      const currentUserInput = e.target.value;
-      
-      // 1. Detect type
-      const detectedType = detectInputType(currentUserInput);
-      
-      // 2. Process based on type
-      if (detectedType === 'phone') {
-        this.processPhoneInput(currentUserInput);
-      } else if (detectedType === 'email') {
-        this.processEmailInput(currentUserInput);
-      } else {
-        this.processAmbiguousInput(currentUserInput);
-      }
-      
-      // 3. Update state
-      this.previousInputType = this.currentInputType;
-      this.currentInputType = detectedType;
-      
-      // 4. Update validation
-      this.$nextTick(() => {
-        if (this.currentInputType === 'email' && this.loginSuggestion) {
-          this.setupEmailSelectionRange();
-        }
-        if (this.loginErrors.identifier) {
-          this.validateLoginField('identifier');
-        }
-      });
-    },
-    
-    processPhoneInput(currentInput) {
-      const formatted = formatPhoneNumber(currentInput);
-      this.loginUserInput = formatted;
-      this.loginSuggestion = '';
-      this.loginData.identifier = formatted;
-      this.identifierType = 'phone';
-    },
-    
-    processEmailInput(currentInput) {
-      if (currentInput.includes('@')) {
-        currentInput = currentInput.replace(/-/g, '');
-      }
-      
-      const atIndex = currentInput.lastIndexOf('@');
-      
-      if (atIndex === -1) {
-        this.loginUserInput = currentInput;
-        this.loginSuggestion = '';
-        this.loginData.identifier = currentInput;
-        return;
-      }
-      
-      const domainPart = currentInput.slice(atIndex + 1);
-      const foundDomain = findEmailSuggestion(domainPart);
-      
-      if (foundDomain && domainPart.length > 0) {
-        this.loginUserInput = currentInput.slice(0, atIndex + 1) + domainPart;
-        this.loginSuggestion = foundDomain.substring(domainPart.length);
-      } else {
-        this.loginUserInput = currentInput;
-        this.loginSuggestion = '';
-      }
-      
-      this.loginData.identifier = this.loginDisplayValue;
-      this.identifierType = 'email';
-      
-      this.setupEmailSelectionRange();
-    },
-    
-    processAmbiguousInput(currentInput) {
-      if (currentInput.includes('@')) {
-        currentInput = currentInput.replace(/-/g, '');
-      }
-      this.loginUserInput = currentInput;
-      this.loginSuggestion = '';
-      this.loginData.identifier = currentInput;
-      this.identifierType = '';
-    },
-    
-    setupEmailSelectionRange() {
-      if (this.loginSuggestion) {
-        // Multiple attempts to ensure selection is set after DOM update
-        [10, 50, 100].forEach(delay => {
-          setTimeout(() => {
-            if (this.$refs.loginIdentifier) {
-              this.$refs.loginIdentifier.setSelectionRange(
-                this.loginUserInput.length,
-                this.loginDisplayValue.length
-              );
-            }
-          }, delay);
-        });
-      }
-    },
-    
-    validateLoginField(field) {
-      if (field === 'identifier') {
-        if (!this.loginData.identifier) {
-          this.loginErrors.identifier = '이메일 또는 전화번호를 입력해주세요.';
-        } else {
-          if (this.currentInputType === 'email') {
-            if (!isValidEmail(this.loginData.identifier)) {
-              this.loginErrors.identifier = '올바른 이메일 형식이 아닙니다.';
-            } else {
-              this.loginErrors.identifier = '';
-            }
-          } else if (this.currentInputType === 'phone') {
-            if (!isValidPhone(this.loginData.identifier)) {
-              this.loginErrors.identifier = '올바른 전화번호 형식이 아닙니다.';
-            } else {
-              this.loginErrors.identifier = '';
-            }
-          } else {
-            // Ambiguous
-            this.loginErrors.identifier = '';
-          }
-        }
-      } else if (field === 'password') {
-        if (!this.loginData.password) {
-          this.loginErrors.password = '비밀번호를 입력해주세요.';
-        } else {
-          this.loginErrors.password = '';
-        }
-      }
-    },
-    
-    handleLogin() {
-      this.validateLoginField('identifier');
-      this.validateLoginField('password');
-      
-      if (this.loginErrors.identifier || this.loginErrors.password) {
-        return;
-      }
-      
-      this.$emit('login', {
-        identifier: this.loginData.identifier,
-        password: this.loginData.password,
-        identifierType: this.identifierType
-      });
+const props = defineProps({
+  isLoading: { type: Boolean, default: false },
+  error: { type: String, default: '' }
+});
+
+const emit = defineEmits(['login', 'update:error']);
+
+// Refs for DOM elements
+const loginIdentifierRef = ref(null);
+const loginPasswordRef = ref(null);
+const loginSubmitRef = ref(null);
+
+// State
+const loginData = ref({ identifier: '', password: '' });
+const showLoginPassword = ref(false);
+const loginUserInput = ref('');
+const loginSuggestion = ref('');
+const currentInputType = ref('ambiguous'); // 'phone', 'email', 'ambiguous'
+const previousInputType = ref('ambiguous');
+const identifierType = ref('');
+const loginErrors = ref({ identifier: '', password: '' });
+
+// Computed
+const loginDisplayValue = computed(() => loginUserInput.value + loginSuggestion.value);
+
+
+
+const placeholderText = computed(() => {
+  switch (currentInputType.value) {
+  case 'phone': return '전화번호';
+  case 'email': return '이메일';
+  default: return '이메일 또는 전화번호';
+  }
+});
+
+// Watch
+watch(() => loginData.value.password, () => {
+  if (loginErrors.value.password) validateLoginField('password');
+});
+
+// Mounted
+onMounted(() => {
+  nextTick(() => {
+    loginIdentifierRef.value?.focus();
+  });
+});
+
+// Methods
+function handleKeydown(event) {
+  if (props.isLoading) return;
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    if (event.target.id === 'login-password') {
+      handleLogin();
     }
   }
-};
+}
+
+function handleLoginIdentifierKeydown(e) {
+  if (e.key === 'Backspace' && loginSuggestion.value) {
+    e.preventDefault();
+    loginUserInput.value = loginUserInput.value.slice(0, -1);
+    loginSuggestion.value = '';
+    loginData.value.identifier = loginUserInput.value;
+    
+    nextTick(() => {
+      loginIdentifierRef.value?.setSelectionRange(
+        loginUserInput.value.length,
+        loginUserInput.value.length
+      );
+    });
+    return;
+  }
+  
+  if ((e.key === 'Tab' || e.key === 'Enter' || e.key === 'ArrowRight') && loginSuggestion.value) {
+    if (e.target.selectionStart === loginUserInput.value.length) {
+      e.preventDefault();
+      loginUserInput.value = loginDisplayValue.value;
+      loginSuggestion.value = '';
+      loginData.value.identifier = loginDisplayValue.value;
+      
+      nextTick(() => {
+        const fullLength = loginDisplayValue.value.length;
+        loginIdentifierRef.value?.setSelectionRange(fullLength, fullLength);
+      });
+      
+      if (e.key === 'Tab') {
+        setTimeout(() => loginPasswordRef.value?.focus(), 100);
+      }
+    }
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    loginPasswordRef.value?.focus();
+  }
+}
+
+function handleLoginIdentifierInput(e) {
+  const currentUserInput = e.target.value;
+  const detectedType = detectInputType(currentUserInput);
+  
+  if (detectedType === 'phone') processPhoneInput(currentUserInput);
+  else if (detectedType === 'email') processEmailInput(currentUserInput);
+  else processAmbiguousInput(currentUserInput);
+  
+  previousInputType.value = currentInputType.value;
+  currentInputType.value = detectedType;
+  
+  nextTick(() => {
+    if (currentInputType.value === 'email' && loginSuggestion.value) setupEmailSelectionRange();
+    if (loginErrors.value.identifier) validateLoginField('identifier');
+  });
+}
+
+function processPhoneInput(currentInput) {
+  const formatted = formatPhoneNumber(currentInput);
+  loginUserInput.value = formatted;
+  loginSuggestion.value = '';
+  loginData.value.identifier = formatted;
+  identifierType.value = 'phone';
+}
+
+function processEmailInput(currentInput) {
+  let input = currentInput;
+  if (input.includes('@')) input = input.replace(/-/g, '');
+  
+  const atIndex = input.lastIndexOf('@');
+  if (atIndex === -1) {
+    loginUserInput.value = input;
+    loginSuggestion.value = '';
+    loginData.value.identifier = input;
+    return;
+  }
+  
+  const domainPart = input.slice(atIndex + 1);
+  const foundDomain = findEmailSuggestion(domainPart);
+  
+  if (foundDomain && domainPart.length > 0) {
+    loginUserInput.value = input.slice(0, atIndex + 1) + domainPart;
+    loginSuggestion.value = foundDomain.substring(domainPart.length);
+  } else {
+    loginUserInput.value = input;
+    loginSuggestion.value = '';
+  }
+  
+  loginData.value.identifier = loginDisplayValue.value;
+  identifierType.value = 'email';
+  setupEmailSelectionRange();
+}
+
+function processAmbiguousInput(currentInput) {
+  let input = currentInput;
+  if (input.includes('@')) input = input.replace(/-/g, '');
+  loginUserInput.value = input;
+  loginSuggestion.value = '';
+  loginData.value.identifier = input;
+  identifierType.value = '';
+}
+
+function setupEmailSelectionRange() {
+  if (loginSuggestion.value) {
+    [10, 50, 100].forEach(delay => {
+      setTimeout(() => {
+        loginIdentifierRef.value?.setSelectionRange(
+          loginUserInput.value.length,
+          loginDisplayValue.value.length
+        );
+      }, delay);
+    });
+  }
+}
+
+function validateLoginField(field) {
+  if (field === 'identifier') {
+    if (!loginData.value.identifier) {
+      loginErrors.value.identifier = '이메일 또는 전화번호를 입력해주세요.';
+    } else {
+      if (currentInputType.value === 'email') {
+        if (!isValidEmail(loginData.value.identifier)) loginErrors.value.identifier = '올바른 이메일 형식이 아닙니다.';
+        else loginErrors.value.identifier = '';
+      } else if (currentInputType.value === 'phone') {
+        if (!isValidPhone(loginData.value.identifier)) loginErrors.value.identifier = '올바른 전화번호 형식이 아닙니다.';
+        else loginErrors.value.identifier = '';
+      } else {
+        loginErrors.value.identifier = '';
+      }
+    }
+  } else if (field === 'password') {
+    if (!loginData.value.password) loginErrors.value.password = '비밀번호를 입력해주세요.';
+    else loginErrors.value.password = '';
+  }
+}
+
+function handleLogin() {
+  // 🚀 포트폴리오 데모 모드:
+  // 입력값이 없으면 자동으로 더미 계정 정보를 입력하고 로그인을 진행합니다.
+  if (!loginData.value.identifier) {
+    loginData.value.identifier = 'demo@example.com';
+    loginUserInput.value = 'demo@example.com'; // 화면 표시용 변수 업데이트
+    identifierType.value = 'email';
+  }
+  
+  if (!loginData.value.password) {
+    loginData.value.password = 'demo1234';
+  }
+
+  // 데이터가 채워진 후에는 유효성 검사 에러를 초기화합니다.
+  if (loginData.value.identifier === 'demo@example.com' && loginData.value.password === 'demo1234') {
+    loginErrors.value.identifier = '';
+    loginErrors.value.password = '';
+  } else {
+    // 사용자가 직접 입력한 경우에는 유효성 검사를 수행합니다.
+    validateLoginField('identifier');
+    validateLoginField('password');
+    
+    if (loginErrors.value.identifier || loginErrors.value.password) return;
+  }
+  
+  emit('login', {
+    identifier: loginData.value.identifier,
+    password: loginData.value.password,
+    identifierType: identifierType.value
+  });
+}
 </script>
 
-<style scoped>
-.auth-form {
-  animation: fadeUp 0.8s ease-out 0.4s backwards;
-}
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(15px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.form-group {
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
-}
-
-.form-group.has-error input {
-  border-color: #f44336;
-  background-color: #fef2f2;
-  box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.08);
-}
-
-.form-group.has-error input:focus {
-  border-color: #f44336;
-  box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.12);
-}
-
-.form-group:not(.has-error) input:not(:placeholder-shown):valid {
-  border-color: #10b981;
-  background-color: #f0fdf4;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
-}
-
-.form-group:not(.has-error) input:not(:placeholder-shown):valid:focus {
-  border-color: #10b981;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 8px;
-  letter-spacing: -0.01em;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 14px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 15px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-sizing: border-box;
-  background: #f8fafc;
-}
-
-.form-group input::placeholder {
-  color: #94a3b8;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: white;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-}
-
-.input-container, .password-input-container {
-  position: relative;
-}
-
-.error-icon, .success-icon {
-  position: absolute;
-  top: 50%;
-  right: 14px;
-  transform: translateY(-50%);
-  font-size: 20px;
-  opacity: 1;
-  z-index: 2;
-}
-
-.error-icon { color: #f44336; }
-.success-icon { color: #10b981; }
-
-.password-input-container .error-icon,
-.password-input-container .success-icon {
-  right: 48px;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  z-index: 3;
-}
-
-.password-toggle:hover { 
-  color: #3b82f6; 
-  background: rgba(59, 130, 246, 0.08);
-}
-.password-toggle.shifted { right: 48px; }
-
-.form-error {
-  display: block;
-  font-size: 12px;
-  color: #ef4444;
-  margin-top: 6px;
-  font-weight: 500;
-}
-
-.error-message {
-  background: #fef2f2;
-  color: #dc2626;
-  padding: 14px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  margin-bottom: 20px;
-  border: 1px solid #fecaca;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.form-actions {
-  margin-top: 28px;
-}
-
-/* Modern SaaS Primary Button - from HeroSection */
-.primary-btn {
-  width: 100%;
-  padding: 16px 24px;
-  background: #0f172a;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.primary-btn:hover:not(:disabled) {
-  background: #1e293b;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
-}
-
-.primary-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.2);
-}
-
-.primary-btn:disabled {
-  background: #cbd5e1;
-  color: #94a3b8;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-icon {
-  font-size: 18px;
-  transition: transform 0.2s ease;
-}
-
-.primary-btn:hover:not(:disabled) .btn-icon {
-  transform: translateX(3px);
-}
-
-.loading-spinner {
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid #fff;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.material-icons { font-size: 20px; }
-
-/* Input Modes */
-.input-field.phone-mode {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
-}
-.input-field.phone-mode:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-}
-
-.input-field.email-mode {
-  border-color: #8b5cf6;
-  background-color: #f5f3ff;
-}
-.input-field.email-mode:focus {
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
-}
-</style>

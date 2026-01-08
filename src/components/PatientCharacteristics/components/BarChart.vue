@@ -1,21 +1,19 @@
 <template>
-  <div class="chart-container">
-    <div class="chart-wrapper">
-      <div class="chart-buttons">
-        <SharedIconButton
-          icon="copy"
-          label="차트 복사"
-          :showSuccess="isChartCopied"
-          @click="handleCopyChart"
-        />
-        <SharedIconButton
-          icon="download"
-          label="차트 저장"
-          @click="handleExportChart"
-        />
-      </div>
-      <div ref="chartContainer" :style="{ width: chartWidth + 'px', height: '500px' }"></div>
+  <div class="flex flex-col items-center justify-center p-5 bg-white rounded-2xl shadow-premium border border-slate-100 overflow-x-auto">
+    <div class="relative w-full flex justify-end gap-2 mb-2">
+      <SharedIconButton
+        icon="copy"
+        label="차트 복사"
+        :showSuccess="isChartCopied"
+        @click="handleCopyChart"
+      />
+      <SharedIconButton
+        icon="download"
+        label="차트 저장"
+        @click="handleExportChart"
+      />
     </div>
+    <div ref="chartContainer" :style="{ width: chartWidth + 'px', height: '500px' }"></div>
   </div>
 </template>
 
@@ -305,106 +303,3 @@ defineExpose({
   triggerChartUpdate
 });
 </script>
-
-<style scoped>
-.chart-container {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
-  margin: 0;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: visible;
-  position: relative;
-}
-
-.chart-wrapper {
-  position: relative;
-  padding: 45px 20px 20px 20px;
-  box-sizing: border-box;
-  width: 90%;
-  height: 90%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.chart-buttons {
-  position: absolute;
-  top: -5px;
-  right: -45px;
-  display: flex;
-  gap: 12px;
-  z-index: 10;
-}
-
-.export-chart-button,
-.copy-chart-button {
-  padding: 8px 12px;
-  border: none;
-  background-color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #1a73e8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.export-chart-button:hover,
-.copy-chart-button:hover {
-  background-color: rgba(26, 115, 232, 0.1);
-}
-
-.export-chart-button:active,
-.copy-chart-button:active {
-  background-color: rgba(26, 115, 232, 0.2);
-}
-
-.button-icon {
-  display: flex;
-  align-items: center;
-}
-
-.button-text {
-  font-family: "Noto Sans KR", sans-serif;
-  font-weight: 400;
-}
-
-.copy-tooltip {
-  position: absolute;
-  left: 50%;
-  top: 110%;
-  transform: translateX(-50%);
-  z-index: 10;
-  pointer-events: none;
-  animation: fadeInOut 1.5s;
-}
-
-.copy-tooltip.check-tooltip {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: none;
-  box-shadow: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.copy-tooltip.check-tooltip svg {
-  display: block;
-}
-
-@keyframes fadeInOut {
-  0% { opacity: 0; }
-  10% { opacity: 0.95; }
-  90% { opacity: 0.95; }
-  100% { opacity: 0; }
-}
-</style>

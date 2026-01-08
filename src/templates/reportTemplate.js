@@ -50,7 +50,7 @@ export default `<div class="report-wrapper">
   </style>
   <h1 class="report-title">수인성 식품매개 집단발생<br/>역학조사 보고서</h1>
 
-  <h2 class="section-heading">Ⅰ. 발생 개요</h2>
+  <h2 id="section-overview" class="section-heading">Ⅰ. 발생 개요</h2>
   <table class="summary-table">
     <tr>
       <th class="label">발생신고 일시</th><td>%reportDate%</td>
@@ -82,7 +82,7 @@ export default `<div class="report-wrapper">
     </tr>
   </table>
 
-  <h2 class="section-heading">Ⅱ. 역학조사반 구성 및 역할</h2>
+  <h2 id="section-team" class="section-heading">Ⅱ. 역학조사반 구성 및 역할</h2>
   <table class="summary-table">
     <tr>
       <td colspan="4" style="height:120px; text-align:center;">생략</td>
@@ -106,7 +106,7 @@ export default `<div class="report-wrapper">
   <p>%statAnalysis%</p>
 
   <!-- IV. 결과 -->
-  <h2 class="section-heading" style="page-break-before:always;">Ⅳ. 결과</h2>
+  <h2 id="section-results" class="section-heading" style="page-break-before:always;">Ⅳ. 결과</h2>
 
   <h3 style="margin-top:24px;">1. 최초 환자 발생일시</h3>
   <p>사례정의에 부합하는 최초 사례는 %firstCaseDateTime%경에 %symptomList% 증상이 발생하였다. 이후 %lastCaseDateTime%까지 총 %patientCount%명의 환례가 있었다.</p>
@@ -144,7 +144,7 @@ export default `<div class="report-wrapper">
   <h3 style="margin-top:24px;">8. 물 조사 결과</h3>
   <p style="height:70px;">생략</p>
 
-  <h3 style="margin-top:24px;">9. 잠복기 및 추정 위험 노출 시기</h3>
+  <h2 id="section-incubation" class="section-heading">Ⅴ. 잠복기 및 노출 시기</h2>
   <div style="margin-bottom: 12px;">%incubationExposureText%</div>
   %incubationChart%
   <p style="text-align:center; margin-top:10px; font-size:12px;">[그림2] 추정 노출 시점을 기준으로 한 잠복기 분포</p>
