@@ -41,36 +41,31 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import CaseControlTableToolbar from './CaseControlTableToolbar.vue';
 import CaseControlTableHeader from './CaseControlTableHeader.vue';
 import CaseControlTableRow from './CaseControlTableRow.vue';
 import CaseControlTableLegend from './CaseControlTableLegend.vue';
+import { CaseControlResult } from '@/types/analysis';
 
-defineProps({
-  filteredAnalysisResults: {
-    type: Array,
-    default: () => []
-  },
-  tableFontSize: {
-    type: Number,
-    default: 14
-  },
-  currentOrThreshold: {
-    type: Number,
-    default: 2
-  },
-  isOrFilterActive: {
-    type: Boolean,
-    default: false
-  },
-  useYatesCorrection: {
-    type: Boolean,
-    default: false
-  }
+withDefaults(defineProps<{
+  filteredAnalysisResults: CaseControlResult[];
+  tableFontSize?: number;
+  currentOrThreshold?: number;
+  isOrFilterActive?: boolean;
+  useYatesCorrection?: boolean;
+}>(), {
+  tableFontSize: 14,
+  currentOrThreshold: 2,
+  isOrFilterActive: false,
+  useYatesCorrection: false
 });
 
-defineEmits(['toggleOrFilter', 'cycleOrThreshold', 'toggleYatesCorrection']);
+defineEmits<{
+  (e: 'toggleOrFilter'): void;
+  (e: 'cycleOrThreshold'): void;
+  (e: 'toggleYatesCorrection'): void;
+}>();
 </script>
 
 <style scoped>

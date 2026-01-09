@@ -37,30 +37,22 @@
   </div>
 </template>
 
-<script setup>
-import { defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
 import CohortResultTableToolbar from './CohortResultTableToolbar.vue';
 import CohortResultTableHeader from './CohortResultTableHeader.vue';
 import CohortResultTableRow from './CohortResultTableRow.vue';
 import CohortResultTableLegend from './CohortResultTableLegend.vue';
+import { CohortResult } from '@/types/analysis';
 
-defineProps({
-  results: {
-    type: Array,
-    required: true,
-    default: () => []
-  },
-  fontSize: {
-    type: Number,
-    required: true
-  },
-  useYatesCorrection: {
-    type: Boolean,
-    required: true
-  }
-});
+defineProps<{
+  results: CohortResult[];
+  fontSize: number;
+  useYatesCorrection: boolean;
+}>();
 
-defineEmits(['toggle-yates']);
+defineEmits<{
+  (e: 'toggle-yates'): void;
+}>();
 </script>
 
 <style scoped>

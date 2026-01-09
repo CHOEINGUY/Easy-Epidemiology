@@ -33,17 +33,13 @@
   </tr>
 </template>
 
-<script setup>
-defineProps({
-  result: {
-    type: Object,
-    required: true
-  },
-  useYatesCorrection: {
-    type: Boolean,
-    default: false
-  }
-});
+<script setup lang="ts">
+import { CohortResult } from '@/types/analysis';
+
+defineProps<{
+  result: CohortResult;
+  useYatesCorrection?: boolean;
+}>();
 </script>
 
 <style scoped>

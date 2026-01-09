@@ -78,8 +78,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, defineEmits } from 'vue';
+<script setup lang="ts">
+import { ref, watch } from 'vue';
 import { useAuthStore } from '../../stores/authStore';
 
 // Parts
@@ -90,7 +90,9 @@ import AuthRegister from './parts/AuthRegister/index.vue';
 import RegistrationSuccessModal from './parts/RegistrationSuccessModal.vue';
 
 // Emits
-const emit = defineEmits(['login-success']);
+const emit = defineEmits<{
+  (e: 'login-success'): void;
+}>();
 
 // Store
 const authStore = useAuthStore();
@@ -109,7 +111,7 @@ watch(() => authStore.isAuthenticated, (newValue, oldValue) => {
 });
 
 // Methods
-function toggleView(isRegister) {
+function toggleView(isRegister: boolean) {
   if (showRegister.value !== isRegister) {
     showRegister.value = isRegister;
     resetState();
@@ -121,7 +123,7 @@ function resetState() {
   isLoading.value = false;
 }
 
-async function handleLogin(credentials) {
+async function handleLogin(credentials: any) {
   if (isLoading.value) return;
   isLoading.value = true;
   error.value = '';
@@ -131,14 +133,15 @@ async function handleLogin(credentials) {
     await authStore.login(credentials);
     await new Promise(resolve => setTimeout(resolve, 100)); // wait for 100ms
     emit('login-success');
-  } catch (err) {
-    if (err.message.includes('Invalid credentials:')) {
+  } catch (err: any) {
+    const msg = err.message || '';
+    if (msg.includes('Invalid credentials:')) {
       error.value = '이메일/전화번호 또는 비밀번호가 올바르지 않습니다.';
-    } else if (err.message.includes('User not found:')) {
+    } else if (msg.includes('User not found:')) {
       error.value = '등록되지 않은 사용자입니다.';
-    } else if (err.message.includes('Account not approved:')) {
+    } else if (msg.includes('Account not approved:')) {
       error.value = '관리자 승인을 기다려주세요.';
-    } else if (err.message.includes('Network')) {
+    } else if (msg.includes('Network')) {
       error.value = '네트워크 연결을 확인해주세요.';
     } else {
       error.value = '로그인 중 오류가 발생했습니다.';
@@ -148,7 +151,7 @@ async function handleLogin(credentials) {
   }
 }
 
-async function handleRegister(registerData) {
+async function handleRegister(registerData: any) {
   if (isLoading.value) return;
   isLoading.value = true;
   error.value = '';
@@ -156,13 +159,14 @@ async function handleRegister(registerData) {
   try {
     await authStore.register(registerData);
     showRegistrationSuccess.value = true;
-  } catch (err) {
-    if (err.message.includes('Email already exists')) {
+  } catch (err: any) {
+    const msg = err.message || '';
+    if (msg.includes('Email already exists')) {
       error.value = '이미 사용 중인 이메일입니다.';
-    } else if (err.message.includes('Phone already exists')) {
+    } else if (msg.includes('Phone already exists')) {
       error.value = '이미 사용 중인 전화번호입니다.';
     } else {
-      error.value = `오류: ${err.message}`;
+      error.value = `오류: ${msg}`;
     }
   } finally {
     isLoading.value = false;

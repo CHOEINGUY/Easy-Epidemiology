@@ -11,7 +11,7 @@
         <select
           :id="intervalId"
           :value="selectedInterval"
-          @change="$emit('update:selectedInterval', Number($event.target.value))"
+          @change="$emit('update:selectedInterval', Number(($event.target as HTMLSelectElement).value))"
           class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 shadow-sm hover:border-blue-400 hover:text-blue-600 transition-colors outline-none focus:ring-2 focus:ring-blue-100"
           @mouseenter="showTooltip('interval', intervalTooltipText)"
           @mouseleave="hideTooltip"
@@ -54,24 +54,24 @@
       minWidthClass="min-w-[70px]"
     />
 
-    <!-- Bar Color -->
+    <!-- Display Mode -->
+    <ControlGroup
+      label="차트 표시:"
+      :modelValue="displayMode"
+      @update:modelValue="$emit('update:displayMode', $event as string)"
+      :options="displayModeOptions"
+    />
+
+    <!-- Custom Append Slot (e.g. Confirmed Lines toggle) -->
+    <slot name="append"></slot>
+
+    <!-- Bar Color (Moved to End) -->
     <ControlCycleColor
       label="색상:"
       :modelValue="barColor"
       @update:modelValue="$emit('update:barColor', $event)"
       :options="barColors"
     />
-
-    <!-- Display Mode -->
-    <ControlGroup
-      label="차트 표시:"
-      :modelValue="displayMode"
-      @update:modelValue="$emit('update:displayMode', $event)"
-      :options="displayModeOptions"
-    />
-
-    <!-- Custom Append Slot (e.g. Confirmed Lines toggle) -->
-    <slot name="append"></slot>
 
     <!-- Reset Button -->
     <div class="ml-auto flex items-center">
@@ -95,21 +95,35 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useTooltip } from '../composables/useTooltip';
 import ControlCycleText from './controls/ControlCycleText.vue';
 import ControlCycleColor from './controls/ControlCycleColor.vue';
 import ControlGroup from './controls/ControlGroup.vue';
 
-defineProps({
+interface Option {
+  value: string | number;
+  label: string;
+  tooltip?: string;
+}
+
+interface IntervalOption {
+  value: number;
+  label: string;
+}
+
+const props = defineProps({
   intervalLabel: { type: String, default: '시간 간격 :' },
   intervalId: { type: String, default: 'interval-select' },
   intervalTooltipText: { type: String, default: '시간 간격을 변경합니다' },
   selectedInterval: { type: Number, required: true },
-  intervalOptions: { type: Array, default: () => [
-    { value: 3, label: '3시간' }, { value: 6, label: '6시간' }, 
-    { value: 12, label: '12시간' }, { value: 24, label: '24시간' }, { value: 48, label: '48시간' }
-  ]},
+  intervalOptions: { 
+    type: Array as () => IntervalOption[], 
+    default: () => [
+      { value: 3, label: '3시간' }, { value: 6, label: '6시간' }, 
+      { value: 12, label: '12시간' }, { value: 24, label: '24시간' }, { value: 48, label: '48시간' }
+    ]
+  },
   
   // Refactored Props
   chartFontSize: { type: Number, default: 16 },
@@ -118,21 +132,21 @@ defineProps({
   displayMode: { type: String, default: 'time' },
   
   // Options Arrays
-  fontSizes: { type: Array, default: () => [] },
-  fontSizeLabels: { type: Array, default: () => [] },
-  chartWidths: { type: Array, default: () => [] },
-  barColors: { type: Array, default: () => [] },
-  displayModeOptions: { type: Array, default: () => [] }
+  fontSizes: { type: Array as () => number[], default: () => [] },
+  fontSizeLabels: { type: Array as () => string[], default: () => [] },
+  chartWidths: { type: Array as () => number[], default: () => [] },
+  barColors: { type: Array as () => string[], default: () => [] },
+  displayModeOptions: { type: Array as () => Option[], default: () => [] }
 });
 
-defineEmits([
-  'update:selectedInterval',
-  'update:chartFontSize',
-  'update:chartWidth',
-  'update:barColor',
-  'update:displayMode',
-  'resetSettings'
-]);
+defineEmits<{
+  (e: 'update:selectedInterval', value: number): void;
+  (e: 'update:chartFontSize', value: number): void;
+  (e: 'update:chartWidth', value: number): void;
+  (e: 'update:barColor', value: string): void;
+  (e: 'update:displayMode', value: string): void;
+  (e: 'resetSettings'): void;
+}>();
 
 const { activeTooltip, showTooltip, hideTooltip } = useTooltip();
 </script>

@@ -89,11 +89,11 @@
 </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useSuspectedFood } from '../composables/useSuspectedFood';
 
-const dropdownRef = ref(null);
+const dropdownRef = ref<HTMLElement | null>(null);
 
 const {
   suspectedFood,
@@ -115,8 +115,8 @@ const {
 } = useSuspectedFood();
 
 // 드롭다운 외부 클릭 시 자동 저장 후 닫기
-const handleClickOutside = (event) => {
-  if (isDropdownOpen.value && dropdownRef.value && !dropdownRef.value.contains(event.target)) {
+const handleClickOutside = (event: MouseEvent) => {
+  if (isDropdownOpen.value && dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
     applySelectedFoods();
   }
 };

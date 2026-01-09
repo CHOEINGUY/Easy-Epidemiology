@@ -15,14 +15,14 @@
   <slot v-else />
 </template>
 
-<script setup>
-import { ref, onErrorCaptured } from 'vue';
-import { createComponentLogger } from '../utils/logger.js';
+<script setup lang="ts">
+import { ref, onErrorCaptured, type ComponentPublicInstance } from 'vue';
+import { createComponentLogger } from '../utils/logger';
 
 const logger = createComponentLogger('ErrorBoundary');
-const error = ref(null);
+const error = ref<Error | null>(null);
 
-onErrorCaptured((err, instance, info) => {
+onErrorCaptured((err: Error, instance: ComponentPublicInstance | null, info: string) => {
   logger.error('Error captured:', err, info);
   error.value = err;
   return false; // 에러 전파 중단

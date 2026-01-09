@@ -9,27 +9,38 @@
       @exportChart="handleExportChart"
     />
 
-    <div ref="chartContainer" class="chart-instance" :style="{ width: chartWidth + 'px' }"></div>
+    <div ref="chartContainer" class="chart-instance" :style="{ width: chartWidth + 'px', height: chartHeight + 'px' }"></div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick, markRaw } from 'vue';
 import * as echarts from 'echarts';
+import type { EChartsOption } from 'echarts';
 import { debounce } from 'lodash-es';
 import ChartActionButtons from '../../../Common/ChartActionButtons.vue';
 
-const props = defineProps({
-  chartOptions: { type: Object, required: true },
-  chartWidth: { type: Number, required: true },
-  isChartSaved: { type: Boolean, default: false },
-  showChartSavedTooltip: { type: Boolean, default: false }
+const props = withDefaults(defineProps<{
+  chartOptions: any; // Relaxed type to avoid circular dependency or version mismatch
+  chartWidth: number;
+  chartHeight?: number;
+  isChartSaved?: boolean;
+  showChartSavedTooltip?: boolean;
+}>(), {
+  chartHeight: 550,
+  isChartSaved: false,
+  showChartSavedTooltip: false
 });
 
-const emit = defineEmits(['saveChartForReport', 'copyChart', 'exportChart', 'chartInstance']);
+const emit = defineEmits<{
+  (e: 'saveChartForReport'): void;
+  (e: 'copyChart', instance: any): void;
+  (e: 'exportChart', instance: any): void;
+  (e: 'chartInstance', instance: any): void;
+}>();
 
-const chartContainer = ref(null);
-const chartInstance = ref(null);
+const chartContainer = ref<HTMLElement | null>(null);
+const chartInstance = ref<any | null>(null);
 const isChartCopied = ref(false);
 
 // 차트 초기화
@@ -37,7 +48,7 @@ const initChart = () => {
   if (!chartContainer.value) return;
   
   const rect = chartContainer.value.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return;
+  if (rect.width <= 0) return;
 
   if (chartInstance.value) {
     chartInstance.value.dispose();
@@ -94,8 +105,8 @@ onUnmounted(() => {
     chartInstance.value.dispose();
     chartInstance.value = null;
   }
-  if (debouncedUpdateChart.cancel) {
-    debouncedUpdateChart.cancel();
+  if ((debouncedUpdateChart as any).cancel) {
+    (debouncedUpdateChart as any).cancel();
   }
 });
 
@@ -129,15 +140,14 @@ defineExpose({
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1; /* 남은 높이 채우기 */
-  min-height: 450px;
+  flex: 1; /* Restore flex to stretch wrapper */
+  /* min-height removed */
   width: 100%;
   box-sizing: border-box;
 }
 
 .chart-instance {
-  flex: 1;
+  /* flex: 1; removed to respect height prop */
   width: 100%;
-  min-height: 400px;
 }
 </style>

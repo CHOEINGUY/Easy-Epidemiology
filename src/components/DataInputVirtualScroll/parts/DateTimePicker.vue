@@ -20,17 +20,17 @@
         :year="selectedDate.year"
         :month="selectedDate.month"
         :day="selectedDate.day"
-        @update:year="val => selectedDate.year = val"
-        @update:month="val => selectedDate.month = val"
-        @update:day="val => selectedDate.day = val"
+        @update:year="updateYear"
+        @update:month="updateMonth"
+        @update:day="updateDay"
         @select="onDateSelected"
       />
       
       <!-- 시간 선택 부분 -->
       <TimePicker
-        v-model:year="selectedDate.year"
-        v-model:month="selectedDate.month"
-        v-model:day="selectedDate.day"
+        v-model:year="selectedDate.year as number"
+        v-model:month="selectedDate.month as number"
+        v-model:day="selectedDate.day as number"
         v-model:hour="selectedHour"
         v-model:minute="selectedMinute"
         @confirm="confirm"
@@ -40,36 +40,33 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed, watch, nextTick } from 'vue';
 import CalendarPicker from './CalendarPicker.vue';
 import TimePicker from './TimePicker.vue';
 
-const props = defineProps({
-  visible: {
-    type: Boolean,
-    default: false
-  },
-  position: {
-    type: Object,
-    default: () => ({ top: 0, left: 0 })
-  },
-  initialValue: {
-    type: Object,
-    default: null
-  }
-});
+import type { DateInfo } from '@/types/virtualGridContext';
 
-const emit = defineEmits(['confirm', 'cancel', 'update:visible']);
+const props = defineProps<{
+  visible: boolean;
+  position: { top: number; left: number };
+  initialValue: DateInfo | null;
+}>();
 
-const pickerRef = ref(null);
-const calendarPickerRef = ref(null);
+const emit = defineEmits<{
+  (e: 'confirm', result: DateInfo): void;
+  (e: 'cancel'): void;
+  (e: 'update:visible', visible: boolean): void;
+}>();
+
+const pickerRef = ref<HTMLElement | null>(null);
+const calendarPickerRef = ref<any>(null);
 
 // 현재 선택된 날짜와 시간
 const selectedDate = reactive({
-  year: null,
-  month: null,
-  day: null
+  year: null as number | null,
+  month: null as number | null,
+  day: null as number | null
 });
 
 const selectedHour = ref('00');
@@ -81,6 +78,11 @@ const pickerStyle = computed(() => ({
   left: `${props.position.left}px`
 }));
 
+// Update Handlers
+const updateYear = (val: number) => { selectedDate.year = val; };
+const updateMonth = (val: number) => { selectedDate.month = val; };
+const updateDay = (val: number) => { selectedDate.day = val; };
+
 // Date Selected Handler
 const onDateSelected = () => {
   // 선택 시 필요한 추가 로직이 있다면 여기에 작성 (예: 로그, 자동 닫기 등)
@@ -89,14 +91,14 @@ const onDateSelected = () => {
   // 셀 포커스 복원 (blur 이벤트 방지)
   nextTick(() => {
     const cellElement = document.querySelector(`[data-row="${props.initialValue?.rowIndex}"][data-col="${props.initialValue?.colIndex}"]`);
-    if (cellElement) {
+    if (cellElement instanceof HTMLElement) {
       cellElement.focus();
     }
   });
 };
 
 // 키보드 이벤트 처리
-const handleKeyDown = (event) => {
+const handleKeyDown = (event: KeyboardEvent) => {
   // 글로벌 단축키
   if (event.key === 'Escape') {
     event.preventDefault();
@@ -131,7 +133,7 @@ const confirm = () => {
     return;
   }
   
-  const result = {
+  const result: DateInfo = {
     year: selectedDate.year,
     month: selectedDate.month,
     day: selectedDate.day,
@@ -153,9 +155,9 @@ watch(() => props.initialValue, (newValue) => {
     selectedDate.year = newValue.year;
     selectedDate.month = newValue.month;
     selectedDate.day = newValue.day;
-    selectedHour.value = newValue.hour || '00';
+    selectedHour.value = String(newValue.hour || '00');
     // 분을 5분 단위로 반올림 (TimePicker 로직에 맞춤, 필요시 TimePicker 내부로 이동 가능)
-    const minuteValue = newValue.minute || '00';
+    const minuteValue = String(newValue.minute || '00');
     const minuteNum = parseInt(minuteValue);
     selectedMinute.value = String(minuteNum).padStart(2, '0');
   } else {
@@ -205,15 +207,15 @@ const preventScroll = () => {
   document.body.style.overflow = 'hidden';
   
   // 휠 이벤트 방지
-  const preventWheel = (e) => {
+  const preventWheel = (e: WheelEvent | TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
   };
   
-  document.addEventListener('wheel', preventWheel, { passive: false });
-  document.addEventListener('touchmove', preventWheel, { passive: false });
+  document.addEventListener('wheel', preventWheel as EventListener, { passive: false });
+  document.addEventListener('touchmove', preventWheel as EventListener, { passive: false });
   
-  // 이벤트 리스너 참조 저장
+  // @ts-ignore
   document._preventWheel = preventWheel;
 };
 
@@ -225,15 +227,19 @@ const restoreScroll = () => {
   document.body.style.overflow = originalOverflow;
   
   // 휠 이벤트 리스너 제거
+  // @ts-ignore
   if (document._preventWheel) {
-    document.removeEventListener('wheel', document._preventWheel, { passive: false });
-    document.removeEventListener('touchmove', document._preventWheel, { passive: false });
+    // @ts-ignore
+    document.removeEventListener('wheel', document._preventWheel as EventListener, { passive: false });
+    // @ts-ignore
+    document.removeEventListener('touchmove', document._preventWheel as EventListener, { passive: false });
+    // @ts-ignore
     delete document._preventWheel;
   }
 };
 
 // 외부 클릭 감지 함수
-const handleOutsideClick = (event) => {
+const handleOutsideClick = (event: MouseEvent) => {
   if (!props.visible) return;
   
   // 데이트피커 요소인지 확인
@@ -241,7 +247,7 @@ const handleOutsideClick = (event) => {
   if (pickerElement) {
     // 클릭된 요소가 데이트피커 내부인지 확인
     let isInsidePicker = false;
-    let currentElement = event.target;
+    let currentElement = event.target as HTMLElement | null;
     
     // DOM 트리를 올라가면서 데이트피커 요소를 찾음
     while (currentElement && currentElement !== document.body) {

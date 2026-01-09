@@ -44,23 +44,31 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
+import { ref, watch } from 'vue';
 import { useAuthStore } from '../../../../stores/authStore';
 import { authApi } from '../../../../services/authApi';
 import Step1BasicInfo from './Step1BasicInfo.vue';
 import Step2Password from './Step2Password.vue';
 import Step3Affiliation from './Step3Affiliation.vue';
 
-defineProps({
-  isLoading: { type: Boolean, default: false },
-  error: { type: String, default: '' }
+interface Props {
+  isLoading?: boolean;
+  error?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
+  error: ''
 });
 
-const emit = defineEmits(['register', 'update:error']);
+const emit = defineEmits<{
+  (e: 'register', data: any): void;
+  (e: 'update:error', value: string): void;
+}>();
 
 const authStore = useAuthStore();
-const step1Ref = ref(null);
+const step1Ref = ref<any>(null);
 
 // State
 const currentStep = ref(1);
@@ -83,11 +91,11 @@ watch(() => authStore.isAuthenticated, (newValue, oldValue) => {
 });
 
 // Methods
-function updateFormData(data) {
+function updateFormData(data: Partial<typeof formData.value>) {
   formData.value = { ...formData.value, ...data };
 }
 
-async function handleStep1Next(data) {
+async function handleStep1Next(data: any) {
   updateFormData(data);
   isChecking.value = true;
   emit('update:error', '');
@@ -96,7 +104,7 @@ async function handleStep1Next(data) {
     // Check Email availability
     try {
       const emailCheck = await authApi.checkEmailAvailability(formData.value.email);
-      if (emailCheck.data?.available === false) {
+      if (emailCheck.available === false) {
         step1Ref.value?.setError('email', '이미 사용 중인 이메일 주소입니다.');
         isChecking.value = false;
         return;
@@ -111,7 +119,7 @@ async function handleStep1Next(data) {
     try {
       const cleanPhone = formData.value.phone.replace(/[^0-9]/g, '');
       const phoneCheck = await authApi.checkPhoneAvailability(cleanPhone);
-      if (phoneCheck.data?.available === false) {
+      if (phoneCheck.available === false) {
         step1Ref.value?.setError('phone', '이미 사용 중인 전화번호입니다.');
         isChecking.value = false;
         return;
@@ -130,12 +138,12 @@ async function handleStep1Next(data) {
   }
 }
 
-function handleStep2Next(data) {
+function handleStep2Next(data: any) {
   updateFormData(data);
   currentStep.value = 3;
 }
 
-function handleSubmit(data) {
+function handleSubmit(data: any) {
   updateFormData(data);
   emit('register', formData.value);
 }

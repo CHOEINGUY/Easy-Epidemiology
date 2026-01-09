@@ -23,7 +23,7 @@
               ? 'bg-blue-600 text-white hover:bg-blue-700' 
               : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-yellow-400 text-orange-500 shadow-sm hover:from-orange-50 hover:to-orange-100 hover:border-amber-500'
           ]"
-          @click="reportData.studyDesign.value ? reportData.downloadHwpxReport() : null"
+          @click="handleDownload"
           @mouseenter="showDownloadTooltip = true"
           @mouseleave="showDownloadTooltip = false"
         >
@@ -62,25 +62,24 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, defineProps } from 'vue';
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import { ReportData } from '../../../types/report';
+import { showToast } from '../../DataInputVirtualScroll/logic/toast';
 
-defineProps({
-  reportData: {
-    type: Object,
-    required: true
-  }
-});
+const props = defineProps<{
+  reportData: ReportData
+}>();
 
 const showDownloadTooltip = ref(false);
-const downloadTooltipRef = ref(null);
+const downloadTooltipRef = ref<HTMLElement | null>(null);
 
 const downloadTooltipStyle = computed(() => {
   if (!downloadTooltipRef.value) return {};
   const buttonRect = downloadTooltipRef.value.parentElement?.getBoundingClientRect();
   if (!buttonRect) return {};
   return {
-    position: 'fixed',
+    position: 'fixed' as const,
     bottom: `${window.innerHeight - buttonRect.top + 8}px`,
     right: `${window.innerWidth - buttonRect.right + 20}px`,
     zIndex: 10000
@@ -94,10 +93,23 @@ const sections = [
   { id: 'section-incubation', label: 'Ⅴ. 잠복기' }
 ];
 
-const scrollToSection = (id) => {
+const scrollToSection = (id: string) => {
   const element = document.getElementById(id);
   if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
+const handleDownload = async () => {
+  if (!props.reportData.studyDesign.value) return;
+  
+  try {
+    showToast('보고서 다운로드를 시작합니다.', 'info');
+    await props.reportData.downloadHwpxReport();
+    showToast('보고서 파일이 생성되었습니다.', 'success');
+  } catch (error) {
+    showToast('보고서 다운로드 중 오류가 발생했습니다.', 'error');
+    console.error(error);
   }
 };
 </script>

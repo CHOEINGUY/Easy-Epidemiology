@@ -29,13 +29,17 @@
   </section>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
+<script setup lang="ts">
+interface Props {
+  title?: string;
+  subtitle?: string;
+  description?: string;
+}
 
-defineProps({
-  title: { type: String, default: '' },
-  subtitle: { type: String, default: '' },
-  description: { type: String, default: '' }
+withDefaults(defineProps<Props>(), {
+  title: '',
+  subtitle: '',
+  description: ''
 });
 </script>
 

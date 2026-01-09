@@ -24,8 +24,10 @@
   </div>
 </template>
 
-<script setup>
-// Component name 'RegistrationSuccessModal' is inferred from filename
+<script setup lang="ts">
+defineEmits<{
+  (e: 'close'): void;
+}>();
 </script>
 
 <style scoped>

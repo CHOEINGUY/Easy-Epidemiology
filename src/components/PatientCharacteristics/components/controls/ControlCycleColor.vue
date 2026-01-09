@@ -19,29 +19,22 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 
-const props = defineProps({
-  label: {
-    type: String,
-    default: ''
-  },
-  modelValue: {
-    type: String,
-    required: true
-  },
-  options: {
-    type: Array,
-    required: true
-  },
-  tooltip: {
-    type: String,
-    default: 'Change color'
-  }
+const props = withDefaults(defineProps<{
+  label?: string;
+  modelValue: string;
+  options: string[];
+  tooltip?: string;
+}>(), {
+  label: '',
+  tooltip: 'Change color'
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void;
+}>();
 
 const isTooltipVisible = ref(false);
 const tooltipText = ref('');

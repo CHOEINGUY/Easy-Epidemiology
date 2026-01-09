@@ -11,7 +11,7 @@
           <select 
             id="hour-select"
             :value="hour"
-            @change="$emit('update:hour', $event.target.value)"
+            @change="handleHourChange"
             class="px-1.5 py-2 border border-gray-200 rounded-md text-sm bg-white cursor-pointer w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
             aria-label="시간 선택"
             @click.stop
@@ -29,7 +29,7 @@
           <select 
             id="minute-select"
             :value="minute"
-            @change="$emit('update:minute', $event.target.value)"
+            @change="handleMinuteChange"
             class="px-1.5 py-2 border border-gray-200 rounded-md text-sm bg-white cursor-pointer w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
             aria-label="분 선택"
             @click.stop
@@ -78,30 +78,28 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from 'vue';
 
-// eslint-disable-next-line no-undef
-const props = defineProps({
-  year: Number,
-  month: Number,
-  day: Number,
-  hour: String,
-  minute: String
-});
+const props = defineProps<{
+  year: number;
+  month: number;
+  day: number;
+  hour: string;
+  minute: string;
+}>();
 
-// eslint-disable-next-line no-undef
-const emit = defineEmits([
-  'update:year', 
-  'update:month', 
-  'update:day', 
-  'update:hour', 
-  'update:minute', 
-  'confirm', 
-  'cancel'
-]);
+const emit = defineEmits<{
+  (e: 'update:year', value: number): void;
+  (e: 'update:month', value: number): void;
+  (e: 'update:day', value: number): void;
+  (e: 'update:hour', value: string): void;
+  (e: 'update:minute', value: string): void;
+  (e: 'confirm'): void;
+  (e: 'cancel'): void;
+}>();
 
-const directInputRef = ref(null);
+const directInputRef = ref<HTMLInputElement | null>(null);
 const directInputValue = ref('');
 
 // 현재 선택 상태 포맷
@@ -115,6 +113,18 @@ const formatCurrentSelection = () => {
   const formattedDay = String(props.day).padStart(2, '0');
   
   return `${formattedYear}-${formattedMonth}-${formattedDay} ${props.hour}:${props.minute}`;
+};
+
+// 시간 변경 처리
+const handleHourChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  emit('update:hour', target.value);
+};
+
+// 분 변경 처리
+const handleMinuteChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  emit('update:minute', target.value);
 };
 
 // 확인 버튼
@@ -162,7 +172,7 @@ const handleDirectInput = () => {
 };
 
 // 직접 입력 키보드 처리
-const handleDirectInputKeydown = (event) => {
+const handleDirectInputKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Enter') {
     event.preventDefault();
     handleDirectInput();

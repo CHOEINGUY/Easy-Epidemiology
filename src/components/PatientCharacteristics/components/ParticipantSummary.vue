@@ -48,32 +48,17 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // ParticipantSummary.vue - 대상자 요약 정보 컴포넌트
 import { useTooltip } from '../composables/useTooltip';
 
-defineProps({
-  totalParticipants: {
-    type: Number,
-    required: true
-  },
-  totalPatients: {
-    type: Number,
-    required: true
-  },
-  attackRate: {
-    type: String,
-    required: true
-  },
-  confirmedRate: {
-    type: String,
-    required: true
-  },
-  isConfirmedCaseColumnVisible: {
-    type: Boolean,
-    default: false
-  }
-});
+defineProps<{
+  totalParticipants: number;
+  totalPatients: number;
+  attackRate: string;
+  confirmedRate: string;
+  isConfirmedCaseColumnVisible?: boolean;
+}>();
 
 const { activeTooltip, tooltipText, showTooltip, hideTooltip } = useTooltip();
 </script>

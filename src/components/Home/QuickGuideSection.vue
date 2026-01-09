@@ -18,7 +18,7 @@
           </div>
 
           <!-- Connector Arrow (Desktop) -->
-          <div v-if="index < steps.length - 1" class="hidden md:flex absolute top-7 left-1/2 w-full h-px items-center justify-center text-slate-200 z-0">
+          <div v-if="Number(index) < steps.length - 1" class="hidden md:flex absolute top-7 left-1/2 w-full h-px items-center justify-center text-slate-200 z-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-auto -mr-3 bg-slate-50 px-1"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
           </div>
 
@@ -33,11 +33,14 @@
   </section>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
+<script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+interface Props {
+  steps?: any[];
+}
 
-defineProps({
-  steps: { type: Array, default: () => [] }
+withDefaults(defineProps<Props>(), {
+  steps: () => []
 });
 </script>
 

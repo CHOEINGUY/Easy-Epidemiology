@@ -1,7 +1,6 @@
 
-
-<script setup>
-import { computed, defineProps } from 'vue';
+<script setup lang="ts">
+import { computed } from 'vue';
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -10,7 +9,7 @@ const props = defineProps({
   color: { 
     type: String, 
     default: 'blue',
-    validator: (value) => ['blue', 'amber', 'emerald', 'primary'].includes(value)
+    validator: (value: string) => ['blue', 'amber', 'emerald', 'primary'].includes(value)
   }
 });
 
@@ -47,8 +46,8 @@ const colorClasses = computed(() => {
       hoverBg: 'group-hover:bg-primary-500',
       hoverShadow: 'group-hover:shadow-[0_0_30px_rgba(var(--primary-500),0.5)]'
     }
-  };
-  return colors[props.color];
+  } as const;
+  return colors[props.color as keyof typeof colors];
 });
 </script>
 

@@ -47,7 +47,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick, markRaw } from 'vue';
 import * as echarts from 'echarts';
 import { debounce } from 'lodash-es';
@@ -64,6 +64,11 @@ import { useSymptomStats } from './composables/useSymptomStats';
 import { useChartControls } from './composables/useChartControls';
 import { useChartOptions } from './composables/useChartOptions';
 import { useClipboardOperations } from './composables/useClipboardOperations';
+
+// Type for chart component ref
+interface SymptomBarChartInstance {
+  chartContainerRef: HTMLElement | null;
+}
 
 // Chart Controls
 const {
@@ -102,8 +107,8 @@ const { chartOptions } = useChartOptions({
 });
 
 // Chart instance
-const chartInstance = ref(null);
-const symptomBarChartRef = ref(null);
+const chartInstance = ref<any | null>(null);
+const symptomBarChartRef = ref<SymptomBarChartInstance | null>(null);
 
 // Clipboard Operations
 const {
@@ -123,7 +128,7 @@ const debouncedRenderChart = debounce(() => {
   renderChart();
 }, 150);
 
-const renderChart = () => {
+const renderChart = (): void => {
   try {
     const chartContainer = symptomBarChartRef.value?.chartContainerRef;
     if (!chartContainer) {
@@ -156,7 +161,7 @@ const renderChart = () => {
   }
 };
 
-const recreateChart = () => {
+const recreateChart = (): void => {
   console.log('Attempting to recreate chart...');
   if (chartInstance.value && typeof chartInstance.value.dispose === 'function') {
     try { 
@@ -187,7 +192,6 @@ const recreateChart = () => {
     }
   });
 };
-// Event handlers removed as explicit watching handles updates
 
 // Lifecycle
 onMounted(() => {
@@ -210,8 +214,8 @@ onUnmounted(() => {
     }
   }
   
-  if (debouncedRenderChart && typeof debouncedRenderChart.cancel === 'function') {
-    debouncedRenderChart.cancel();
+  if (debouncedRenderChart && typeof (debouncedRenderChart as any).cancel === 'function') {
+    (debouncedRenderChart as any).cancel();
   }
   
   console.log('ClinicalSymptoms 컴포넌트 cleanup 완료');

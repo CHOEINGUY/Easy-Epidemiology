@@ -27,17 +27,15 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useTableExport } from '../../../composables/useTableExport';
+// @ts-ignore
 import { generateCaseSeriesTsv, generateCaseSeriesHtml } from '../../../utils/tableHtmlGenerators';
+import { CaseSeriesResult } from '@/types/analysis';
 
-const props = defineProps({
-  results: {
-    type: Array,
-    required: true,
-    default: () => []
-  }
-});
+const props = defineProps<{
+  results: CaseSeriesResult[];
+}>();
 
 const { isCopied: isTableCopied, copyToClipboard } = useTableExport();
 

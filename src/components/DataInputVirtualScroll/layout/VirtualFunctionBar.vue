@@ -222,55 +222,53 @@
   </Teleport>
 </template>
 
-<script setup>
-import { ref, watch, defineProps, defineEmits, computed, nextTick } from 'vue';
+<script setup lang="ts">
+import { ref, watch, computed, nextTick } from 'vue';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import ExcelUploadButton from '../parts/ExcelUploadButton.vue';
 
-const props = defineProps({
-  cellAddress: {
-    type: String,
-    default: ''
-  },
-  cellValue: {
-    type: [String, Number],
-    default: ''
-  },
-  isUploadingExcel: {
-    type: Boolean,
-    default: false
-  },
-  uploadProgress: {
-    type: Number,
-    default: 0
-  },
-  canUndo: {
-    type: Boolean,
-    default: false
-  },
-  canRedo: {
-    type: Boolean,
-    default: false
-  },
-  // 필터 관련 props
-  isFiltered: {
-    type: Boolean,
-    default: false
-  },
-  filteredRowCount: {
-    type: Number,
-    default: 0
-  },
-  originalRowCount: {
-    type: Number,
-    default: 0
-  }
+interface Props {
+  cellAddress?: string;
+  cellValue?: string | number;
+  isUploadingExcel?: boolean;
+  uploadProgress?: number;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  isFiltered?: boolean;
+  filteredRowCount?: number;
+  originalRowCount?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  cellAddress: '',
+  cellValue: '',
+  isUploadingExcel: false,
+  uploadProgress: 0,
+  canUndo: false,
+  canRedo: false,
+  isFiltered: false,
+  filteredRowCount: 0,
+  originalRowCount: 0
 });
 
-const emit = defineEmits(['update-cell-value', 'enter-pressed', 'excel-file-selected', 'download-template', 'export-data', 'copy-entire-data', 'delete-empty-cols', 'reset-sheet', 'toggle-exposure-col', 'toggle-confirmed-case-col', 'undo', 'redo', 'clear-all-filters']);
+const emit = defineEmits<{
+  (e: 'update-cell-value', value: string | number): void;
+  (e: 'enter-pressed'): void;
+  (e: 'excel-file-selected', file: File): void;
+  (e: 'download-template', type: string): void;
+  (e: 'export-data'): void;
+  (e: 'copy-entire-data'): void;
+  (e: 'delete-empty-cols'): void;
+  (e: 'reset-sheet'): void;
+  (e: 'toggle-exposure-col'): void;
+  (e: 'toggle-confirmed-case-col'): void;
+  (e: 'undo'): void;
+  (e: 'redo'): void;
+  (e: 'clear-all-filters'): void;
+}>();
 
 const settingsStore = useSettingsStore();
-const inputValue = ref(props.cellValue);
+const inputValue = ref<string | number>(props.cellValue);
 const showTemplateMenu = ref(false);
 
 // 개별 노출시간 컬럼 가시성 상태
@@ -284,32 +282,32 @@ const isConfirmedCaseColumnVisible = computed(
 );
 
 // === Tooltip State ===
-const activeTooltip = ref(null);
+const activeTooltip = ref<string | null>(null);
 const tooltipVisible = ref(false);
 const tooltipText = ref('');
 const tooltipPos = ref({ x: 0, y: 0 });
 
 const tooltipStyle = computed(() => ({
-  position: 'fixed',
+  position: 'fixed' as const,
   left: `${tooltipPos.value.x}px`,
   top: `${tooltipPos.value.y}px`,
   transform: 'translateX(-50%)',
   zIndex: 10002
 }));
 
-function showTooltip(key, text, event) {
-  if (key === 'template') return; // template no tooltip
+function showTooltip(key: string, text: string, event: MouseEvent) {
+  if (key === 'template') return;
   activeTooltip.value = key;
-  tooltipVisible.value = false; // start hidden
+  tooltipVisible.value = false;
   tooltipText.value = text;
-  const rect = event.currentTarget.getBoundingClientRect();
-  // 모든 버튼 툴팁을 버튼 아래쪽에 표시
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
   const y = rect.bottom + 5;
-  const initial = { x: rect.left + rect.width/2, y, rect };
+  const initial = { x: rect.left + rect.width/2, y };
   tooltipPos.value = { x: initial.x, y: initial.y };
 
   nextTick(() => {
-    const tip = document.querySelector('.function-bar-tooltip');
+    const tip = document.querySelector('.function-bar-tooltip') as HTMLElement;
     if (!tip) return;
     const tipRect = tip.getBoundingClientRect();
     const pad = 10;
@@ -321,7 +319,7 @@ function showTooltip(key, text, event) {
       x = tipRect.width/2 + pad;
     }
     tooltipPos.value = { x, y: initial.y };
-    tooltipVisible.value = true; // show after final position set
+    tooltipVisible.value = true;
   });
 }
 
@@ -334,7 +332,7 @@ function hideTooltip() {
 watch(() => props.cellValue, (v) => { inputValue.value = v; });
 
 // --- Template menu hover logic ---
-let hideTimer = null;
+let hideTimer: any = null;
 
 function showTemplateMenuHover() {
   clearTimeout(hideTimer);
@@ -355,7 +353,7 @@ function onEnterKeyDown() {
   emit('enter-pressed');
 }
 
-function onFileSelected(file) {
+function onFileSelected(file: File) {
   emit('excel-file-selected', file);
 }
 
@@ -383,7 +381,7 @@ function onToggleConfirmedCaseColumn() {
   emit('toggle-confirmed-case-col');
 }
 
-function onSelectTemplate(type) {
+function onSelectTemplate(type: string) {
   showTemplateMenu.value = false;
   emit('download-template', type);
 }
@@ -397,9 +395,7 @@ function onRedo() {
 }
 
 function onFilterButtonClick() {
-  // 버튼이 사라지기 때문에 툴팁을 강제로 숨겨야 함
   hideTooltip();
-  // 필터 버튼 클릭 시 모든 필터 해제
   emit('clear-all-filters');
 }
 </script>
@@ -412,7 +408,8 @@ function onFilterButtonClick() {
   border-bottom: 1px solid #d3d3d3;
   padding: 0 8px;
   min-height: 40px;
-  z-index: 3;
+  z-index: 15; /* 드롭다운 메뉴가 그리드(z-index: 10) 위에 표시되도록 */
+  position: relative; /* z-index 적용을 위해 필요 */
 }
 
 .cell-info-section {
@@ -509,8 +506,8 @@ function onFilterButtonClick() {
 }
 
 .current-cell-input:focus {
-  box-shadow: 0 0 0 2px #1a73e8 inset;
-  border-radius: 2px;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .function-button {

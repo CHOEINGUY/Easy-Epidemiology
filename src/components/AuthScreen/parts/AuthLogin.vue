@@ -114,7 +114,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { 
   isValidEmail, 
@@ -124,38 +124,44 @@ import {
   formatPhoneNumber
 } from '../logic/inputHandlers';
 
-const props = defineProps({
-  isLoading: { type: Boolean, default: false },
-  error: { type: String, default: '' }
+interface Props {
+  isLoading?: boolean;
+  error?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
+  error: ''
 });
 
-const emit = defineEmits(['login', 'update:error']);
+const emit = defineEmits<{
+  (e: 'login', data: { identifier: string; password?: string; identifierType?: string }): void;
+  (e: 'update:error', value: string): void;
+}>();
 
 // Refs for DOM elements
-const loginIdentifierRef = ref(null);
-const loginPasswordRef = ref(null);
-const loginSubmitRef = ref(null);
+const loginIdentifierRef = ref<HTMLInputElement | null>(null);
+const loginPasswordRef = ref<HTMLInputElement | null>(null);
+const loginSubmitRef = ref<HTMLButtonElement | null>(null);
 
 // State
 const loginData = ref({ identifier: '', password: '' });
 const showLoginPassword = ref(false);
 const loginUserInput = ref('');
 const loginSuggestion = ref('');
-const currentInputType = ref('ambiguous'); // 'phone', 'email', 'ambiguous'
-const previousInputType = ref('ambiguous');
-const identifierType = ref('');
+const currentInputType = ref<'phone' | 'email' | 'ambiguous'>('ambiguous'); 
+const previousInputType = ref<'phone' | 'email' | 'ambiguous'>('ambiguous');
+const identifierType = ref<string>('');
 const loginErrors = ref({ identifier: '', password: '' });
 
 // Computed
 const loginDisplayValue = computed(() => loginUserInput.value + loginSuggestion.value);
 
-
-
 const placeholderText = computed(() => {
   switch (currentInputType.value) {
-  case 'phone': return '전화번호';
-  case 'email': return '이메일';
-  default: return '이메일 또는 전화번호';
+    case 'phone': return '전화번호';
+    case 'email': return '이메일';
+    default: return '이메일 또는 전화번호';
   }
 });
 
@@ -172,17 +178,18 @@ onMounted(() => {
 });
 
 // Methods
-function handleKeydown(event) {
+function handleKeydown(event: KeyboardEvent) {
   if (props.isLoading) return;
   if (event.key === 'Enter') {
     event.preventDefault();
-    if (event.target.id === 'login-password') {
+    const target = event.target as HTMLElement;
+    if (target.id === 'login-password') {
       handleLogin();
     }
   }
 }
 
-function handleLoginIdentifierKeydown(e) {
+function handleLoginIdentifierKeydown(e: KeyboardEvent) {
   if (e.key === 'Backspace' && loginSuggestion.value) {
     e.preventDefault();
     loginUserInput.value = loginUserInput.value.slice(0, -1);
@@ -199,7 +206,8 @@ function handleLoginIdentifierKeydown(e) {
   }
   
   if ((e.key === 'Tab' || e.key === 'Enter' || e.key === 'ArrowRight') && loginSuggestion.value) {
-    if (e.target.selectionStart === loginUserInput.value.length) {
+    const target = e.target as HTMLInputElement;
+    if (target.selectionStart === loginUserInput.value.length) {
       e.preventDefault();
       loginUserInput.value = loginDisplayValue.value;
       loginSuggestion.value = '';
@@ -220,8 +228,9 @@ function handleLoginIdentifierKeydown(e) {
   }
 }
 
-function handleLoginIdentifierInput(e) {
-  const currentUserInput = e.target.value;
+function handleLoginIdentifierInput(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const currentUserInput = target.value;
   const detectedType = detectInputType(currentUserInput);
   
   if (detectedType === 'phone') processPhoneInput(currentUserInput);
@@ -237,7 +246,7 @@ function handleLoginIdentifierInput(e) {
   });
 }
 
-function processPhoneInput(currentInput) {
+function processPhoneInput(currentInput: string) {
   const formatted = formatPhoneNumber(currentInput);
   loginUserInput.value = formatted;
   loginSuggestion.value = '';
@@ -245,7 +254,7 @@ function processPhoneInput(currentInput) {
   identifierType.value = 'phone';
 }
 
-function processEmailInput(currentInput) {
+function processEmailInput(currentInput: string) {
   let input = currentInput;
   if (input.includes('@')) input = input.replace(/-/g, '');
   
@@ -273,7 +282,7 @@ function processEmailInput(currentInput) {
   setupEmailSelectionRange();
 }
 
-function processAmbiguousInput(currentInput) {
+function processAmbiguousInput(currentInput: string) {
   let input = currentInput;
   if (input.includes('@')) input = input.replace(/-/g, '');
   loginUserInput.value = input;
@@ -295,7 +304,7 @@ function setupEmailSelectionRange() {
   }
 }
 
-function validateLoginField(field) {
+function validateLoginField(field: 'identifier' | 'password') {
   if (field === 'identifier') {
     if (!loginData.value.identifier) {
       loginErrors.value.identifier = '이메일 또는 전화번호를 입력해주세요.';
@@ -317,11 +326,9 @@ function validateLoginField(field) {
 }
 
 function handleLogin() {
-  // 🚀 포트폴리오 데모 모드:
-  // 입력값이 없으면 자동으로 더미 계정 정보를 입력하고 로그인을 진행합니다.
   if (!loginData.value.identifier) {
     loginData.value.identifier = 'demo@example.com';
-    loginUserInput.value = 'demo@example.com'; // 화면 표시용 변수 업데이트
+    loginUserInput.value = 'demo@example.com';
     identifierType.value = 'email';
   }
   
@@ -329,12 +336,10 @@ function handleLogin() {
     loginData.value.password = 'demo1234';
   }
 
-  // 데이터가 채워진 후에는 유효성 검사 에러를 초기화합니다.
   if (loginData.value.identifier === 'demo@example.com' && loginData.value.password === 'demo1234') {
     loginErrors.value.identifier = '';
     loginErrors.value.password = '';
   } else {
-    // 사용자가 직접 입력한 경우에는 유효성 검사를 수행합니다.
     validateLoginField('identifier');
     validateLoginField('password');
     

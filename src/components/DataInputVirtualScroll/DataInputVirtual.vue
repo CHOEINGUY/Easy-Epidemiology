@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="h-full grid grid-rows-[auto_auto_1fr] bg-white overflow-hidden outline-none pb-[37px]"
+    class="h-full grid grid-rows-[auto_auto_1fr] bg-white overflow-hidden outline-none pb-[48px]"
     tabindex="0"
     @keydown="onKeyDown"
     ref="dataContainerRef"
@@ -14,11 +14,11 @@
       :cell-value="selectedCellInfo.value"
       :is-uploading-excel="isUploadingExcel"
       :upload-progress="excelUploadProgress"
-      :can-undo="canUndo"
-      :can-redo="canRedo"
-      :is-filtered="storeBridge.filterState.isFiltered"
-      :filtered-row-count="storeBridge.filterState.filteredRowCount"
-      :original-row-count="storeBridge.filterState.originalRowCount"
+      :can-undo="historyStore.canUndo"
+      :can-redo="historyStore.canRedo"
+      :is-filtered="gridStore.isFiltered"
+      :filtered-row-count="gridStore.filterState.filteredRowCount || 0"
+      :original-row-count="gridStore.filterState.originalRowCount || 0"
       @update-cell-value="onUpdateCellValueFromBar"
       @enter-pressed="onEnterPressedFromBar"
       @excel-file-selected="onExcelFileSelected"
@@ -45,7 +45,7 @@
         :isEditing="selectionSystem.state.isEditing"
         :editingCell="selectionSystem.state.editingCell"
         :scrollbarWidth="scrollbarWidth"
-        :is-filtered="storeBridge.filterState.isFiltered"
+        :is-filtered="gridStore.isFiltered"
         :activeFilters="computedActiveFilters"
         @cell-mousedown="onCellMouseDown"
         @cell-dblclick="onCellDoubleClick"
@@ -72,7 +72,7 @@
         :individualSelectedRows="selectionSystem.state.selectedRowsIndividual"
         :validation-errors="visibleValidationErrors"
         :column-metas="allColumnsMeta"
-        :is-filtered="storeBridge.filterState.isFiltered"
+        :is-filtered="gridStore.isFiltered"
         @scroll="handleGridScroll"
         @cell-mousedown="onCellMouseDown"
         @cell-dblclick="onCellDoubleClick"
@@ -87,7 +87,7 @@
       :visible="contextMenuState.visible"
       :x="contextMenuState.x"
       :y="contextMenuState.y"
-      :items="contextMenuState.items"
+      :items="contextMenuState.items as any"
       @select="onContextMenuSelect"
     />
     <DragOverlay :visible="isDragOver" :progress="excelUploadProgress" />
@@ -111,10 +111,26 @@
       :total="validationTotal"
       :error-count="validationErrorCount"
     />
+
+    <!-- Cell Edit Overlay -->
+    <CellEditOverlay
+      ref="editOverlayRef"
+      :visible="editOverlayState.visible"
+      :position="editOverlayState.position"
+      :value="editOverlayState.value"
+      :row-index="editOverlayState.rowIndex"
+      :col-index="editOverlayState.colIndex"
+      :select-on-focus="editOverlayState.selectOnFocus"
+      @confirm="confirmEdit"
+      @cancel="cancelEdit"
+      @input="handleOverlayInput"
+      @move-next-row="moveToNextRow"
+      @move-next-cell="moveToNextCell"
+    />
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import VirtualAppHeader from './layout/VirtualAppHeader.vue';
 import VirtualFunctionBar from './layout/VirtualFunctionBar.vue';
@@ -123,57 +139,67 @@ import VirtualGridBody from './layout/VirtualGridBody.vue';
 import ContextMenu from './parts/ContextMenu.vue';
 import DragOverlay from './parts/DragOverlay.vue';
 import DateTimePicker from './parts/DateTimePicker.vue';
-// --- 새로운 저장 시스템 ---
-import { useStoreBridge } from '../../store/storeBridge.js';
-import { useCellInputState } from '../../store/cellInputState.js';
+import CellEditOverlay from './parts/CellEditOverlay.vue';
+import type { OverlayController } from '@/types/virtualGridContext';
+
+// --- Pinia Stores ---
+import { useGridStore } from '@/stores/gridStore';
+import { useHistoryStore } from '@/stores/historyStore';
+import { useEpidemicStore } from '@/stores/epidemicStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+
+// --- Services ---
+import { EnhancedStorageManager } from '@/store/enhancedStorageManager';
+
 import ToastContainer from './parts/ToastContainer.vue';
-import { useContextMenu } from './logic/useContextMenu.js';
-import { useVirtualSelectionSystem, setColumnsMeta } from './logic/virtualSelectionSystem.js';
-import { showToast } from './logic/toast.js';
-import { useDragDrop } from './logic/dragDrop.js';
+import { useContextMenu } from './logic/useContextMenu';
+import { useVirtualSelectionSystem, setColumnsMeta } from './logic/virtualSelectionSystem';
+import { showToast } from './logic/toast';
+import { useDragDrop } from './logic/dragDrop';
 import {
   COL_TYPE_BASIC,
   COL_TYPE_IS_PATIENT,
   COL_TYPE_CLINICAL,
   COL_TYPE_DIET
-} from './constants/index.js';
-import { useUndoRedo } from '../../hooks/useUndoRedo.js';
-import { useOperationGuard } from '../../hooks/useOperationGuard.js';
-// Validation
-import ValidationManager from '../../validation/ValidationManager.js';
-import { createProcessingOptions } from '../../utils/environmentUtils.js';
+} from './constants/index';
+
+import { useOperationGuard } from '../../hooks/useOperationGuard';
+import ValidationManager from '@/validation/ValidationManager';
 import ValidationProgress from './parts/ValidationProgress.vue';
-// Logger
-import { logger, devLog } from '../../utils/logger.js';
+import { logger, devLog } from '../../utils/logger';
 
-// --- 상수 (기존 컴포넌트에서 가져옴) ---
-import { useGridColumns } from './composables/useGridColumns.js';
-import { useGridScrolling } from './composables/useGridScrolling.js';
-import { useGridFilter } from './composables/useGridFilter.js';
-import { useGridInteraction } from './composables/useGridInteraction.js';
-import { useExcelOperations } from './composables/useExcelOperations.js';
-import { useGridContextMenu } from './composables/useGridContextMenu.js';
-import { useGridRowOperations } from './composables/useGridRowOperations.js';
-import { useUndoRedoHandlers } from './composables/useUndoRedoHandlers.js';
-import { useDateTimePicker } from './composables/useDateTimePicker.js';
+// --- Composables ---
+import { useGridColumns } from './composables/useGridColumns';
+import { useGridScrolling } from './composables/useGridScrolling';
+import { useGridFilter } from './composables/useGridFilter';
+import { useGridInteraction } from './composables/useGridInteraction';
+import { useExcelOperations } from './composables/useExcelOperations';
+import { useGridContextMenu } from './composables/useGridContextMenu';
+import { useGridRowOperations } from './composables/useGridRowOperations';
+import { useUndoRedoHandlers } from './composables/useUndoRedoHandlers';
+import { useDateTimePicker } from './composables/useDateTimePicker';
+import { useEditOverlay } from './composables/useEditOverlay';
 
-// --- 스토어 및 상태 ---
-// --- 스토어 및 상태 ---
-// --- Template Refs (Must be defined at the top to avoid TDZ in composables) ---
-const dataContainerRef = ref(null);
-const gridContainerRef = ref(null);
-const gridHeaderRef = ref(null);
-const gridBodyRef = ref(null);
-const dateTimePickerRef = ref(null);
+// --- Template Refs ---
+const dataContainerRef = ref<HTMLElement | null>(null);
+const gridContainerRef = ref<HTMLElement | null>(null);
+const gridHeaderRef = ref<any>(null); 
+const gridBodyRef = ref<any>(null);
+const dateTimePickerRef = ref<any>(null);
 
 const focusGrid = () => dataContainerRef.value?.focus();
 
 // --- Core Reactive State ---
-// --- Core Reactive State ---
-// rows computed replaced by direct storeBridge access or below
-const rows = computed(() => storeBridge.rows);
+const gridStore = useGridStore();
+const historyStore = useHistoryStore();
+const epidemicStore = useEpidemicStore();
+const settingsStore = useSettingsStore();
 
-// --- DateTimePicker State (Moved to useDateTimePicker) ---
+// --- Persistence Manager ---
+const storageManager = new EnhancedStorageManager(null, null); 
+storageManager.setStore(epidemicStore); // Link to Pinia
+
+const rows = computed(() => epidemicStore.rows);
 
 // --- Validation Status Refs ---
 const isValidationProgressVisible = ref(false);
@@ -182,33 +208,12 @@ const validationProcessed = ref(0);
 const validationTotal = ref(0);
 const validationErrorCount = ref(0);
 
-
-
-// ValidationManager 인스턴스 (환경에 따른 자동 최적화)
-const validationOptions = createProcessingOptions({
-  chunkSize: 500,
-  debug: true  // 강제로 디버그 모드 활성화
+// ValidationManager 인스턴스
+const validationManager = new ValidationManager(epidemicStore, { 
+  debug: false, 
+  useWorker: true,
+  showToast: showToast
 });
-
-// --- 새로운 저장 시스템 (Initialization Order Fix for Pinia Migration) ---
-// 1. 먼저 StoreBridge를 초기화 (Shim 생성)
-const storeBridge = useStoreBridge(null, null, { 
-  debug: import.meta.env?.MODE === 'development' || false
-});
-
-// 2. ValidationManager에 StoreBridge의 Legacy Shim 전달
-const validationManager = new ValidationManager(storeBridge.bridge.legacyStore, validationOptions);
-
-// 3. StoreBridge에 ValidationManager 연결 (Circular reference handling)
-storeBridge.bridge.validationManager = validationManager;
-
-// (Filter logic moved to useGridFilter)
-
-
-
-// 전역 Undo/Redo 키보드 단축키 활성화
-useUndoRedo(storeBridge);
-const cellInputState = useCellInputState();
 
 // --- DateTimePicker System ---
 const {
@@ -216,9 +221,7 @@ const {
   onDateTimeConfirm,
   onDateTimeCancel,
   closeDateTimePicker
-} = useDateTimePicker(storeBridge, validationManager, focusGrid);
-
-
+} = useDateTimePicker(validationManager, focusGrid, storageManager);
 
 // --- 작업 가드 시스템 ---
 const { tryStartOperation, endOperation } = useOperationGuard();
@@ -226,7 +229,7 @@ const { tryStartOperation, endOperation } = useOperationGuard();
 // --- Selection System ---
 const selectionSystem = useVirtualSelectionSystem();
 
-// --- Column Logic (Extracted to useGridColumns) ---
+// --- Column Logic ---
 const { 
   allColumnsMeta, 
   headerGroups, 
@@ -237,13 +240,14 @@ const {
   onDeleteColumn,
   onDeleteEmptyCols,
   onResetSheet
-} = useGridColumns(storeBridge, validationManager, selectionSystem, focusGrid, tryStartOperation, endOperation);
+} = useGridColumns(validationManager, selectionSystem, focusGrid, tryStartOperation, endOperation);
 
-function onCellInput(event, rowIndex, colIndex) {
-  const newValue = event.target.textContent;
+function onCellInput(event: Event, rowIndex: number, colIndex: number) {
+  const target = event.target as HTMLElement;
+  const newValue = target.textContent || '';
   const columnMeta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
   if (columnMeta) {
-    cellInputState.updateTempValue(rowIndex, colIndex, newValue, columnMeta);
+    gridStore.updateTempValue(newValue);
   }
 }
 
@@ -255,7 +259,16 @@ const {
   syncFilterStateAfterHistoryChange,
   onClearAllFilters,
   onUpdateActiveFilters
-} = useGridFilter(storeBridge, rows, gridBodyRef, gridHeaderRef);
+} = useGridFilter(rows, gridBodyRef, gridHeaderRef);
+
+const computedActiveFilters = computed(() => {
+  const filters = gridStore.activeFilters;
+  const map = new Map<number, any>();
+  if (filters) {
+    filters.forEach((v: any, k: any) => map.set(Number(k) || k, v)); 
+  }
+  return map;
+});
 
 // --- 가상 스크롤 및 그리드 DOM 관리 (useGridScrolling) ---
 const {
@@ -274,17 +287,13 @@ const {
   gridBodyRef
 });
 
-
-// 전역 함수 관리 시스템 사용
-import { useGlobalFunctions } from '../../hooks/useGlobalFunctions.js';
-
-// 전역 함수 관리 훅 사용
+// 전역 함수 관리
+import { useGlobalFunctions } from '../../hooks/useGlobalFunctions';
 const { registerFunction } = useGlobalFunctions();
 
-// ValidationManager에서 사용할 수 있도록 전역 함수 등록
 if (typeof window !== 'undefined') {
   registerFunction('showToast', showToast);
-  registerFunction('updateValidationProgress', (progress, processed, total, errors) => {
+  registerFunction('updateValidationProgress', (progress: number, processed: number, total: number, errors: number) => {
     isValidationProgressVisible.value = true;
     validationProgress.value = progress;
     validationProcessed.value = processed;
@@ -296,7 +305,53 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// --- Interaction System (useGridInteraction) ---
 
+// [CIRCULAR DEPENDENCY FIX]
+// useEditOverlay needs `getCellValue`, but `getCellValue` comes from `useGridInteraction`.
+// `useGridInteraction` needs `overlayController`, which comes from `useEditOverlay`.
+// Solution: Use a proxy function.
+let _getCellValueImpl: any = null;
+const getCellValueProxy = (row: any, col: any, index: any) => {
+  if (_getCellValueImpl) return _getCellValueImpl(row, col, index);
+  return '';
+};
+
+
+// --- Edit Overlay System ---
+const editOverlayRef = ref<any>(null);
+const {
+  editOverlayState,
+  startEditOverlay,
+  startEditOverlayWithKey,
+  confirmEdit,
+  cancelEdit,
+  handleOverlayInput,
+  moveToNextRow,
+  moveToNextCell,
+  appendValueToOverlay
+} = useEditOverlay({
+  selectionSystem,
+  allColumnsMeta,
+  rows,
+  getCellValue: getCellValueProxy,
+  storageManager,
+  validationManager,
+  focusGrid,
+  ensureCellIsVisible,
+  gridBodyRef,
+  gridHeaderRef
+});
+
+// 오버레이 편집 시작/확인/닫기 함수를 전역에서 접근 가능하게 설정
+// Construct Overlay Controller for Dependency Injection
+const overlayController: OverlayController = {
+  open: startEditOverlayWithKey,
+  close: cancelEdit,
+  confirm: confirmEdit,
+  isVisible: () => editOverlayState.visible,
+  append: appendValueToOverlay
+};
 
 // --- Interaction System (useGridInteraction) ---
 const {
@@ -307,13 +362,11 @@ const {
   onKeyDown: onGridKeyDown,
   getCellValue,
   cleanupInteractionListeners
-  // onDocumentMouseMoveBound and onDocumentMouseUpBound unused
 } = useGridInteraction(
-  storeBridge,
   selectionSystem,
-  cellInputState,
   allColumnsMeta,
-  filteredRows, // Use filteredRows for safe interaction
+  rows,
+  filteredRows, 
   focusGrid,
   ensureCellIsVisible,
   validationManager,
@@ -321,14 +374,26 @@ const {
   dateTimePickerRef,
   gridBodyRef,
   closeDateTimePicker,
-  onDateTimeCancel
+  onDateTimeCancel,
+  storageManager,
+  overlayController
 );
 
+// Assign real implementation to proxy
+_getCellValueImpl = getCellValue;
 
+// 외부 클릭 감지 (오버레이 자동 저장 및 닫기)
+function handleOutsideClick(event: MouseEvent) {
+  if (editOverlayState.visible) {
+    // 오버레이 내부 클릭은 stopPropagation 되므로 이곳에 도달하지 않음
+    // 즉, 이곳에 도달했다는 것은 오버레이 외부(문서의 다른 곳)를 클릭했다는 뜻
+    confirmEdit();
+  }
+}
 
-// 컴포넌트 마운트 시 기존 에러를 고유 식별자 기반으로 마이그레이션
 onMounted(() => {
-  // ValidationManager에 열 메타데이터 업데이트
+  document.addEventListener('mousedown', handleOutsideClick);
+
   if (validationManager && allColumnsMeta.value.length > 0) {
     validationManager.updateColumnMetas(allColumnsMeta.value);
     validationManager.migrateErrorsToUniqueKeys(allColumnsMeta.value);
@@ -336,6 +401,24 @@ onMounted(() => {
   }
 });
 
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleOutsideClick);
+});
+
+// 역사 복원(Undo/Redo) 시 편집 중인 오버레이가 있다면 강제로 닫아야 함
+// 그렇지 않으면 엉뚱한 데이터 위에 편집 내용이 덮어쓰여질 수 있음
+watch(() => historyStore.isRestoring, (isRestoring) => {
+  if (isRestoring && editOverlayState.visible) {
+    cancelEdit();
+  }
+});
+
+// [추가 안전장치] 행이나 열의 개수가 바뀌면(추가/삭제 등) 오버레이 위치가 유효하지 않으므로 닫음
+watch(() => [allColumnsMeta.value.length, (rows.value || []).length], () => {
+  if (editOverlayState.visible) {
+    cancelEdit();
+  }
+});
 
 const selectedCellInfo = computed(() => {
   const { rowIndex, colIndex } = selectionSystem.state.selectedCell;
@@ -345,67 +428,62 @@ const selectedCellInfo = computed(() => {
 
   const columnMeta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
   
-  // columnMeta가 없는 경우 처리
   if (!columnMeta) {
     return { address: '', value: '' };
   }
 
-  // If a whole row (serial column) is selected, show empty id
   if (colIndex === 0 && rowIndex >= 0) {
     const value = rows.value[rowIndex] ? rowIndex + 1 : '';
     return { address: '', value: String(value) };
   }
 
-  // Determine header / group label
   let headerLabel = (columnMeta.headerText || '').replace(/<br\s*\/?>/gi, ' ').trim();
 
-  // 환자여부 컬럼은 괄호 설명을 제거합니다.
   if (columnMeta.type === COL_TYPE_IS_PATIENT) {
     headerLabel = headerLabel.split('(')[0].trim();
   }
 
   const groupedTypes = [COL_TYPE_BASIC, COL_TYPE_CLINICAL, COL_TYPE_DIET];
 
-  // Header row (-1) 선택 시에는 그룹 이름을 사용,
-  // 바디 셀 선택 시에는 개별 변수명을 그대로 표시합니다.
   if (rowIndex < 0 && groupedTypes.includes(columnMeta.type)) {
     const grp = headerGroups.value.find(g => colIndex >= g.startColIndex && colIndex < g.startColIndex + (g.colspan || 1));
     const groupName = grp && grp.text ? String(grp.text).split('(')[0].trim() : '';
     headerLabel = groupName;
   }
 
-  // Build display id
   let address = '';
   if (rowIndex >= 0) {
     address = `${headerLabel} / ${rowIndex + 1}`;
-  } else { // header row selected
+  } else { 
     address = headerLabel;
   }
 
-  // value
   let value = '';
   if (rowIndex < 0) {
     value = getCellValue(null, columnMeta, -1);
   } else {
-    const row = rows.value[rowIndex];
-    value = getCellValue(row, columnMeta, rowIndex);
+    // Check key mapping for rowIndex if needed? 
+    // filteredRows are used for model usually, but getCellValue might need original row?
+    // Actually getCellValue implementation in useGridInteraction handles basic reading.
+    // If rowIndex refers to View Index in filteredRows, we should pass filteredRows[rowIndex].
+    
+    // Safety check
+    const row = filteredRows.value[rowIndex];
+    if (row) {
+        value = getCellValue(row, columnMeta, rowIndex);
+    }
   }
 
   return { address, value };
 });
 
-// --- 필터된 행 계산 ---
-
-
 // --- Context Menu System ---
 const { contextMenuState, showContextMenu, hideContextMenu } = useContextMenu();
 
-// --- Context Menu Logic (useGridContextMenu) ---
 const {
   onContextMenu,
   onContextMenuSelect
 } = useGridContextMenu(
-  storeBridge,
   selectionSystem,
   allColumnsMeta,
   contextMenuState,
@@ -419,10 +497,12 @@ const {
   captureSnapshotWithFilter,
   filterState,
   rows,
-  filteredRows
+  filteredRows,
+  getCellValue,
+  storageManager
 );
 
-// --- Excel Upload/Export (useExcelOperations) ---
+// --- Excel Upload/Export ---
 const {
   isUploadingExcel,
   excelUploadProgress,
@@ -432,7 +512,6 @@ const {
   onCopyEntireData,
   onFileDropped
 } = useExcelOperations(
-  storeBridge, 
   validationManager, 
   selectionSystem, 
   tryStartOperation, 
@@ -440,18 +519,17 @@ const {
   allColumnsMeta,
   getCellValue,
   {
-    hasIndividualExposure: computed(() => storeBridge.state.settings.isIndividualExposureColumnVisible),
-    hasConfirmedCase: computed(() => storeBridge.state.settings.isConfirmedCaseColumnVisible)
+    hasIndividualExposure: computed(() => settingsStore.isIndividualExposureColumnVisible),
+    hasConfirmedCase: computed(() => settingsStore.isConfirmedCaseColumnVisible)
   }
 );
 
-// --- Row Operations (useGridRowOperations) ---
+// --- Row Operations ---
 const {
   onDeleteEmptyRows,
   onAddRows,
   onClearSelection
 } = useGridRowOperations(
-  storeBridge,
   selectionSystem,
   rows,
   dateTimePickerState,
@@ -460,12 +538,11 @@ const {
   endOperation
 );
 
-// --- Undo/Redo Handlers (useUndoRedoHandlers) ---
+// --- Undo/Redo Handlers ---
 const {
   onUndo,
   onRedo
 } = useUndoRedoHandlers(
-  storeBridge,
   validationManager,
   filterState,
   syncFilterStateAfterHistoryChange,
@@ -476,41 +553,31 @@ const {
 );
 
 // --- Drag & Drop ---
-// Drag operations only handle UI state; the actual dropped file handling is passed to onFileDropped from useExcelOperations
 const { isDragOver, setupDragDropListeners } = useDragDrop();
-let cleanupDragDrop = null;
+let cleanupDragDrop: (() => void) | null = null;
 
 // === 새로운 필터 유효성 검사 통합 시스템 ===
-import { FilterRowValidationManager } from './utils/FilterRowValidationManager.js';
-
-// 필터 + 행 변경 통합 매니저 인스턴스
+import { FilterRowValidationManager } from './utils/FilterRowValidationManager';
 const filterRowValidationManager = new FilterRowValidationManager();
 
-// === Validation Errors Computed ===
 const validationErrors = computed(() => {
-  const errors = storeBridge.state.epidemic.validationState?.errors;
+  const errors = epidemicStore.validationState?.errors;
   return errors instanceof Map ? errors : new Map();
 });
 
-// 필터된 상태에서 보이는 유효성 에러만 계산 (새로운 시스템 사용)
 const visibleValidationErrors = computed(() => {
   const errors = validationErrors.value;
-  const isFiltered = storeBridge.filterState.isFiltered;
+  const isFiltered = gridStore.isFiltered;
   const filteredRowsData = filteredRows.value;
   
-  // FilterRowValidationManager 업데이트
   filterRowValidationManager.updateFilterState(isFiltered, filteredRowsData, errors);
   
-  // 보이는 에러만 반환
   return filterRowValidationManager.getVisibleErrors();
 });
 
-// 필터 상태 변경 감지 및 CSS 업데이트 (새로운 시스템 사용)
-watch(() => storeBridge.filterState.isFiltered, (newIsFiltered, oldIsFiltered) => {
+watch(() => gridStore.isFiltered, (newIsFiltered, oldIsFiltered) => {
   if (newIsFiltered !== oldIsFiltered) {
-    // 새로운 매니저로 CSS 업데이트
     nextTick(() => {
-      // 강제로 CSS 재계산
       const gridBody = gridBodyRef.value;
       if (gridBody) {
         gridBody.$forceUpdate();
@@ -519,8 +586,7 @@ watch(() => storeBridge.filterState.isFiltered, (newIsFiltered, oldIsFiltered) =
   }
 }, { immediate: false });
 
-function onKeyDown(event) {
-  // 데이트피커가 열려 있을 때 키보드 이벤트 우선 처리
+function onKeyDown(event: KeyboardEvent) {
   if (dateTimePickerState.visible) {
     switch (event.key) {
     case 'Escape':
@@ -528,7 +594,6 @@ function onKeyDown(event) {
       event.stopPropagation();
       onDateTimeCancel();
       return;
-
     case 'Enter':
       event.preventDefault();
       event.stopPropagation();
@@ -536,7 +601,6 @@ function onKeyDown(event) {
         dateTimePickerRef.value.confirm();
       }
       return;
-
     case 'Tab':
       event.preventDefault();
       event.stopPropagation();
@@ -544,21 +608,13 @@ function onKeyDown(event) {
         dateTimePickerRef.value.confirm();
       }
       return;
-
     default:
       return;
     }
   }
-
-  // 데이트피커가 열려 있지 않을 때는 useGridInteraction에서 제공하는 핸들러 호출
   onGridKeyDown(event);
 }
 
-
-
-
-
-// --- 라이프사이클 훅 ---
 const handleGlobalClick = () => {
   if (contextMenuState.visible) {
     hideContextMenu();
@@ -566,16 +622,76 @@ const handleGlobalClick = () => {
 };
 
 onMounted(() => {
-  // storeBridge를 전역으로 설정하여 유효성 검사 오류 자동 저장
-  registerFunction('storeBridge', storeBridge);
-  
-  // 필터 상태 초기화 (임시)
   devLog('[Filter] 컴포넌트 마운트 시 필터 초기화');
-  storeBridge.clearAllFilters();
+  gridStore.clearAllFilters();
   
+  // Load data from storage
+  const loadedData = storageManager.loadData();
+  if (loadedData) {
+      if (loadedData.headers && loadedData.rows) {
+          epidemicStore.setInitialData({ headers: loadedData.headers, rows: loadedData.rows });
+      }
+      
+      // Hydrate Settings
+      if (loadedData.settings) {
+          const s = loadedData.settings;
+          if (s.isIndividualExposureColumnVisible !== undefined) settingsStore.setIndividualExposureColumnVisibility(s.isIndividualExposureColumnVisible);
+          if (s.isConfirmedCaseColumnVisible !== undefined) settingsStore.setConfirmedCaseColumnVisibility(s.isConfirmedCaseColumnVisible);
+          if (s.exposureDateTime !== undefined) settingsStore.updateExposureDateTime(s.exposureDateTime);
+          if (s.selectedSymptomInterval !== undefined) settingsStore.updateSymptomInterval(s.selectedSymptomInterval);
+          if (s.selectedIncubationInterval !== undefined) settingsStore.updateIncubationInterval(s.selectedIncubationInterval);
+          if (s.selectedSuspectedFoods !== undefined) settingsStore.setSelectedSuspectedFoods(s.selectedSuspectedFoods);
+          if (s.epidemicCurveSettings !== undefined) settingsStore.updateEpidemicCurveSettings(s.epidemicCurveSettings);
+          // Add other settings as needed
+      }
+      
+      // Hydrate Validation State
+      if (loadedData.validationState) {
+          const { errors, version } = loadedData.validationState;
+          if (errors) {
+              const errorMap = new Map<string, { message: string; timestamp: number }>();
+              if (typeof errors === 'object' && errors !== null) {
+                  Object.entries(errors).forEach(([key, value]) => {
+                      errorMap.set(key, value as { message: string; timestamp: number });
+                  });
+              }
+              epidemicStore.setValidationErrors(errorMap);
+          }
+          if (version !== undefined) {
+              epidemicStore.setValidationVersion(version);
+          }
+          
+          // Re-run migration after data load to ensure legacy error keys are updated
+          nextTick(() => {
+              if (validationManager && allColumnsMeta.value.length > 0) {
+                  validationManager.migrateErrorsToUniqueKeys(allColumnsMeta.value);
+              }
+          });
+      }
+  } else {
+      epidemicStore.loadInitialData();
+  }
+
+  // --- Auto-Save Subscription ---
+  // Watch for structural changes and settings changes
+  watch(
+      [
+          () => epidemicStore.headers,
+          () => epidemicStore.rows,
+          () => epidemicStore.validationState,
+          () => settingsStore.$state
+      ],
+      () => {
+          // Debounce could be added here if performance is an issue, 
+          // but for now relying on Vue's scheduler batching is a start.
+          // Consider using a debounced save function if writes are too frequent.
+          storageManager.saveCurrentState();
+      },
+      { deep: true }
+  );
+
   cleanupDragDrop = setupDragDropListeners(onFileDropped);
   
-  // 컨텍스트 메뉴 닫기를 위한 전역 리스너
   document.addEventListener('mousedown', handleGlobalClick);
 });
 
@@ -583,65 +699,75 @@ onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleGlobalClick);
   if (cleanupDragDrop) cleanupDragDrop();
   if (cleanupInteractionListeners) cleanupInteractionListeners();
-
-  // ValidationManager 타이머 정리
+  
   if (validationManager && typeof validationManager.clearTimers === 'function') {
-    try {
-      validationManager.clearTimers();
-    } catch (error) {
-      // 정리 중 오류가 발생해도 무시
-    }
+    try { validationManager.clearTimers(); } catch (error) {}
   }
-
-  // [Critical Fix] Memory Leak Prevention
-  // 컴포넌트 언마운트 시 전역 참조 해제
-  if (storeBridge && storeBridge.bridge) {
-    storeBridge.bridge.validationManager = null;
-  }
+  validationManager.destroy();
+  if (storageManager) storageManager.reset();
 });
 
 watch(allColumnsMeta, (newMeta) => {
   setColumnsMeta(newMeta);
 }, { immediate: true });
 
-
-
-
-// --- Missing Template Refs/Props Fixes ---
-const canUndo = computed(() => storeBridge.canUndo);
-const canRedo = computed(() => storeBridge.canRedo);
-const computedActiveFilters = computed(() => storeBridge.filterState.activeFilters);
-
 function handleFocusFirstError() {
-  // 필터된 상태에서는 보이는 에러만 고려
   const errors = Array.from(visibleValidationErrors.value.entries());
   if (errors.length === 0) return;
   
   const [key] = errors[0];
-  const [rowIndex, uniqueKey] = key.split('_');
-  const originalRowIndex = parseInt(rowIndex, 10);
   
-  // 고유 키를 사용하여 열 인덱스 찾기
-  const columnMeta = allColumnsMeta.value.find(col => {
+  // 에러 키 파싱: 첫 번째 '_' 만 사용하여 rowIndex와 uniqueKey 분리
+  const firstUnderscoreIndex = key.indexOf('_');
+  if (firstUnderscoreIndex === -1) return;
+  
+  const rowIndexStr = key.substring(0, firstUnderscoreIndex);
+  const uniqueKeyOrColIndex = key.substring(firstUnderscoreIndex + 1);
+  
+  const originalRowIndex = parseInt(rowIndexStr, 10);
+  
+  // 1. 컬럼 찾기 (UniqueKey -> DataKey -> Alias 순서로 확인)
+  let columnMeta = allColumnsMeta.value.find(col => {
+    // 1-1. 정확한 고유 키 일치 확인 (권장)
     const colUniqueKey = validationManager.getColumnUniqueKey(col);
-    return colUniqueKey === uniqueKey;
+    if (colUniqueKey === uniqueKeyOrColIndex) return true;
+    
+    // 1-2. 데이터 키 일치 확인 (clinicalSymptoms 등)
+    if (col.dataKey === uniqueKeyOrColIndex) return true;
+    
+    // 1-3. 예외적인 별칭(Alias) 처리 (confirmed -> isConfirmedCase)
+    if (uniqueKeyOrColIndex === 'confirmed' && col.dataKey === 'isConfirmedCase') return true;
+    
+    return false;
   });
+
+  // 2. Fallback: 인덱스로 찾기 (레거시)
+  if (!columnMeta) {
+      const colIndex = parseInt(uniqueKeyOrColIndex, 10);
+      if (!isNaN(colIndex)) {
+          columnMeta = allColumnsMeta.value.find(c => c.colIndex === colIndex);
+      }
+  }
   
   if (!columnMeta) {
-    logger.warn('[FocusFirstError] Column meta not found for unique key:', uniqueKey);
+    logger.warn('[FocusFirstError] Column meta not found for key component:', uniqueKeyOrColIndex);
     return;
   }
   
   const colIndex = columnMeta.colIndex;
   
-  // 필터된 상태에서는 필터된 인덱스로 변환
   let targetRowIndex = originalRowIndex;
-  if (storeBridge.filterState.isFiltered) {
+  if (gridStore.isFiltered) {
     const filteredIndex = filteredRows.value.findIndex(row => 
       row._originalIndex === originalRowIndex
     );
     if (filteredIndex !== -1) {
       targetRowIndex = filteredIndex;
+    } else {
+        // If the row with error is filtered out, we might want to clear filter or warn
+        // For now, if filtered out, we can't scroll to it easily without unfiltering
+        logger.warn('[FocusFirstError] Row with error is currently filtered out');
+        return;
     }
   }
   
@@ -649,118 +775,17 @@ function handleFocusFirstError() {
     originalRowIndex,
     targetRowIndex,
     colIndex,
-    uniqueKey
+    key: uniqueKeyOrColIndex
   });
   
-  // 가상 스크롤/그리드에 셀 이동 및 포커스
-  ensureCellIsVisible(targetRowIndex, colIndex);
-  selectionSystem.selectCell(targetRowIndex, colIndex);
-  focusGrid();
+  const targetCol = colIndex ?? 0;
+  
+  // Ensure strict scroll order
+  Promise.resolve().then(async () => {
+       await ensureCellIsVisible(targetRowIndex, targetCol);
+       // Select after scrolling ensures element exists
+       selectionSystem.selectCell(targetRowIndex, targetCol);
+       focusGrid();
+  });
 }
-
-
-
-
-
 </script>
-
-<style scoped>
-/* Grid Selection & Border Styles */
-/* These use specific box-shadows for pixel-perfect grid borders which are difficult to replicate with standard border utilities */
-
-/* Deep selectors to apply styles to child grid components */
-:deep(.cell-selected) {
-  @apply z-10;
-  box-shadow: 0 0 0 1.5px theme('colors.blue.600') inset !important;
-}
-
-/* Range Selection Borders */
-:deep(.border-top) {
-  box-shadow: inset 0 1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-bottom) {
-  box-shadow: inset 0 -1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-left) {
-  box-shadow: inset 1.5px 0 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-right) {
-  box-shadow: inset -1.5px 0 0 0 theme('colors.blue.600') !important;
-}
-
-/* Border Combinations */
-:deep(.border-top.border-left) {
-  box-shadow: inset 1.5px 1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-top.border-right) {
-  box-shadow: inset -1.5px 1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-bottom.border-left) {
-  box-shadow: inset 1.5px -1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-bottom.border-right) {
-  box-shadow: inset -1.5px -1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-top.border-bottom) {
-  box-shadow: inset 0 1.5px 0 0 theme('colors.blue.600'), inset 0 -1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-left.border-right) {
-  box-shadow: inset 1.5px 0 0 0 theme('colors.blue.600'), inset -1.5px 0 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-top.border-left.border-right) {
-  box-shadow: inset 1.5px 1.5px 0 0 theme('colors.blue.600'), inset -1.5px 1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-bottom.border-left.border-right) {
-  box-shadow: inset 1.5px -1.5px 0 0 theme('colors.blue.600'), inset -1.5px -1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-top.border-bottom.border-left) {
-  box-shadow: inset 1.5px 1.5px 0 0 theme('colors.blue.600'), inset 1.5px -1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-top.border-bottom.border-right) {
-  box-shadow: inset -1.5px 1.5px 0 0 theme('colors.blue.600'), inset -1.5px -1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-:deep(.border-top.border-bottom.border-left.border-right) {
-  box-shadow: inset 1.5px 1.5px 0 0 theme('colors.blue.600'), inset -1.5px 1.5px 0 0 theme('colors.blue.600'), inset 1.5px -1.5px 0 0 theme('colors.blue.600'), inset -1.5px -1.5px 0 0 theme('colors.blue.600') !important;
-}
-
-/* Multi-select Background */
-:deep(.cell-multi-selected) {
-  background-color: rgba(37, 99, 235, 0.1) !important; /* blue-600 with opacity */
-  box-shadow: 0 0 0 1.5px theme('colors.blue.600') inset !important;
-  @apply z-[9];
-}
-
-/* Row Selection */
-:deep(.row-individual-selected) {
-  background-color: rgba(37, 99, 235, 0.05) !important;
-}
-
-/* Range Active Cell */
-:deep(.cell-active-in-range) {
-  @apply bg-white z-[15];
-}
-
-/* Header & Body Layout Fixes */
-:deep(.grid-header-virtual) {
-  @apply flex-none relative z-10 shadow-sm border-b border-gray-200;
-  padding-bottom: 2px;
-}
-
-:deep(.grid-body-virtual) {
-  @apply flex-1 min-h-0 z-[1] h-auto;
-}
-</style>
- 

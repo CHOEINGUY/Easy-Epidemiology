@@ -4,7 +4,7 @@
     <div class="main-app">
       <!-- 메인 콘텐츠 영역 -->
       <main :class="contentClass">
-        <router-view v-slot="{ Component }">
+        <router-view v-slot="{ Component }: { Component: any }">
           <component 
             :is="Component" 
             @logout="handleLogout" 
@@ -112,13 +112,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ToastContainer from './components/DataInputVirtualScroll/parts/ToastContainer.vue';
-import { showConfirmToast } from './components/DataInputVirtualScroll/logic/toast.js';
-import { tokenManager } from './services/authApi.js';
-import { isAuthRequired, logEnvironmentInfo } from './utils/environmentUtils.js';
+import { showConfirmToast } from './components/DataInputVirtualScroll/logic/toast';
+import { tokenManager } from './services/authApi';
+import { isAuthRequired, logEnvironmentInfo } from './utils/environmentUtils';
 import { useAuthStore } from './stores/authStore';
 import { useEpidemicStore } from './stores/epidemicStore';
 import { USER_ROLES } from './constants';
@@ -130,11 +130,11 @@ const epidemicStore = useEpidemicStore(); // store for validation checks
 
 // --- State ---
 const isAuthenticated = ref(false);
-const currentUser = ref(null);
+const currentUser = ref<any>(null);
 const isAdmin = ref(false);
 const showLogoutConfirmModal = ref(false);
 const isLogoutProcessing = ref(false);
-const logoutModalTimer = ref(null);
+const logoutModalTimer = ref<number | null>(null);
 const remainingSeconds = ref(1.5);
 
 // Constants
@@ -178,7 +178,7 @@ const contentClass = computed(() => {
     classes.push('has-tabs');
   }
 
-  if (['DataInputVirtual', 'ReportWriter'].includes(currentRouteName.value)) {
+  if (['DataInputVirtual', 'ReportWriter'].includes(currentRouteName.value as string)) {
     classes.push('no-scroll');
   } else {
     classes.push('scrollable');
@@ -233,8 +233,8 @@ async function checkAuthAndLoadData() {
 }
 
 function loadInitialData() {
-  if (window.storeBridge) {
-    window.storeBridge.loadInitialData();
+  if ((window as any).storeBridge) {
+    (window as any).storeBridge.loadInitialData();
     console.log('App.vue created: StoreBridge를 통해 초기 데이터 로드 완료');
   } else {
     // If storeBridge is missing, fallback to explicit load inside components or another store action if needed.
@@ -261,7 +261,8 @@ async function handleLoginSuccess() {
   console.log('🎉 handleLoginSuccess 호출됨');
   loadInitialData();
   isAuthenticated.value = true;
-  const u = JSON.parse(localStorage.getItem('user'));
+  const userStr = localStorage.getItem('user');
+  const u = userStr ? JSON.parse(userStr) : null;
   currentUser.value = u;
   isAdmin.value = u && (u.role === USER_ROLES.ADMIN || u.role === USER_ROLES.SUPPORT);
   
@@ -332,13 +333,13 @@ async function confirmLogout() {
     startLogoutTimer();
   } catch (error) {
     console.error('❌ 로그아웃 실패:', error);
-    showConfirmToast('로그아웃 중 오류가 발생했습니다.', null, null);
+    showConfirmToast('로그아웃 중 오류가 발생했습니다.');
     closeLogoutConfirmModal();
   }
 }
 
 function startLogoutTimer() {
-  logoutModalTimer.value = setInterval(() => {
+  logoutModalTimer.value = window.setInterval(() => {
     remainingSeconds.value--;
     if (remainingSeconds.value <= 0) {
       closeLogoutConfirmModal();
@@ -347,7 +348,7 @@ function startLogoutTimer() {
   }, 1000);
 }
 
-function handleTabClick(routeName) {
+function handleTabClick(routeName: string) {
   if (currentRouteName.value === 'DataInputVirtual' && routeName !== 'DataInputVirtual') {
     // Check validation errors from epidemicStore
     // Setup store access: epidemicStore.validationState.errors
@@ -356,11 +357,11 @@ function handleTabClick(routeName) {
     
     if (hasErrors) {
       const confirmMessage = `데이터 유효성 오류가 ${validationErrors.size}개 있습니다.\n다른 탭으로 이동하시겠습니까?`;
-      showConfirmToast(
-        confirmMessage,
-        () => { router.push({ name: routeName }); },
-        () => {}
-      );
+      showConfirmToast(confirmMessage).then((confirmed) => {
+        if (confirmed) {
+          router.push({ name: routeName });
+        }
+      });
     } else {
       router.push({ name: routeName });
     }

@@ -26,26 +26,24 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 
-defineProps({
-  label: {
-    type: String,
-    default: ''
-  },
-  modelValue: {
-    type: [String, Number],
-    required: true
-  },
-  options: {
-    type: Array,
-    required: true
-    // Expected format: Array of { value, label, tooltip }
-  }
-});
+export interface BoxOption {
+  value: string | number;
+  label: string;
+  tooltip?: string;
+}
 
-defineEmits(['update:modelValue']);
+defineProps<{
+  label?: string;
+  modelValue: string | number;
+  options: BoxOption[];
+}>();
 
-const activeTooltip = ref(null);
+defineEmits<{
+  (e: 'update:modelValue', value: string | number): void;
+}>();
+
+const activeTooltip = ref<string | number | null>(null);
 </script>

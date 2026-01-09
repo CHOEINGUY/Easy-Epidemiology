@@ -119,16 +119,20 @@
   </section>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
-
-defineProps({
-  basicConfig: { type: Object, required: true },
-  currentDate: { type: String, required: true },
-  systemFeatures: { type: Array, default: () => [] },
-  targetUsers: { type: Array, default: () => [] },
-  education: { type: Object, default: () => ({}) },
-  organization: { type: Object, default: () => ({}) }
+<script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+withDefaults(defineProps<{
+  basicConfig: any;
+  currentDate: string;
+  systemFeatures?: any[];
+  targetUsers?: any[];
+  education?: any;
+  organization?: any;
+}>(), {
+  systemFeatures: () => [],
+  targetUsers: () => [],
+  education: () => ({}),
+  organization: () => ({})
 });
 </script>
 

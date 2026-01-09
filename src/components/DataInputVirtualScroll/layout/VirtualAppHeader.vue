@@ -1,80 +1,51 @@
 <template>
-  <header class="app-header">
+  <header class="flex items-center justify-between px-4 py-2 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow z-[20] relative">
     <CommonHeader />
-    <button 
-      v-if="errorCount > 0"
-      class="validation-error-button"
-      @click="$emit('focusFirstError')"
-    >
-      <svg class="warning-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L1 21H23L12 2Z" fill="#e74c3c"/>
-        <path d="M12 8V14" stroke="white" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="12" cy="17" r="1" fill="white"/>
-      </svg>
-      데이터 유효성 오류
-      <span class="badge">{{ errorCount }}</span>
-    </button>
+    
+    <Transition name="fade">
+      <button 
+        v-if="errorCount > 0"
+        class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-50/80 border border-rose-200/60 cursor-pointer transition-all duration-200 hover:bg-rose-100 hover:shadow-md hover:scale-105 active:scale-95"
+        @click="$emit('focusFirstError')"
+        title="클릭하여 첫 번째 오류로 이동"
+      >
+        <div class="flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span class="text-sm font-semibold text-rose-600">데이터 오류 {{ errorCount }}건</span>
+        </div>
+      </button>
+    </Transition>
   </header>
 </template>
 
-<script setup>
-import { defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
 import CommonHeader from '../../Common/CommonHeader.vue';
-defineProps({
-  errorCount: { type: Number, default: 0 }
+
+interface Props {
+  errorCount?: number;
+}
+
+withDefaults(defineProps<Props>(), {
+  errorCount: 0
 });
-defineEmits(['focusFirstError']);
+
+defineEmits<{
+  (e: 'focusFirstError'): void;
+}>();
 </script>
 
 <style scoped>
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background-color: white;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  z-index: 4;
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-
-
-.validation-error-button {
-  background: #ffeaea;
-  border: none;
-  color: #e74c3c;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 15px;
-  padding: 7px 18px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: none;
-  transition: none;
-  position: relative;
-}
-
-.validation-error-button:hover {
-  background: #ffd6d6;
-}
-
-.warning-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.badge {
-  background: #e74c3c;
-  color: #fff;
-  border-radius: 50%;
-  padding: 2px 8px;
-  font-size: 14px;
-  margin-left: 4px;
-  font-weight: bold;
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

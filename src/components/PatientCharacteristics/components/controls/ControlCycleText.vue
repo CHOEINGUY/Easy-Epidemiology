@@ -21,55 +21,47 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 
-const props = defineProps({
-  label: {
-    type: String,
-    default: ''
-  },
-  modelValue: {
-    type: [Number, String],
-    required: true
-  },
-  options: {
-    type: Array,
-    required: true
-    // Expected format: Array of values [12, 15] OR Array of Objects [{ value: 'v', label: 'l', tooltip: 't' }]
-  },
-  displayLabels: {
-    type: Array, // Optional: separate labels if options are just values
-    default: () => []
-  },
-  tooltipPrefix: {
-    type: String,
-    default: 'Change to'
-  },
-  suffix: {
-    type: String,
-    default: ''
-  },
-  minWidthClass: {
-    type: String,
-    default: 'min-w-[60px]'
-  }
+export interface CycleOption {
+  value: string | number;
+  label: string;
+  tooltip?: string;
+}
+
+const props = withDefaults(defineProps<{
+  label?: string;
+  modelValue: string | number;
+  options: (string | number | CycleOption)[];
+  displayLabels?: string[];
+  tooltipPrefix?: string;
+  suffix?: string;
+  minWidthClass?: string;
+}>(), {
+  label: '',
+  displayLabels: () => [],
+  tooltipPrefix: 'Change to',
+  suffix: '',
+  minWidthClass: 'min-w-[60px]'
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string | number): void;
+}>();
 
 const isTooltipVisible = ref(false);
 const tooltipMessage = ref('');
-const previewLabel = ref(null);
+const previewLabel = ref<string | null>(null);
 
 // Helper to normalized option structure
-const normalizedOptions = computed(() => {
-  return props.options.map((opt, index) => {
+const normalizedOptions = computed<CycleOption[]>(() => {
+  return props.options.map((opt: any, index: number) => {
     if (typeof opt === 'object' && opt !== null && 'value' in opt) {
-      return opt;
+      return opt as CycleOption;
     }
     const label = props.displayLabels[index] || `${opt}${props.suffix}`;
-    return { value: opt, label, tooltip: '' };
+    return { value: opt as string | number, label, tooltip: '' };
   });
 });
 
@@ -88,21 +80,11 @@ const cycleValue = () => {
   const nextOption = normalizedOptions.value[nextIndex];
   emit('update:modelValue', nextOption.value);
   
-  // Update preview immediately for the next one after this new value
-  // Actually, usually when we click, we want to see what will happen NEXT time
-  // But if we are hovering, the logic in handleMouseEnter handles "next of current"
-  // Let's reset preview to avoid confusion or re-trigger mouseenter logic
-  // The original component implementation updated the button text to the *next* value on click too?
-  // Original: cycleFontSize -> emits new size -> button text follows props.fontSize.
-  // BUT local 'fontSizeButtonText' was used.
-  
-  // If we are hovering, we should show the *next* of the *new* value.
   if (isTooltipVisible.value) {
     const nextNextIndex = (nextIndex + 1) % normalizedOptions.value.length;
     const nextNextOption = normalizedOptions.value[nextNextIndex];
     previewLabel.value = nextNextOption.label;
     
-    // Update tooltip
     if (nextNextOption.tooltip) {
       tooltipMessage.value = nextNextOption.tooltip;
     } else {

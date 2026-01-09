@@ -7,11 +7,8 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  title: {
-    type: String,
-    default: '임상증상'
-  }
-});
+<script setup lang="ts">
+defineProps<{
+  title?: string;
+}>();
 </script>

@@ -15,13 +15,10 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  useYatesCorrection: {
-    type: Boolean,
-    default: false
-  }
-});
+<script setup lang="ts">
+defineProps<{
+  useYatesCorrection?: boolean;
+}>();
 </script>
 
 <style scoped>

@@ -10,12 +10,13 @@
   </transition>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
-
-defineProps({
-  visible: { type: Boolean, default: false },
-  progress: { type: Number, default: 0 }
+<script setup lang="ts">
+withDefaults(defineProps<{
+  visible?: boolean;
+  progress?: number;
+}>(), {
+  visible: false,
+  progress: 0
 });
 </script>
 

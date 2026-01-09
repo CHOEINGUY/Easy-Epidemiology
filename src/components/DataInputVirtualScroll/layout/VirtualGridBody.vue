@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="grid-body-virtual overflow-auto relative h-full bg-slate-50 will-change-scroll" 
+    class="grid-body-virtual overflow-auto relative flex-1 min-h-0 bg-slate-50 will-change-scroll" 
     :class="{ 'relative': isFiltered }"
     ref="bodyContainer" 
     @scroll.passive="handleScroll"
@@ -34,20 +34,20 @@
               :data-col="column.colIndex"
               :class="[
                 'border border-gray-300 px-2 text-sm whitespace-nowrap overflow-hidden text-ellipsis box-border bg-clip-padding text-center align-middle cursor-default h-[35px] !p-0',
-                getCellClasses(item.originalIndex, column.colIndex),
-                { '!bg-white': !isCellEditing(item.originalIndex, column.colIndex) }
+                getCellClasses(Number(item.originalIndex), Number(column.colIndex)),
+                { 'bg-white': !isCellEditing(Number(item.originalIndex), Number(column.colIndex)) }
               ]"
-              :data-validation-message="getValidationMessage(item.originalIndex, column.colIndex)"
-              :contenteditable="isCellEditing(item.originalIndex, column.colIndex)"
-              @input="handleCellInput($event, item, column.colIndex)"
-              @dblclick="handleCellDoubleClick(index, column.colIndex, $event)"
-              @mousedown="handleCellMouseDown(index, column.colIndex, $event)"
-              @mousemove="handleCellMouseMove(index, column.colIndex, $event)"
-              @contextmenu.prevent="handleCellContextMenu($event, index, column.colIndex)"
-              @mouseenter="handleCellMouseEnter($event, item.originalIndex, column.colIndex)"
+              :data-validation-message="getValidationMessage(Number(item.originalIndex), Number(column.colIndex))"
+              :contenteditable="isCellEditing(Number(item.originalIndex), Number(column.colIndex))"
+              @input="handleCellInput($event, item, Number(column.colIndex))"
+              @dblclick="handleCellDoubleClick(index, Number(column.colIndex), $event)"
+              @mousedown="handleCellMouseDown(index, Number(column.colIndex), $event)"
+              @mousemove="handleCellMouseMove(index, Number(column.colIndex), $event)"
+              @contextmenu.prevent="handleCellContextMenu($event, index, Number(column.colIndex))"
+              @mouseenter="handleCellMouseEnter($event, index, Number(column.colIndex))"
               @mouseleave="handleCellMouseLeave"
             >
-              {{ getCellValue(item, column, item.originalIndex) }}
+              {{ getCellValue(item, column, Number(item.originalIndex)) }}
             </td>
           </tr>
         </tbody>
@@ -77,39 +77,61 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, defineProps, defineEmits, defineExpose } from 'vue';
+<script setup lang="ts">
+import { ref, computed } from 'vue';
 import AddRowsControls from '../parts/AddRowsControls.vue';
-import { hasValidationError } from '../utils/validationUtils.js';
-import { FilterRowValidationManager } from '../utils/FilterRowValidationManager.js';
+import { hasValidationError } from '../utils/validationUtils';
+import { FilterRowValidationManager } from '../utils/FilterRowValidationManager';
 
-const props = defineProps({
-  visibleRows: { type: Array, required: true },
-  allColumnsMeta: { type: Array, required: true },
-  tableWidth: { type: String, required: true },
-  totalHeight: { type: Number, required: true },
-  paddingTop: { type: Number, required: true },
-  getCellValue: { type: Function, required: true },
-  selectedCell: { type: Object, default: () => ({ rowIndex: null, colIndex: null }) },
-  selectedRange: {
-    type: Object,
-    default: () => ({
-      start: { rowIndex: null, colIndex: null },
-      end: { rowIndex: null, colIndex: null }
-    })
-  },
-  isEditing: { type: Boolean, default: false },
-  editingCell: { type: Object, default: () => ({ rowIndex: null, colIndex: null }) },
-  individualSelectedCells: { type: Object, default: null },
-  individualSelectedRows: { type: Object, default: null },
-  bufferSize: { type: Number, default: 4 },
-  validationErrors: { type: Object, default: null },
-  isFiltered: { type: Boolean, default: false }
+interface Props {
+  visibleRows: any[];
+  allColumnsMeta: any[];
+  tableWidth: string;
+  totalHeight: number;
+  paddingTop: number;
+  getCellValue: (item: any, column: any, index: number) => any;
+  selectedCell?: { rowIndex: number | null; colIndex: number | null };
+  selectedRange?: {
+    start: { rowIndex: number | null; colIndex: number | null };
+    end: { rowIndex: number | null; colIndex: number | null };
+  };
+  isEditing?: boolean;
+  editingCell?: { rowIndex: number | null; colIndex: number | null };
+  individualSelectedCells?: Set<string> | null;
+  individualSelectedRows?: Set<number> | null;
+  bufferSize?: number;
+  validationErrors?: any;
+  isFiltered?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  selectedCell: () => ({ rowIndex: null, colIndex: null }),
+  selectedRange: () => ({
+    start: { rowIndex: null, colIndex: null },
+    end: { rowIndex: null, colIndex: null }
+  }),
+  isEditing: false,
+  editingCell: () => ({ rowIndex: null, colIndex: null }),
+  individualSelectedCells: null,
+  individualSelectedRows: null,
+  bufferSize: 4,
+  validationErrors: null,
+  isFiltered: false
 });
 
-const emit = defineEmits(['scroll', 'cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-rows', 'delete-empty-rows', 'clear-selection']);
+const emit = defineEmits<{
+  (e: 'scroll', event: Event): void;
+  (e: 'cell-mousedown', rowIndex: number, colIndex: number, event: MouseEvent): void;
+  (e: 'cell-mousemove', rowIndex: number, colIndex: number, event: MouseEvent): void;
+  (e: 'cell-dblclick', rowIndex: number, colIndex: number, event: MouseEvent): void;
+  (e: 'cell-input', event: Event, rowIndex: number, colIndex: number): void;
+  (e: 'cell-contextmenu', event: MouseEvent, rowIndex: number, colIndex: number): void;
+  (e: 'add-rows', count: number): void;
+  (e: 'delete-empty-rows'): void;
+  (e: 'clear-selection'): void;
+}>();
 
-const bodyContainer = ref(null);
+const bodyContainer = ref<HTMLElement | null>(null);
 
 // 필터 + 행 변경 통합 매니저 인스턴스
 const filterRowValidationManager = new FilterRowValidationManager();
@@ -126,15 +148,15 @@ const containerHeight = computed(() => props.totalHeight + CONTROL_SPACING + ADD
 // Validation Tooltip 상태
 const tooltipVisible = ref(false);
 const tooltipMessage = ref('');
-const tooltipStyle = ref({});
+const tooltipStyle = ref<any>({});
 
-function handleScroll(event) {
+function handleScroll(event: Event) {
   emit('scroll', event);
 }
 
-function isCellInRange(rowIndex, colIndex) {
+function isCellInRange(rowIndex: number, colIndex: number) {
   const { start, end } = props.selectedRange;
-  if (start.rowIndex === null || end.rowIndex === null) return false;
+  if (start.rowIndex === null || end.rowIndex === null || start.colIndex === null || end.colIndex === null) return false;
 
   const minRow = Math.min(start.rowIndex, end.rowIndex);
   const maxRow = Math.max(start.rowIndex, end.rowIndex);
@@ -149,17 +171,17 @@ function isCellInRange(rowIndex, colIndex) {
   );
 }
 
-function isCellEditing(rowIndex, colIndex) {
-  return props.isEditing && props.editingCell.rowIndex === rowIndex && props.editingCell.colIndex === colIndex;
+function isCellEditing(rowIndex: number, colIndex: number) {
+  return props.isEditing && props.editingCell?.rowIndex === rowIndex && props.editingCell?.colIndex === colIndex;
 }
 
-function isMultiCellSelection(range) {
+function isMultiCellSelection(range: any) {
   if (!range || range.start.rowIndex === null) return false;
   return range.start.rowIndex !== range.end.rowIndex || range.start.colIndex !== range.end.colIndex;
 }
 
-function getCellClasses(rowIndex, colIndex) {
-  const classes = [];
+function getCellClasses(rowIndex: number, colIndex: number) {
+  const classes: string[] = [];
   
   if (colIndex === 0) {
     if (props.isFiltered) {
@@ -182,8 +204,8 @@ function getCellClasses(rowIndex, colIndex) {
   if (isRowIndividuallySelected) {
     classes.push('row-individual-selected');
 
-    const isFirstSelectedRow = !props.individualSelectedRows.has(rowIndex - 1);
-    const isLastSelectedRow = !props.individualSelectedRows.has(rowIndex + 1);
+    const isFirstSelectedRow = !props.individualSelectedRows?.has(rowIndex - 1);
+    const isLastSelectedRow = !props.individualSelectedRows?.has(rowIndex + 1);
 
     if (isFirstSelectedRow) classes.push('border-top');
     if (isLastSelectedRow) classes.push('border-bottom');
@@ -204,15 +226,17 @@ function getCellClasses(rowIndex, colIndex) {
       }
       
       const { start, end } = props.selectedRange;
-      const minRow = Math.min(start.rowIndex, end.rowIndex);
-      const maxRow = Math.max(start.rowIndex, end.rowIndex);
-      const minCol = Math.min(start.colIndex, end.colIndex);
-      const maxCol = Math.max(start.colIndex, end.colIndex);
+      if (start.rowIndex !== null && end.rowIndex !== null && start.colIndex !== null && end.colIndex !== null) {
+        const minRow = Math.min(start.rowIndex, end.rowIndex);
+        const maxRow = Math.max(start.rowIndex, end.rowIndex);
+        const minCol = Math.min(start.colIndex, end.colIndex);
+        const maxCol = Math.max(start.colIndex, end.colIndex);
 
-      if (rowIndex === minRow) classes.push('border-top');
-      if (rowIndex === maxRow) classes.push('border-bottom');
-      if (colIndex === minCol) classes.push('border-left');
-      if (colIndex === maxCol) classes.push('border-right');
+        if (rowIndex === minRow) classes.push('border-top');
+        if (rowIndex === maxRow) classes.push('border-bottom');
+        if (colIndex === minCol) classes.push('border-left');
+        if (colIndex === maxCol) classes.push('border-right');
+      }
     }
   }
 
@@ -232,7 +256,7 @@ function getCellClasses(rowIndex, colIndex) {
   // --- Validation error (통합 시스템 사용) ---
   const columnMeta = props.allColumnsMeta[colIndex];
   
-  // 1. 열 변경 시스템: 고유키 기반 에러 확인 (기존 로직)
+  // 1. 열 변경 시스템: 고유키 기반 에러 확인
   const hasColumnError = hasValidationError(rowIndex, colIndex, columnMeta, props.validationErrors);
   
   // 2. 필터 + 행 변경 시스템: 가시성 확인
@@ -241,7 +265,7 @@ function getCellClasses(rowIndex, colIndex) {
     props.visibleRows, 
     props.validationErrors
   );
-  const isVisible = filterRowValidationManager.isErrorVisible(rowIndex, colIndex);
+  const isVisible = filterRowValidationManager.isErrorVisible(rowIndex);
   
   // 두 시스템 모두 통과해야 에러 표시
   if (hasColumnError && isVisible) {
@@ -251,17 +275,31 @@ function getCellClasses(rowIndex, colIndex) {
   return classes;
 }
 
-function getValidationMessage(rowIndex, colIndex) {
+function getValidationMessage(rowIndex: number, colIndex: number) {
   const columnMeta = props.allColumnsMeta[colIndex];
-  
-  // 새로운 시스템으로 에러 메시지 조회
   return filterRowValidationManager.getErrorMessage(rowIndex, colIndex, columnMeta);
 }
 
-function handleCellMouseEnter(event, rowIndex, colIndex) {
-  const message = getValidationMessage(rowIndex, colIndex);
+function handleCellMouseEnter(event: any, index: any, colIndex: any) {
+  const item = props.visibleRows[index];
+  let originalRowIndex: number;
+  
+  if (props.isFiltered) {
+    if (item._originalIndex !== undefined) {
+      originalRowIndex = item._originalIndex;
+    } else if (item._filteredOriginalIndex !== undefined) {
+      originalRowIndex = item._filteredOriginalIndex;
+    } else {
+      originalRowIndex = item.originalIndex || 0;
+    }
+  } else {
+    originalRowIndex = item.originalIndex || 0;
+  }
+
+  const message = getValidationMessage(Number(originalRowIndex) as any, Number(colIndex) as any);
   if (message) {
-    const rect = event.target.getBoundingClientRect();
+    const target = event.target as HTMLElement;
+    const rect = target.getBoundingClientRect();
     
     tooltipMessage.value = message;
     tooltipStyle.value = {
@@ -269,15 +307,7 @@ function handleCellMouseEnter(event, rowIndex, colIndex) {
       top: `${rect.top - 40}px`,
       left: `${rect.left + (rect.width / 2)}px`,
       transform: 'translateX(-50%)',
-      background: '#333333',
-      color: 'white',
-      padding: '6px 10px',
-      borderRadius: '4px',
-      fontSize: '12px',
-      whiteSpace: 'nowrap',
-      zIndex: '1000',
-      pointerEvents: 'none',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+      zIndex: '1000'
     };
     tooltipVisible.value = true;
   }
@@ -287,119 +317,98 @@ function handleCellMouseLeave() {
   tooltipVisible.value = false;
 }
 
-// 필터된 상태에서 올바른 원본 인덱스를 전달하는 이벤트 핸들러들
-function handleCellInput(event, item, colIndex) {
-  // 필터된 상태에서는 원본 인덱스를 전달
-  let originalRowIndex;
+function handleCellInput(event: any, item: any, colIndex: any) {
+  let originalRowIndex: number = 0;
   
   if (props.isFiltered) {
-    // 필터된 상태에서는 _originalIndex를 우선 사용
     if (item._originalIndex !== undefined) {
-      originalRowIndex = item._originalIndex;
+      originalRowIndex = Number(item._originalIndex);
     } else if (item._filteredOriginalIndex !== undefined) {
-      originalRowIndex = item._filteredOriginalIndex;
+      originalRowIndex = Number(item._filteredOriginalIndex);
     } else if (item.originalIndex !== undefined) {
-      originalRowIndex = item.originalIndex;
-    } else {
-      // 둘 다 없는 경우 fallback
-      originalRowIndex = 0;
+      originalRowIndex = Number(item.originalIndex);
     }
   } else {
-    // 필터되지 않은 상태에서는 originalIndex 사용
-    originalRowIndex = item.originalIndex || 0;
+    originalRowIndex = Number(item.originalIndex || 0);
   }
   
-  console.log('[VirtualGridBody] handleCellInput:', {
-    isFiltered: props.isFiltered,
-    item,
-    item_originalIndex: item._originalIndex,
-    item_filteredOriginalIndex: item._filteredOriginalIndex,
-    item_originalIndex_alt: item.originalIndex,
-    calculatedOriginalRowIndex: originalRowIndex,
-    colIndex
-  });
-  
-  emit('cell-input', event, originalRowIndex, colIndex);
+  emit('cell-input', event, originalRowIndex as any, Number(colIndex) as any);
 }
 
-function handleCellDoubleClick(index, colIndex, event) {
-  // 필터된 상태에서는 원본 인덱스를 전달
+function handleCellDoubleClick(index: any, colIndex: any, event: any) {
   const item = props.visibleRows[index];
-  let originalRowIndex;
+  let originalRowIndex: number = 0;
   
   if (props.isFiltered) {
     if (item._originalIndex !== undefined) {
-      originalRowIndex = item._originalIndex;
+      originalRowIndex = Number(item._originalIndex);
     } else if (item._filteredOriginalIndex !== undefined) {
-      originalRowIndex = item._filteredOriginalIndex;
+      originalRowIndex = Number(item._filteredOriginalIndex);
     } else {
-      originalRowIndex = item.originalIndex;
+      originalRowIndex = Number(item.originalIndex || 0);
     }
   } else {
-    originalRowIndex = item.originalIndex;
+    originalRowIndex = Number(item.originalIndex || 0);
   }
   
-  emit('cell-dblclick', originalRowIndex, colIndex, event);
+  emit('cell-dblclick', originalRowIndex as any, Number(colIndex) as any, event);
 }
 
-function handleCellMouseDown(index, colIndex, event) {
-  // 필터된 상태에서는 원본 인덱스를 전달
+function handleCellMouseDown(index: any, colIndex: any, event: any) {
   const item = props.visibleRows[index];
-  let originalRowIndex;
+  let originalRowIndex: number = 0;
   
   if (props.isFiltered) {
     if (item._originalIndex !== undefined) {
-      originalRowIndex = item._originalIndex;
+      originalRowIndex = Number(item._originalIndex);
     } else if (item._filteredOriginalIndex !== undefined) {
-      originalRowIndex = item._filteredOriginalIndex;
+      originalRowIndex = Number(item._filteredOriginalIndex);
     } else {
-      originalRowIndex = item.originalIndex;
+      originalRowIndex = Number(item.originalIndex || 0);
     }
   } else {
-    originalRowIndex = item.originalIndex;
+    originalRowIndex = Number(item.originalIndex || 0);
   }
   
-  emit('cell-mousedown', originalRowIndex, colIndex, event);
+  emit('cell-mousedown', originalRowIndex as any, Number(colIndex) as any, event);
 }
 
-function handleCellMouseMove(index, colIndex, event) {
-  // 필터된 상태에서는 원본 인덱스를 전달
+function handleCellMouseMove(index: any, colIndex: any, event: any) {
   const item = props.visibleRows[index];
-  let originalRowIndex;
+  let originalRowIndex: number = 0;
   
   if (props.isFiltered) {
     if (item._originalIndex !== undefined) {
-      originalRowIndex = item._originalIndex;
+      originalRowIndex = Number(item._originalIndex);
     } else if (item._filteredOriginalIndex !== undefined) {
-      originalRowIndex = item._filteredOriginalIndex;
+      originalRowIndex = Number(item._filteredOriginalIndex);
     } else {
-      originalRowIndex = item.originalIndex;
+      originalRowIndex = Number(item.originalIndex || 0);
     }
   } else {
-    originalRowIndex = item.originalIndex;
+    originalRowIndex = Number(item.originalIndex || 0);
   }
   
-  emit('cell-mousemove', originalRowIndex, colIndex, event);
+  emit('cell-mousemove', originalRowIndex as any, Number(colIndex) as any, event);
 }
 
-function handleCellContextMenu(event, index, colIndex) {
-  // 필터된 상태에서는 원본 인덱스를 전달
+function handleCellContextMenu(event: any, index: any, colIndex: any) {
   const item = props.visibleRows[index];
-  let originalRowIndex;
+  let originalRowIndex: number = 0;
   
   if (props.isFiltered) {
     if (item._originalIndex !== undefined) {
-      originalRowIndex = item._originalIndex;
+      originalRowIndex = Number(item._originalIndex);
     } else if (item._filteredOriginalIndex !== undefined) {
-      originalRowIndex = item._filteredOriginalIndex;
+      originalRowIndex = Number(item._filteredOriginalIndex);
     } else {
-      originalRowIndex = item.originalIndex;
+      originalRowIndex = Number(item.originalIndex || 0);
     }
   } else {
-    originalRowIndex = item.originalIndex;
+    originalRowIndex = Number(item.originalIndex || 0);
   }
   
-  emit('cell-contextmenu', event, originalRowIndex, colIndex);
+  emit('cell-contextmenu', event, originalRowIndex as any, Number(colIndex) as any);
 }
 
 defineExpose({ bodyContainer });

@@ -30,62 +30,43 @@
     
     @resetSettings="$emit('resetSettings')"
   >
-    <!-- Prepend Slot: Exposure Time Input -->
-    <template #prepend>
-      <div v-if="!isIndividualExposureColumnVisible" class="flex items-center gap-2">
-        <label for="exposure-time" class="text-xs font-semibold text-slate-500 uppercase tracking-wider">의심원 노출시간 :</label>
-        <div class="relative group">
-          <input
-            type="text"
-            id="exposure-time"
-            :value="formattedExposureDateTime"
-            @click="$emit('showExposureDateTimePicker', $event)"
-            readonly
-            class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 shadow-sm hover:border-blue-400 hover:text-blue-600 transition-colors w-[160px] cursor-pointer outline-none focus:ring-2 focus:ring-blue-100"
-            @mouseenter="showTooltip('exposureTime', '기준 의심원 노출일을 설정합니다.')"
-            @mouseleave="hideTooltip"
-            placeholder="YYYY-MM-DD HH:MM"
-          />
-          <div v-if="activeTooltip === 'exposureTime'" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-3 py-2 rounded shadow-lg text-xs whitespace-nowrap z-50">
-            {{ tooltipText }}
-            <div class="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
-          </div>
-        </div>
-      </div>
-    </template>
-
   </EpidemicChartControls>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import EpidemicChartControls from '../EpidemicChartControls.vue';
 import { useTooltip } from '../../composables/useTooltip';
 
-defineProps({
-  selectedInterval: { type: Number, required: true },
-  chartFontSize: { type: Number, required: true },
-  chartWidth: { type: Number, required: true },
-  barColor: { type: String, required: true },
-  displayMode: { type: String, required: true },
-  
-  fontSizes: { type: Array, default: () => [] },
-  fontSizeLabels: { type: Array, default: () => [] },
-  chartWidths: { type: Array, default: () => [] },
-  barColors: { type: Array, default: () => [] },
-  
-  formattedExposureDateTime: { type: String, default: '' },
-  isIndividualExposureColumnVisible: { type: Boolean, default: false }
+withDefaults(defineProps<{
+  selectedInterval: number;
+  chartFontSize: number;
+  chartWidth: number;
+  barColor: string;
+  displayMode: string;
+  fontSizes?: number[];
+  fontSizeLabels?: string[];
+  chartWidths?: number[];
+  barColors?: string[];
+  formattedExposureDateTime?: string;
+  isIndividualExposureColumnVisible?: boolean;
+}>(), {
+  fontSizes: () => [],
+  fontSizeLabels: () => [],
+  chartWidths: () => [],
+  barColors: () => [],
+  formattedExposureDateTime: '',
+  isIndividualExposureColumnVisible: false
 });
 
-defineEmits([
-  'update:selectedInterval',
-  'update:chartFontSize',
-  'update:chartWidth',
-  'update:barColor',
-  'update:displayMode',
-  'resetSettings',
-  'showExposureDateTimePicker'
-]);
+defineEmits<{
+  (e: 'update:selectedInterval', value: number): void;
+  (e: 'update:chartFontSize', value: number): void;
+  (e: 'update:chartWidth', value: number): void;
+  (e: 'update:barColor', value: string): void;
+  (e: 'update:displayMode', value: string): void;
+  (e: 'resetSettings'): void;
+  (e: 'showExposureDateTimePicker', event: MouseEvent): void;
+}>();
 
 const { activeTooltip, tooltipText, showTooltip, hideTooltip } = useTooltip();
 </script>

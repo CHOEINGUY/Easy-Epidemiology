@@ -31,22 +31,16 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  icon: {
-    type: String,
-    required: true,
-    validator: (value) => ['copy', 'download'].includes(value)
-  },
-  label: {
-    type: String,
-    required: true
-  },
-  showSuccess: {
-    type: Boolean,
-    default: false
-  }
-});
+<script setup lang="ts">
+// Note: Validator in TS with defineProps is a bit complex, relying on runtime props for validation is fine.
+// But we can use TS literal types.
+const props = defineProps<{
+  icon: 'copy' | 'download';
+  label: string;
+  showSuccess?: boolean;
+}>();
 
-defineEmits(['click']);
+defineEmits<{
+  (e: 'click'): void;
+}>();
 </script>

@@ -15,8 +15,8 @@
           class="p-6 bg-white rounded-3xl border border-slate-100 hover:border-primary-200 hover:shadow-premium transition-all duration-500 group/feature relative overflow-hidden"
         >
           <div class="flex items-center justify-between mb-6">
-            <span class="px-3 py-1 bg-primary-500 text-white rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm">#{{ index + 1 }}</span>
-            <button @click="removeFeature(index)" class="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-xl transition-all duration-300 hover:bg-red-500 hover:text-white hover:shadow-lg active:scale-90 shrink-0" title="삭제">
+            <span class="px-3 py-1 bg-primary-500 text-white rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm">#{{ Number(index) + 1 }}</span>
+            <button @click="removeFeature(Number(index))" class="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-xl transition-all duration-300 hover:bg-red-500 hover:text-white hover:shadow-lg active:scale-90 shrink-0" title="삭제">
               <span class="material-icons text-base">close</span>
             </button>
           </div>
@@ -59,7 +59,7 @@
           class="flex items-center bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:border-primary-200 focus-within:ring-4 focus-within:ring-primary-500/10 focus-within:border-primary-400 transition-all"
         >
           <input v-model="localSystemFeatures[index]" type="text" class="px-5 py-3 border-none text-[13px] font-bold text-slate-700 min-w-[140px] focus:outline-none bg-transparent">
-          <button @click="removeSystemFeature(index)" class="flex items-center justify-center w-10 h-10 bg-slate-50 text-slate-400 border-l border-slate-100 cursor-pointer transition-all hover:bg-red-50 hover:text-red-500 shrink-0" title="삭제">
+          <button @click="removeSystemFeature(Number(index))" class="flex items-center justify-center w-10 h-10 bg-slate-50 text-slate-400 border-l border-slate-100 cursor-pointer transition-all hover:bg-red-50 hover:text-red-500 shrink-0" title="삭제">
             <span class="material-icons text-lg">close</span>
           </button>
         </div>
@@ -71,8 +71,8 @@
   </div>
 </template>
 
-<script setup>
-import { defineProps, defineEmits, ref, watch } from 'vue';
+<script setup lang="ts">
+import { ref, watch } from 'vue';
 
 const props = defineProps({
   features: {
@@ -100,7 +100,7 @@ function addFeature() {
   localFeatures.value.push({ icon: '', title: '', description: '' });
 }
 
-function removeFeature(index) {
+function removeFeature(index: number) {
   localFeatures.value.splice(index, 1);
 }
 
@@ -108,7 +108,7 @@ function addSystemFeature() {
   localSystemFeatures.value.push('');
 }
 
-function removeSystemFeature(index) {
+function removeSystemFeature(index: number) {
   localSystemFeatures.value.splice(index, 1);
 }
 </script>

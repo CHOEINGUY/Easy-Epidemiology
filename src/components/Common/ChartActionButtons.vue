@@ -84,20 +84,28 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 
-defineProps({
-  isSaved: { type: Boolean, default: false },
-  showSavedFeedback: { type: Boolean, default: false },
-  isCopied: { type: Boolean, default: false }
+const props = withDefaults(defineProps<{
+  isSaved?: boolean;
+  showSavedFeedback?: boolean;
+  isCopied?: boolean;
+}>(), {
+  isSaved: false,
+  showSavedFeedback: false,
+  isCopied: false
 });
 
-defineEmits(['saveReport', 'copyChart', 'exportChart']);
+defineEmits<{
+  (e: 'saveReport'): void;
+  (e: 'copyChart'): void;
+  (e: 'exportChart'): void;
+}>();
 
-const activeTooltip = ref(null);
+const activeTooltip = ref<string | null>(null);
 
-const showTooltip = (id) => {
+const showTooltip = (id: string) => {
   activeTooltip.value = id;
 };
 

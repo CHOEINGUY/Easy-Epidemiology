@@ -19,27 +19,39 @@
       />
     </div>
 
-    <div v-else ref="chartContainer" class="chart-instance" :style="{ width: chartWidth + 'px' }"></div>
+    <div v-else ref="chartContainer" class="chart-instance" :style="{ width: chartWidth + 'px', height: chartHeight + 'px' }"></div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick, markRaw } from 'vue';
 import * as echarts from 'echarts';
 import { debounce } from 'lodash-es';
 import DataGuideMessage from '../../../DataGuideMessage.vue';
 import ChartActionButtons from '../../../Common/ChartActionButtons.vue';
 
-const props = defineProps({
-  chartOptions: { type: Object, required: true },
-  chartWidth: { type: Number, required: true },
-  isChartSaved: { type: Boolean, default: false },
-  showChartSavedTooltip: { type: Boolean, default: false },
-  showWarningMessage: { type: Boolean, default: false },
-  formattedExposureDateTime: { type: String, default: '' }
+const props = withDefaults(defineProps<{
+  chartOptions: any;
+  chartWidth: number;
+  chartHeight?: number;
+  isChartSaved?: boolean;
+  showChartSavedTooltip?: boolean;
+  showWarningMessage?: boolean;
+  formattedExposureDateTime?: string;
+}>(), {
+  chartHeight: 550,
+  isChartSaved: false,
+  showChartSavedTooltip: false,
+  showWarningMessage: false,
+  formattedExposureDateTime: ''
 });
 
-const emit = defineEmits(['saveChartForReport', 'copyChart', 'exportChart', 'chartInstance']);
+const emit = defineEmits<{
+  (e: 'saveChartForReport'): void;
+  (e: 'copyChart', instance: any): void;
+  (e: 'exportChart', instance: any): void;
+  (e: 'chartInstance', instance: any): void;
+}>();
 
 // 경고 메시지 steps
 const warningSteps = [
@@ -48,8 +60,8 @@ const warningSteps = [
   { number: '2', text: '또는 데이터 입력 화면에서 각 환자의 증상발현시간을 노출시간 이후로 수정합니다' }
 ];
 
-const chartContainer = ref(null);
-const chartInstance = ref(null);
+const chartContainer = ref<HTMLElement | null>(null);
+const chartInstance = ref<any | null>(null);
 const isChartCopied = ref(false);
 
 // 차트 초기화
@@ -57,14 +69,14 @@ const initChart = () => {
   if (!chartContainer.value || props.showWarningMessage) return;
   
   const rect = chartContainer.value.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return;
+  if (rect.width <= 0) return;
 
   if (chartInstance.value) {
     chartInstance.value.dispose();
   }
 
   chartInstance.value = markRaw(echarts.init(chartContainer.value));
-  emit('chartInstance', chartInstance.value);
+  emit('chartInstance', chartInstance.value as any);
   
   if (props.chartOptions && typeof props.chartOptions === 'object') {
     chartInstance.value.setOption(props.chartOptions, false);
@@ -132,14 +144,14 @@ onUnmounted(() => {
 
 const handleCopyChart = async () => {
   if (!chartInstance.value) return;
-  emit('copyChart', chartInstance.value);
+  emit('copyChart', chartInstance.value as any);
   isChartCopied.value = true;
   setTimeout(() => (isChartCopied.value = false), 1500);
 };
 
 const handleExportChart = () => {
   if (!chartInstance.value) return;
-  emit('exportChart', chartInstance.value);
+  emit('exportChart', chartInstance.value as any);
 };
 
 // 외부에서 접근할 수 있도록 차트 인스턴스 노출
@@ -160,21 +172,26 @@ defineExpose({
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1; /* 남은 높이 채우기 */
-  min-height: 450px;
+  flex: 1; /* Restore flex to stretch wrapper */
+  /* min-height removed */
   width: 100%;
   box-sizing: border-box;
 }
 
 .chart-instance {
-  flex: 1;
+  /* flex: 1; removed */
   width: 100%;
-  min-height: 400px;
 }
 
 .no-data-message { 
   padding: 20px; 
   text-align: center; 
-  color: #666; 
+  color: #666;
+  flex: 1; /* Keep flex 1 here for centering within its own bounds if needed */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 </style>

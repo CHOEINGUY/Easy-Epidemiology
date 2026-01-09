@@ -1,10 +1,10 @@
 <template>
-  <div class="bg-gray-100 h-screen overflow-hidden">
-    <header class="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200 shadow-sm z-[4]">
+  <div class="bg-gradient-to-br from-slate-50 to-slate-100 h-full flex flex-col overflow-hidden">
+    <header class="flex items-center justify-between px-4 py-2 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-glass z-[4] sticky top-0">
       <CommonHeader />
     </header>
 
-    <div class="flex gap-[30px] mx-[30px] my-5 mb-[37px] h-[calc(100vh-131px)]">
+    <div class="flex gap-[30px] mx-[30px] mt-5 mb-[68px] flex-1 min-h-0 relative z-0">
       <ReportEditor :reportData="reportData" />
       <ReportPreview :reportData="reportData" />
     </div>
@@ -34,11 +34,12 @@
   </div>
 </template>
 
-<script setup>
-import { useReportData } from './composables/useReportData.js';
+<script setup lang="ts">
+import { useReportData } from './composables/useReportData';
 import CommonHeader from '../Common/CommonHeader.vue';
 import ReportEditor from './components/ReportEditor.vue';
 import ReportPreview from './components/ReportPreview.vue';
+import { ReportData } from '../../types/report';
 
-const reportData = useReportData();
+const reportData: ReportData = useReportData();
 </script>

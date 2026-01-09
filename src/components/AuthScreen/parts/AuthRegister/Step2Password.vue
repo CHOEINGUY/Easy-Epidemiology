@@ -115,20 +115,29 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, onMounted, nextTick, defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
+import { ref, watch, onMounted, nextTick } from 'vue';
 import StepIndicator from './StepIndicator.vue';
 
-const props = defineProps({
-  isLoading: { type: Boolean, default: false },
-  initialData: { type: Object, default: () => ({}) }
+interface Props {
+  isLoading?: boolean;
+  initialData?: any;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
+  initialData: () => ({})
 });
 
-const emit = defineEmits(['next', 'prev', 'update:data']);
+const emit = defineEmits<{
+  (e: 'next', data: any): void;
+  (e: 'prev'): void;
+  (e: 'update:data', value: any): void;
+}>();
 
 // Refs
-const passwordInputRef = ref(null);
-const confirmPasswordInputRef = ref(null);
+const passwordInputRef = ref<HTMLInputElement | null>(null);
+const confirmPasswordInputRef = ref<HTMLInputElement | null>(null);
 
 // State
 const formData = ref({
@@ -159,7 +168,7 @@ onMounted(() => {
 });
 
 // Methods
-function validateField(field) {
+function validateField(field: 'password' | 'confirmPassword') {
   if (field === 'password') {
     if (!formData.value.password) errors.value.password = '비밀번호를 입력해주세요.';
     else if (formData.value.password.length < 6) errors.value.password = '비밀번호는 최소 6자 이상이어야 합니다.';

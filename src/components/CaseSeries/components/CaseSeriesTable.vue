@@ -32,24 +32,17 @@
   </div>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
+<script setup lang="ts">
 import CaseSeriesTableToolbar from './CaseSeriesTableToolbar.vue';
 import CaseSeriesTableHeader from './CaseSeriesTableHeader.vue';
 import CaseSeriesTableRow from './CaseSeriesTableRow.vue';
 import CaseSeriesTableLegend from './CaseSeriesTableLegend.vue';
+import { CaseSeriesResult } from '@/types/analysis';
 
-defineProps({
-  results: {
-    type: Array,
-    required: true,
-    default: () => []
-  },
-  fontSize: {
-    type: Number,
-    required: true
-  }
-});
+defineProps<{
+  results: CaseSeriesResult[];
+  fontSize: number;
+}>();
 </script>
 
 <style scoped>

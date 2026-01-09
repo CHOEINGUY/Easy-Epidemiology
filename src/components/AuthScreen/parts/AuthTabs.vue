@@ -27,15 +27,16 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  showRegister: {
-    type: Boolean,
-    required: true
-  }
-});
+<script setup lang="ts">
+interface Props {
+  showRegister: boolean;
+}
 
-defineEmits(['update:showRegister']);
+defineProps<Props>();
+
+defineEmits<{
+  (e: 'update:showRegister', value: boolean): void;
+}>();
 </script>
 
 <style scoped>

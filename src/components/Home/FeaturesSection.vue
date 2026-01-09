@@ -154,11 +154,14 @@
   </section>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
+<script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+interface Props {
+  features?: any[];
+}
 
-defineProps({
-  features: { type: Array, default: () => [] }
+withDefaults(defineProps<Props>(), {
+  features: () => []
 });
 </script>
 

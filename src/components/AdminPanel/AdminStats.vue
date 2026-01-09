@@ -46,21 +46,18 @@
   </div>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
+<script setup lang="ts">
 import StatCard from './StatCard.vue';
 
-defineProps({
-  stats: {
-    type: Object,
-    required: true,
-    default: () => ({
-      total: 0,
-      pending: 0,
-      approved: 0,
-      admin: 0
-    })
-  }
+interface Stats {
+  total: number;
+  pending: number;
+  approved: number;
+  admin: number;
+}
+
+withDefaults(defineProps<{ stats: Stats }>(), {
+  stats: () => ({ total: 0, pending: 0, approved: 0, admin: 0 })
 });
 </script>
 

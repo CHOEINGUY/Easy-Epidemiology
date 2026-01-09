@@ -1,249 +1,138 @@
 <template>
-  <!-- 일반 toast는 오른쪽 상단에 -->
-  <div class="toast-container">
-    <div 
-      v-for="toast in toasts.filter(t => t.type !== 'confirm')" 
-      :key="toast.id" 
-      :class="['toast-item', `toast-${toast.type}`]"
+  <!-- 일반 toast는 하단 중앙에 -->
+  <div class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[10000] flex flex-col gap-4 items-center pointer-events-none w-full max-w-[600px] px-4">
+    <TransitionGroup
+      enter-active-class="transition-all duration-500 cubic-bezier(0.34, 1.56, 0.64, 1)"
+      leave-active-class="transition-all duration-300 ease-in"
+      enter-from-class="opacity-0 translate-y-full scale-90 blur-sm"
+      leave-to-class="opacity-0 translate-y-full scale-90 blur-sm"
+      move-class="transition-all duration-500 ease-in-out"
     >
-      <div class="toast-content">
-        <div class="toast-icon">
-          <span v-if="toast.type === 'error'">❌</span>
-          <span v-else-if="toast.type === 'warning'">⚠️</span>
-          <span v-else-if="toast.type === 'info'">ℹ️</span>
+      <div 
+        v-for="toast in toasts.filter(t => t.type !== 'confirm')" 
+        :key="toast.id" 
+        class="pointer-events-auto w-full md:min-w-[420px] md:w-auto bg-slate-900/80 backdrop-blur-2xl rounded-[2rem] p-4 md:p-5 flex items-center gap-4 md:gap-5 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/toast cursor-pointer hover:scale-[1.02] transition-transform"
+        @click="removeToast(toast.id)"
+      >
+        <!-- Icon Area -->
+        <div class="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-2xl shadow-lg ring-1 ring-white/10 relative overflow-hidden shrink-0" :class="{
+          'bg-gradient-to-br from-emerald-500 to-emerald-600': toast.type === 'success',
+          'bg-gradient-to-br from-red-500 to-red-600': toast.type === 'error',
+          'bg-gradient-to-br from-blue-500 to-blue-600': toast.type === 'info',
+          'bg-gradient-to-br from-amber-500 to-amber-600': toast.type === 'warning'
+        }">
+          <span class="material-icons text-xl md:text-2xl text-white animate-bounce relative z-10">
+            {{ getIcon(toast.type) }}
+          </span>
+          <div class="absolute inset-0 bg-white/20 opacity-0 group-hover/toast:opacity-30 transition-opacity"></div>
         </div>
-        <div class="toast-message">{{ toast.message }}</div>
-        <button @click="removeToast(toast.id)" class="toast-close">×</button>
+
+        <!-- Content Area -->
+        <div class="flex flex-col flex-1 gap-0.5 md:gap-1 min-w-0">
+          <span class="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-60 text-white truncate">
+            {{ getLabel(toast.type) }}
+          </span>
+          <span class="text-sm md:text-[15px] font-bold text-white tracking-tight leading-snug break-words">
+            {{ toast.message }}
+          </span>
+        </div>
+
+        <!-- Close Button -->
+        <button class="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-white/5 text-white/40 rounded-full hover:bg-white/20 hover:text-white transition-all shrink-0">
+          <span class="material-icons text-lg md:text-[20px]">close</span>
+        </button>
       </div>
-    </div>
+    </TransitionGroup>
   </div>
 
-  <!-- 확인 toast만 가운데에 -->
-  <div v-if="toasts.some(t => t.type === 'confirm')" class="toast-overlay">
-    <div class="toast-center-container">
-      <div 
-        v-for="toast in toasts.filter(t => t.type === 'confirm')" 
-        :key="toast.id" 
-        :class="['toast-item', `toast-${toast.type}`]"
-      >
-        <div class="toast-confirm-content">
-          <div class="toast-header">
-            <div class="toast-title">확인</div>
+  <!-- 확인 toast만 가운데에 (Modal Style) -->
+  <Transition
+    enter-active-class="transition-opacity duration-300 ease-out"
+    enter-from-class="opacity-0"
+    enter-to-class="opacity-100"
+    leave-active-class="transition-opacity duration-200 ease-in"
+    leave-from-class="opacity-100"
+    leave-to-class="opacity-0"
+  >
+    <div v-if="toasts.some(t => t.type === 'confirm')" class="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div class="w-full max-w-md">
+        <div 
+          v-for="toast in toasts.filter(t => t.type === 'confirm')" 
+          :key="toast.id" 
+          class="bg-white rounded-3xl shadow-2xl overflow-hidden animate-springUp ring-1 ring-slate-900/5"
+        >
+          <!-- Header -->
+          <div class="p-6 pb-0 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+              <span class="material-icons text-2xl">help_outline</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-black text-slate-800">확인 필요</h3>
+              <p class="text-xs font-medium text-slate-400 mt-0.5">작업을 계속하시겠습니까?</p>
+            </div>
           </div>
-          <div class="toast-message">{{ toast.message }}</div>
-          <div class="toast-buttons">
-            <button @click="toast.onCancel" class="toast-btn toast-btn-cancel">취소</button>
-            <button @click="toast.onConfirm" class="toast-btn toast-btn-confirm">확인</button>
+
+          <!-- Body -->
+          <div class="p-6 md:p-8">
+            <p class="text-slate-600 font-medium leading-relaxed text-[15px]">
+              {{ toast.message }}
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <button 
+              @click="toast.onCancel" 
+              class="px-6 py-3 rounded-2xl text-sm font-bold text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all active:scale-95"
+            >
+              취소
+            </button>
+            <button 
+              @click="toast.onConfirm" 
+              class="px-8 py-3 rounded-2xl text-sm font-bold text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+            >
+              확인
+            </button>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
-<script setup>
-import { useToast } from '../logic/toast.js';
+<script setup lang="ts">
+import { useToast } from '../logic/toast';
+import type { ToastType } from '../logic/toast';
 
 const { toasts, removeToast } = useToast();
+
+function getIcon(type: ToastType) {
+  switch (type) {
+    case 'success': return 'verified';
+    case 'error': return 'error_outline';
+    case 'warning': return 'warning_amber';
+    default: return 'info';
+  }
+}
+
+function getLabel(type: ToastType) {
+  switch (type) {
+    case 'success': return '시스템 성공';
+    case 'error': return '시스템 오류';
+    case 'warning': return '시스템 경고';
+    default: return '시스템 알림';
+  }
+}
 </script>
 
 <style scoped>
-/* Toast 시스템 스타일 */
-.toast-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  pointer-events: none;
+/* 애니메이션 유틸리티 */
+@keyframes springUp {
+  0% { transform: scale(0.9) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-/* Toast 오버레이 - 확인 toast만 가운데에 */
-.toast-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(2px);
+.animate-springUp {
+  animation: springUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
-
-.toast-center-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 90vw;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-/* Toast 아이템 */
-.toast-item {
-  background: white;
-  border-radius: 0px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  max-width: 400px;
-  border: 1px solid #e0e0e0;
-  pointer-events: auto;
-}
-
-/* 가운데 toast는 더 크게 */
-.toast-overlay .toast-item {
-  min-width: 400px;
-  max-width: 600px;
-}
-
-/* 일반 토스트 내용 */
-.toast-content {
-  display: flex;
-  align-items: center;
-  padding: 20px 24px;
-  gap: 16px;
-}
-
-.toast-icon {
-  font-size: 24px;
-  flex-shrink: 0;
-}
-
-.toast-message {
-  flex: 1;
-  font-size: 16px;
-  line-height: 1.5;
-  color: #333;
-  word-break: break-word;
-}
-
-.toast-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
-  padding: 4px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0px;
-  transition: all 0.2s;
-}
-
-.toast-close:hover {
-  background: #f5f5f5;
-  color: #666;
-}
-
-/* 확인 토스트 내용 */
-.toast-confirm {
-  border-left: 4px solid #2196F3;
-}
-
-.toast-confirm-content {
-  padding: 0;
-}
-
-.toast-header {
-  padding: 20px 24px 0 24px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.toast-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
-}
-
-.toast-confirm-content .toast-message {
-  padding: 20px 24px;
-  font-size: 16px;
-  color: #555;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.toast-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  padding: 20px 24px;
-  background: #fafafa;
-  border-radius: 0px;
-}
-
-.toast-btn {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 0px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
-  min-width: 80px;
-}
-
-.toast-btn-confirm {
-  background: #2196F3;
-  color: white;
-}
-
-.toast-btn-confirm:hover {
-  background: #1976D2;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-}
-
-.toast-btn-cancel {
-  background: white;
-  color: #000;
-  border: 1px solid #e0e0e0;
-}
-
-.toast-btn-cancel:hover {
-  background: #f5f5f5;
-  color: #000;
-  transform: translateY(-1px);
-}
-
-/* Toast 타입별 스타일 */
-.toast-success {
-  border-left: 4px solid #4CAF50;
-}
-
-.toast-error {
-  border-left: 4px solid #F44336;
-}
-
-.toast-warning {
-  border-left: 4px solid #FF9800;
-}
-
-.toast-info {
-  border-left: 4px solid #2196F3;
-}
-
-/* 반응형 */
-@media (max-width: 768px) {
-  .toast-item {
-    min-width: 90vw;
-    max-width: 90vw;
-  }
-  
-  .toast-buttons {
-    flex-direction: column;
-  }
-  
-  .toast-btn {
-    width: 100%;
-  }
-}
-</style> 
+</style>

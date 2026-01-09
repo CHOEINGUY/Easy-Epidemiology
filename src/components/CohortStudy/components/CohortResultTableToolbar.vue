@@ -36,23 +36,20 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useTableExport } from '../../../composables/useTableExport';
+// @ts-ignore
 import { generateCohortTsv, generateCohortHtml } from '../../../utils/tableHtmlGenerators';
+import { CohortResult } from '@/types/analysis';
 
-const props = defineProps({
-  results: {
-    type: Array,
-    required: true,
-    default: () => []
-  },
-  useYatesCorrection: {
-    type: Boolean,
-    required: true
-  }
-});
+const props = defineProps<{
+  results: CohortResult[];
+  useYatesCorrection: boolean;
+}>();
 
-defineEmits(['toggle-yates']);
+defineEmits<{
+  (e: 'toggle-yates'): void;
+}>();
 
 const { isCopied: isTableCopied, copyToClipboard } = useTableExport();
 

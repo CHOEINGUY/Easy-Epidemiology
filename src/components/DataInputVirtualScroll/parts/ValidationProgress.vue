@@ -16,28 +16,19 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  progress: {
-    type: Number,
-    default: 0
-  },
-  processed: {
-    type: Number,
-    default: 0
-  },
-  total: {
-    type: Number,
-    default: 0
-  },
-  errorCount: {
-    type: Number,
-    default: 0
-  },
-  isVisible: {
-    type: Boolean,
-    default: false
-  }
+<script setup lang="ts">
+withDefaults(defineProps<{
+  progress?: number;
+  processed?: number;
+  total?: number;
+  errorCount?: number;
+  isVisible?: boolean;
+}>(), {
+  progress: 0,
+  processed: 0,
+  total: 0,
+  errorCount: 0,
+  isVisible: false
 });
 </script>
 

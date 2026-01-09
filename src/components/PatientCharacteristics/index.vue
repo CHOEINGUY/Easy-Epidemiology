@@ -80,9 +80,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // index.vue - PatientCharacteristics 메인 컴포넌트
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, type ComponentPublicInstance } from 'vue';
 import DataGuideMessage from '../DataGuideMessage.vue';
 
 // 하위 컴포넌트 임포트
@@ -96,8 +96,15 @@ import ChartControlPanel from './components/ChartControlPanel.vue';
 import BarChart from './components/BarChart.vue';
 
 // Composable 임포트
-import { usePatientStats } from './composables/usePatientStats';
+import { usePatientStats, type FrequencyData } from './composables/usePatientStats';
 import { useClipboardOperations } from './composables/useClipboardOperations';
+
+// BarChart 컴포넌트 타입
+interface BarChartInstance {
+  updateCharts: () => void;
+  recreateChart: () => void;
+  triggerChartUpdate: () => void;
+}
 
 // 통계 데이터
 const {
@@ -113,31 +120,31 @@ const {
 const { isTableCopied, copyTableToClipboard } = useClipboardOperations();
 
 // UI 상태
-const selectedVariableIndex = ref(null);
-const selectedChartType = ref('total');
-const selectedDataType = ref('count');
-const chartFontSize = ref(18);
-const chartWidth = ref(700);
-const barWidthPercent = ref(50);
-const selectedBarColor = ref('#5470c6');
-const currentHighlight = ref('none');
-const labelMappings = ref({});
-const barChartRef = ref(null);
+const selectedVariableIndex = ref<number | null>(null);
+const selectedChartType = ref<'total' | 'patient'>('total');
+const selectedDataType = ref<'count' | 'percentage'>('count');
+const chartFontSize = ref<number>(18);
+const chartWidth = ref<number>(700);
+const barWidthPercent = ref<number>(50);
+const selectedBarColor = ref<string>('#5470c6');
+const currentHighlight = ref<'none' | 'max' | 'min' | 'both'>('none');
+const labelMappings = ref<Record<string, string>>({});
+const barChartRef = ref<BarChartInstance | null>(null);
 
 // 현재 선택된 헤더 이름
-const currentHeaderName = computed(() => {
+const currentHeaderName = computed<string>(() => {
   if (selectedVariableIndex.value === null) return '';
   return headers.value?.basic?.[selectedVariableIndex.value] || '';
 });
 
 // 현재 선택된 빈도 데이터
-const currentFrequencyData = computed(() => {
+const currentFrequencyData = computed<FrequencyData>(() => {
   if (selectedVariableIndex.value === null) return {};
   return frequencyData.value?.[selectedVariableIndex.value] || {};
 });
 
 // 현재 카테고리 목록
-const currentCategories = computed(() => {
+const currentCategories = computed<string[]>(() => {
   if (
     selectedVariableIndex.value !== null &&
     frequencyData.value &&
@@ -150,7 +157,7 @@ const currentCategories = computed(() => {
 });
 
 // 변수 선택
-const selectVariable = (index) => {
+const selectVariable = (index: number) => {
   selectedVariableIndex.value = index;
 };
 
@@ -177,7 +184,7 @@ watch(selectedVariableIndex, (newIndex, oldIndex) => {
     const currentFreqData = frequencyData.value?.[newIndex];
     if (currentFreqData && typeof currentFreqData === 'object') {
       const categories = Object.keys(currentFreqData);
-      const newMappings = {};
+      const newMappings: Record<string, string> = {};
       categories.forEach(cat => { newMappings[cat] = ''; });
       labelMappings.value = newMappings;
       console.log('Initialized mappings efficiently');

@@ -20,18 +20,14 @@
   </div>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
+<script setup lang="ts">
+interface Props {
+  currentStep: number;
+  totalSteps?: number;
+}
 
-defineProps({
-  currentStep: {
-    type: Number,
-    required: true
-  },
-  totalSteps: {
-    type: Number,
-    default: 3
-  }
+withDefaults(defineProps<Props>(), {
+  totalSteps: 3
 });
 </script>
 

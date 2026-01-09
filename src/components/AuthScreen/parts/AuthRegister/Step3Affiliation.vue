@@ -100,21 +100,31 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, onMounted, nextTick, defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
+import { ref, watch, onMounted, nextTick } from 'vue';
 import StepIndicator from './StepIndicator.vue';
 
-const props = defineProps({
-  isLoading: { type: Boolean, default: false },
-  error: { type: String, default: '' },
-  initialData: { type: Object, default: () => ({}) }
+interface Props {
+  isLoading?: boolean;
+  error?: string;
+  initialData?: any;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
+  error: '',
+  initialData: () => ({})
 });
 
-const emit = defineEmits(['submit', 'prev', 'update:data']);
+const emit = defineEmits<{
+  (e: 'submit', data: any): void;
+  (e: 'prev'): void;
+  (e: 'update:data', value: any): void;
+}>();
 
 // Refs
-const affiliationTypeInputRef = ref(null);
-const affiliationInputRef = ref(null);
+const affiliationTypeInputRef = ref<HTMLSelectElement | null>(null);
+const affiliationInputRef = ref<HTMLInputElement | null>(null);
 
 // State
 const formData = ref({
@@ -142,7 +152,7 @@ onMounted(() => {
 });
 
 // Methods
-function validateField(field) {
+function validateField(field: 'affiliationType' | 'affiliation') {
   if (field === 'affiliationType') {
     if (!formData.value.affiliationType) errors.value.affiliationType = '소속 유형을 선택해주세요.';
     else errors.value.affiliationType = '';

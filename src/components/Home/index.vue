@@ -23,8 +23,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
+// @ts-ignore
 import { loadSiteConfig } from '@/config/siteConfig';
 
 import HeroSection from './HeroSection.vue';

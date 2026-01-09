@@ -22,7 +22,7 @@
               :style="group.style"
               role="columnheader"
               :class="[
-                'relative border border-slate-300 p-2 text-center font-medium text-sm bg-clip-padding align-middle whitespace-nowrap select-none tracking-tight leading-[1.4]',
+                'relative border border-slate-300 p-2 text-center font-medium text-sm bg-clip-padding align-middle whitespace-nowrap select-none tracking-tight leading-[1.4] group',
                 { 
                   'whitespace-normal': group.startColIndex === 1 || group.startColIndex === 2,
                   '!bg-slate-100 !font-semibold': group.startColIndex === 0 
@@ -30,7 +30,9 @@
               ]"
               @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, group.startColIndex)"
             >
-              <span v-html="getHeaderText(group)"></span>
+              <div class="relative w-full h-full flex items-center justify-center">
+                <span v-html="getHeaderText(group)"></span>
+              </div>
               <span v-if="isColumnFiltered(group.startColIndex)" class="absolute top-[2px] right-[4px] w-[14px] h-[14px] inline-flex items-center justify-center z-[3] pointer-events-auto bg-blue-50/50 rounded-[2px] p-[1px] cursor-default transition-all border border-transparent" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
@@ -75,7 +77,7 @@
           <template v-for="column in allColumnsMeta" :key="'header-th-' + column.colIndex">
             <th
               v-if="column.headerRow === 2"
-              class="relative border border-slate-300 p-2 text-center font-medium text-sm bg-clip-padding align-middle whitespace-nowrap select-none tracking-tight leading-[1.4] bg-slate-50 cursor-default h-[35px] hover:bg-slate-200"
+              class="relative border border-slate-300 p-2 text-center font-medium text-sm bg-clip-padding align-middle whitespace-nowrap select-none tracking-tight leading-[1.4] bg-slate-50 cursor-default h-[35px] hover:bg-slate-200 group"
               role="columnheader"
               :data-col="column.colIndex"
               :class="getCellClasses(-1, column.colIndex)"
@@ -88,6 +90,7 @@
               @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, column.colIndex)"
             >
               <span class="header-text">{{ column.headerText }}</span>
+
               <span v-if="isColumnFiltered(column.colIndex)" class="absolute top-[2px] right-[4px] w-[14px] h-[14px] inline-flex items-center justify-center z-[3] pointer-events-auto bg-blue-50/50 rounded-[2px] p-[1px] cursor-default transition-all border border-transparent" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
@@ -112,68 +115,68 @@
   </Teleport>
 </template>
 
-<script setup>
-import { ref, defineProps, defineExpose, defineEmits, reactive, computed } from 'vue';
+<script setup lang="ts">
+import { ref, reactive, computed } from 'vue';
 import { useUiStore } from '../../../stores/uiStore';
-import { safeGetGlobalProperty } from '../../../utils/globalAccessWrapper.js';
+import { safeGetGlobalProperty } from '../../../utils/globalAccessWrapper';
 
 const uiStore = useUiStore();
 
-const props = defineProps({
-  headerGroups: {
-    type: Array,
-    required: true
-  },
-  allColumnsMeta: {
-    type: Array,
-    required: true
-  },
-  tableWidth: {
-    type: String,
-    required: true
-  },
-  selectedCell: {
-    type: Object,
-    default: () => ({ rowIndex: null, colIndex: null })
-  },
-  selectedRange: {
-    type: Object,
-    default: () => ({
-      start: { rowIndex: null, colIndex: null },
-      end: { rowIndex: null, colIndex: null }
-    })
-  },
-  isEditing: { type: Boolean, default: false },
-  editingCell: { type: Object, default: () => ({ rowIndex: null, colIndex: null }) },
-  individualSelectedCells: { type: Object, default: null },
-  scrollbarWidth: { type: Number, default: 0 },
-  // 필터 상태 props 추가
-  activeFilters: {
-    type: Map,
-    default: () => new Map()
-  },
-  isFiltered: {
-    type: Boolean,
-    default: false
-  }
-});
-
-defineEmits(['cell-mousedown', 'cell-mousemove', 'cell-dblclick', 'cell-input', 'cell-contextmenu', 'add-column', 'delete-column']);
-
-const headerContainer = ref(null);
-
-// 툴팁 상태
-const activeTooltip = ref(null);
-const tooltipText = ref('');
-const tooltipStyle = reactive({});
-
-function isCellEditing(rowIndex, colIndex) {
-  return props.isEditing && props.editingCell.rowIndex === rowIndex && props.editingCell.colIndex === colIndex;
+interface Props {
+  headerGroups: any[];
+  allColumnsMeta: any[];
+  tableWidth: string;
+  selectedCell?: { rowIndex: number | null; colIndex: number | null };
+  selectedRange?: {
+    start: { rowIndex: number | null; colIndex: number | null };
+    end: { rowIndex: number | null; colIndex: number | null };
+  };
+  isEditing?: boolean;
+  editingCell?: { rowIndex: number | null; colIndex: number | null };
+  individualSelectedCells?: Set<string> | null;
+  scrollbarWidth?: number;
+  activeFilters?: Map<number, any>;
+  isFiltered?: boolean;
 }
 
-function isCellInRange(rowIndex, colIndex) {
+const props = withDefaults(defineProps<Props>(), {
+  selectedCell: () => ({ rowIndex: null, colIndex: null }),
+  selectedRange: () => ({
+    start: { rowIndex: null, colIndex: null },
+    end: { rowIndex: null, colIndex: null }
+  }),
+  isEditing: false,
+  editingCell: () => ({ rowIndex: null, colIndex: null }),
+  individualSelectedCells: null,
+  scrollbarWidth: 0,
+  activeFilters: () => new Map(),
+  isFiltered: false
+});
+
+const emit = defineEmits<{
+  (e: 'cell-mousedown', rowIndex: number, colIndex: number, event: MouseEvent): void;
+  (e: 'cell-mousemove', rowIndex: number, colIndex: number, event: MouseEvent): void;
+  (e: 'cell-dblclick', rowIndex: number, colIndex: number, event: MouseEvent): void;
+  (e: 'cell-input', event: Event, rowIndex: number, colIndex: number): void;
+  (e: 'cell-contextmenu', event: MouseEvent, rowIndex: number, colIndex: number): void;
+  (e: 'add-column', type: string): void;
+  (e: 'delete-column', type: string): void;
+}>();
+
+const headerContainer = ref<HTMLElement | null>(null);
+
+// 툴팁 상태
+const activeTooltip = ref<string | null>(null);
+const tooltipText = ref('');
+const tooltipStyle = reactive<any>({});
+
+function isCellEditing(rowIndex: number, colIndex: number) {
+  return props.isEditing && props.editingCell?.rowIndex === rowIndex && props.editingCell?.colIndex === colIndex;
+}
+
+function isCellInRange(rowIndex: number, colIndex: number) {
   const { start, end } = props.selectedRange;
-  if (start.rowIndex === null || end.rowIndex === null) return false;
+  if (start.rowIndex === null || end.rowIndex === null || start.colIndex === null || end.colIndex === null) return false;
 
   const minRow = Math.min(start.rowIndex, end.rowIndex);
   const maxRow = Math.max(start.rowIndex, end.rowIndex);
@@ -188,13 +191,13 @@ function isCellInRange(rowIndex, colIndex) {
   );
 }
 
-function isMultiCellSelection(range) {
+function isMultiCellSelection(range: any) {
   if (!range || range.start.rowIndex === null) return false;
   return range.start.rowIndex !== range.end.rowIndex || range.start.colIndex !== range.end.colIndex;
 }
 
-function getCellClasses(rowIndex, colIndex) {
-  const classes = [];
+function getCellClasses(rowIndex: number, colIndex: number) {
+  const classes: string[] = [];
 
   if (isCellEditing(rowIndex, colIndex)) {
     classes.push('cell-editing');
@@ -218,19 +221,19 @@ function getCellClasses(rowIndex, colIndex) {
 
   // 전체 선택 범위의 바깥쪽 테두리 적용
   const { start, end } = props.selectedRange;
-  const minRow = Math.min(start.rowIndex, end.rowIndex);
-  const maxRow = Math.max(start.rowIndex, end.rowIndex);
-  const minCol = Math.min(start.colIndex, end.colIndex);
-  const maxCol = Math.max(start.colIndex, end.colIndex);
+  if (start.rowIndex !== null && end.rowIndex !== null && start.colIndex !== null && end.colIndex !== null) {
+    const minRow = Math.min(start.rowIndex, end.rowIndex);
+    const maxRow = Math.max(start.rowIndex, end.rowIndex);
+    const minCol = Math.min(start.colIndex, end.colIndex);
+    const maxCol = Math.max(start.colIndex, end.colIndex);
 
-  if (rowIndex === minRow) classes.push('border-top');
-  if (rowIndex === maxRow) classes.push('border-bottom');
-  if (colIndex === minCol) classes.push('border-left');
-  if (colIndex === maxCol) classes.push('border-right');
+    if (rowIndex === minRow) classes.push('border-top');
+    if (rowIndex === maxRow) classes.push('border-bottom');
+    if (colIndex === minCol) classes.push('border-left');
+    if (colIndex === maxCol) classes.push('border-right');
+  }
 
   // 현재 활성 셀에 'cell-selected' 클래스 적용 (진한 테두리)
-  // 단, 다중 선택 범위 내의 활성 셀인 경우 'cell-selected' 대신 'cell-active-in-range' 적용
-  // (cell-selected의 4면 테두리가 범위 테두리(border-top 등)와 충돌하는 것을 방지)
   if (
     props.selectedCell &&
     props.selectedCell.rowIndex === rowIndex &&
@@ -247,11 +250,10 @@ function getCellClasses(rowIndex, colIndex) {
 }
 
 function getValidationMessage() {
-  // 헤더에는 유효성 검사 오류가 없으므로 빈 문자열 반환
   return '';
 }
 
-const getHeaderText = (group) => {
+const getHeaderText = (group: any) => {
   // 환자여부(1)와 확진여부(2) 열은 두 줄 표시 허용
   if (group.startColIndex === 1 || group.startColIndex === 2) {
     return group.text;
@@ -259,8 +261,9 @@ const getHeaderText = (group) => {
   return String(group.text).replace(/<br\s*\/?>/gi, ' ');
 };
 
-function showTooltip(type, text, event) {
-  const rect = event.currentTarget.getBoundingClientRect();
+function showTooltip(type: string, text: string, event: MouseEvent) {
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
   tooltipText.value = text;
   tooltipStyle.left = `${rect.left + rect.width / 2}px`;
   tooltipStyle.top = `${rect.bottom + 5}px`;
@@ -278,31 +281,35 @@ defineExpose({ headerContainer });
 const headerContainerStyle = computed(() => {
   return {
     paddingRight: props.scrollbarWidth > 0 ? `${props.scrollbarWidth}px` : '0px',
-    paddingBottom: '0px' // 하단 테두리 잘림 방지 (사용자 요청: Gap 0으로 제거)
+    paddingBottom: '0px'
   };
 });
 
-// 필터 적용 여부 확인 함수 - 간단하고 확실한 방법
-function isColumnFiltered(colIndex) {
-  // props로 받은 activeFilters를 우선 사용
-  if (props.activeFilters && props.activeFilters.has(colIndex)) {
-    return true;
-  }
+const isColumnFiltered = (colIndex: number) => {
+  // Access store state via props or bridge
+  const activeFilters = props.activeFilters || (window as any).storeBridge?.filterState?.activeFilters;
   
-  // fallback: window.storeBridge 사용
-  const storeBridge = safeGetGlobalProperty('storeBridge', 'filterState');
-  if (storeBridge && storeBridge.activeFilters) {
-    return storeBridge.activeFilters.has(colIndex);
-  }
-  
-  // fallback: Pinia UI Store 사용
-  if (uiStore.filterState && uiStore.filterState.activeFilters) {
-    return uiStore.filterState.activeFilters.has(colIndex);
-  }
-  
-  return false;
-}
+  if (!activeFilters || activeFilters.size === 0) return false;
 
+  // Resolve key exactly as we do in other components
+  const column = props.allColumnsMeta.find((c: any) => c.colIndex === colIndex);
+  
+  // 1. Try colIndex as string (default)
+  if (activeFilters.has(String(colIndex))) return true;
+
+  if (column) {
+    // 2. Try dataKey-cellIndex (Array columns)
+    if (column.dataKey && (column.cellIndex !== undefined && column.cellIndex !== null)) {
+      if (activeFilters.has(`${column.dataKey}-${column.cellIndex}`)) return true;
+    }
+    // 3. Try dataKey (Single value columns)
+    else if (column.dataKey && activeFilters.has(column.dataKey)) {
+      return true;
+    }
+  }
+
+  return false;
+};
 </script>
 
 <style scoped>
@@ -385,38 +392,24 @@ function isColumnFiltered(colIndex) {
   vertical-align: middle;
 }
 
-/* Cell Editing Text Effect (Keep for special stroke) */
+/* Cell Editing Text Effect - Simplified (overlay handles the editing now) */
 .cell-editing {
   background-color: #fff !important;
   box-shadow: 0 0 0 2px #1a73e8 inset !important;
   z-index: 10;
   outline: none;
   cursor: text;
-
-  text-shadow:
-    0 0 4px #ffffff,
-    0 0 8px #ffffff,
-    0 0 12px #ffffff;
-  -webkit-text-stroke: 13px #ffffff;
-  -webkit-text-fill-color: #000000; /* keep text color */
-  paint-order: stroke fill;
 }
 
-/* Text Selection Styles */
+/* Text Selection Styles (fallback mode) */
 .cell-editing::selection {
   background-color: #1a73e8 !important;
   color: white !important;
-  text-shadow: none !important;
-  -webkit-text-stroke: 0 !important;
-  -webkit-text-fill-color: white !important;
 }
 
 .cell-editing::-moz-selection {
   background-color: #1a73e8 !important;
   color: white !important;
-  text-shadow: none !important;
-  -webkit-text-stroke: 0 !important;
-  -webkit-text-fill-color: white !important;
 }
 </style>
 

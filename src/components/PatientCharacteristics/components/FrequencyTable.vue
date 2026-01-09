@@ -26,9 +26,9 @@
           <tr v-for="(data, category) in frequencyData" :key="category" class="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
             <td class="py-3 px-4 text-slate-700">{{ category }}</td>
             <td class="py-3 px-4 text-slate-600">{{ data.count }}</td>
-            <td class="py-3 px-4 text-slate-600">{{ data.totalPercentage.toFixed(1) }}%</td>
+            <td class="py-3 px-4 text-slate-600">{{ data.totalPercentage?.toFixed(1) }}%</td>
             <td class="py-3 px-4 text-slate-600">{{ data.patientCount }}</td>
-            <td class="py-3 px-4 text-slate-600">{{ data.patientPercentage.toFixed(1) }}%</td>
+            <td class="py-3 px-4 text-slate-600">{{ data.patientPercentage?.toFixed(1) }}%</td>
           </tr>
         </tbody>
       </table>
@@ -36,21 +36,16 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // FrequencyTable.vue - 빈도 테이블 컴포넌트
 import { useClipboardOperations } from '../composables/useClipboardOperations';
 import SharedIconButton from './SharedIconButton.vue';
+import type { FrequencyData } from '../composables/usePatientStats';
 
-defineProps({
-  headerName: {
-    type: String,
-    required: true
-  },
-  frequencyData: {
-    type: Object,
-    required: true
-  }
-});
+defineProps<{
+  headerName: string;
+  frequencyData: FrequencyData;
+}>();
 
 const { isTableCopied, copyTableToClipboard } = useClipboardOperations();
 

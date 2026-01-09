@@ -4,7 +4,7 @@
     <ControlCycleText
       label="막대 방향:"
       :modelValue="barDirection"
-      @update:modelValue="$emit('update:barDirection', $event)"
+      @update:modelValue="$emit('update:barDirection', $event as 'horizontal' | 'vertical')"
       :options="['vertical', 'horizontal']"
       :displayLabels="['세로', '가로']"
       tooltipPrefix="막대 방향을"
@@ -15,7 +15,7 @@
     <ControlCycleText
       label="폰트 크기:"
       :modelValue="chartFontSize"
-      @update:modelValue="$emit('update:chartFontSize', $event)"
+      @update:modelValue="$emit('update:chartFontSize', $event as number)"
       :options="fontSizes"
       :displayLabels="fontSizeLabels"
       tooltipPrefix="폰트 크기를"
@@ -27,7 +27,7 @@
     <ControlCycleText
       label="차트 너비:"
       :modelValue="chartWidth"
-      @update:modelValue="$emit('update:chartWidth', $event)"
+      @update:modelValue="$emit('update:chartWidth', $event as number)"
       :options="chartWidths"
       tooltipPrefix="차트 너비를"
       suffix="px"
@@ -38,7 +38,7 @@
     <ControlCycleText
       label="막대 너비:"
       :modelValue="barWidthPercent"
-      @update:modelValue="$emit('update:barWidthPercent', $event)"
+      @update:modelValue="$emit('update:barWidthPercent', $event as number)"
       :options="barWidthPercents"
       tooltipPrefix="막대 너비를"
       suffix="%"
@@ -49,7 +49,7 @@
     <ControlCycleText
       label="막대 강조:"
       :modelValue="currentHighlight"
-      @update:modelValue="$emit('update:currentHighlight', $event)"
+      @update:modelValue="$emit('update:currentHighlight', $event as 'none' | 'max' | 'min' | 'both')"
       :options="highlightOptionsNormalized"
       minWidthClass="min-w-[100px]"
     />
@@ -58,7 +58,7 @@
     <ControlCycleText
       label="정렬:"
       :modelValue="currentSort"
-      @update:modelValue="$emit('update:currentSort', $event)"
+      @update:modelValue="$emit('update:currentSort', $event as string)"
       :options="sortOptionsNormalized"
       minWidthClass="min-w-[90px]"
     />
@@ -73,51 +73,67 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import ControlCycleText from './controls/ControlCycleText.vue';
 import ControlCycleColor from './controls/ControlCycleColor.vue';
+import type { CycleOption } from '@/types/ui';
+import type { HighlightOption, SortOption } from '../composables/useChartControls';
 
-const props = defineProps({
-  barDirection: { type: String, default: 'vertical' },
-  chartFontSize: { type: Number, default: 16 },
-  chartWidth: { type: Number, default: 700 },
-  barWidthPercent: { type: Number, default: 50 },
-  selectedBarColor: { type: String, default: '#5470c6' },
-  currentHighlight: { type: String, default: 'none' },
-  currentSort: { type: String, default: 'none' },
-  
+const props = withDefaults(defineProps<{
+  barDirection?: 'horizontal' | 'vertical';
+  chartFontSize?: number;
+  chartWidth?: number;
+  barWidthPercent?: number;
+  selectedBarColor?: string;
+  currentHighlight?: 'none' | 'max' | 'min' | 'both';
+  currentSort?: string;
   // 옵션 배열들
-  fontSizes: { type: Array, default: () => [] },
-  fontSizeLabels: { type: Array, default: () => [] },
-  chartWidths: { type: Array, default: () => [] },
-  barWidthPercents: { type: Array, default: () => [] },
-  barColors: { type: Array, default: () => [] }, // Index receives defaults from useChartControls, usually passed in
-  highlightOptions: { type: Array, default: () => [] },
-  sortOptions: { type: Array, default: () => [] }
+  fontSizes?: number[];
+  fontSizeLabels?: string[];
+  chartWidths?: number[];
+  barWidthPercents?: number[];
+  barColors?: string[];
+  highlightOptions?: HighlightOption[];
+  sortOptions?: SortOption[];
+}>(), {
+  barDirection: 'vertical',
+  chartFontSize: 16,
+  chartWidth: 700,
+  barWidthPercent: 50,
+  selectedBarColor: '#5470c6',
+  currentHighlight: 'none',
+  currentSort: 'none',
+  fontSizes: () => [],
+  fontSizeLabels: () => [],
+  chartWidths: () => [],
+  barWidthPercents: () => [],
+  barColors: () => [],
+  highlightOptions: () => [],
+  sortOptions: () => []
 });
 
-defineEmits([
-  'update:barDirection',
-  'update:chartFontSize',
-  'update:chartWidth',
-  'update:barWidthPercent',
-  'update:selectedBarColor',
-  'update:currentHighlight',
-  'update:currentSort'
-]);
+defineEmits<{
+  (e: 'update:barDirection', value: 'horizontal' | 'vertical'): void;
+  (e: 'update:chartFontSize', value: number): void;
+  (e: 'update:chartWidth', value: number): void;
+  (e: 'update:barWidthPercent', value: number): void;
+  (e: 'update:selectedBarColor', value: string): void;
+  (e: 'update:currentHighlight', value: 'none' | 'max' | 'min' | 'both'): void;
+  (e: 'update:currentSort', value: string): void;
+}>();
 
 // Normalize options for ControlCycleText ({value, label, tooltip})
-const highlightOptionsNormalized = computed(() => {
-  return props.highlightOptions.map(opt => ({
+const highlightOptionsNormalized = computed<CycleOption[]>(() => {
+  return props.highlightOptions.map((opt: HighlightOption) => ({
     value: opt.key,
     label: opt.label,
     tooltip: opt.tooltip
   }));
 });
 
-const sortOptionsNormalized = computed(() => {
-  return props.sortOptions.map(opt => ({
+const sortOptionsNormalized = computed<CycleOption[]>(() => {
+  return props.sortOptions.map((opt: SortOption) => ({
     value: opt.key,
     label: opt.label,
     tooltip: opt.tooltip

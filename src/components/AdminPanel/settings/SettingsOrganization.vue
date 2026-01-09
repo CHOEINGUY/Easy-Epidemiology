@@ -36,7 +36,7 @@
             <input v-model="member.role" type="text" placeholder="역할" class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-1.5xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-400 focus:bg-white transition-all">
             <input v-model="member.name" type="text" placeholder="이름" class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-1.5xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-400 focus:bg-white transition-all">
           </div>
-          <button @click="removeTeamMember(index)" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl transition-all duration-300 hover:bg-red-500 hover:text-white hover:shadow-lg hover:shadow-red-500/20 active:scale-90 shrink-0" title="삭제">
+          <button @click="removeTeamMember(Number(index))" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl transition-all duration-300 hover:bg-red-500 hover:text-white hover:shadow-lg hover:shadow-red-500/20 active:scale-90 shrink-0" title="삭제">
             <span class="material-icons text-lg">close</span>
           </button>
         </div>
@@ -49,8 +49,8 @@
   </section>
 </template>
 
-<script setup>
-import { defineProps, defineEmits, ref, watch } from 'vue';
+<script setup lang="ts">
+import { ref, watch } from 'vue';
 
 const props = defineProps({
   config: {
@@ -77,7 +77,7 @@ function addTeamMember() {
   localConfig.value.team.push({ role: '', name: '' });
 }
 
-function removeTeamMember(index) {
+function removeTeamMember(index: number) {
   localConfig.value.team.splice(index, 1);
 }
 </script>

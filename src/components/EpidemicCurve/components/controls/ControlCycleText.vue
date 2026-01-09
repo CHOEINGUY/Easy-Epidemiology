@@ -21,56 +21,46 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 
-const props = defineProps({
-  label: {
-    type: String,
-    default: ''
-  },
-  modelValue: {
-    type: [Number, String],
-    required: true
-  },
-  options: {
-    type: Array,
-    required: true
-    // Expected format: Array of values [12, 15] OR Array of Objects [{ value: 'v', label: 'l', tooltip: 't' }]
-  },
-  displayLabels: {
-    type: Array, // Optional: separate labels if options are just values
-    default: () => []
-  },
-  tooltipPrefix: {
-    type: String,
-    default: 'Change to'
-  },
-  suffix: {
-    type: String,
-    default: ''
-  },
-  tooltipSuffix: {
-    type: String,
-    default: ''
-  },
-  minWidthClass: {
-    type: String,
-    default: 'min-w-[60px]'
-  }
+interface Option {
+  value: any;
+  label: string;
+  tooltip?: string;
+}
+
+const props = withDefaults(defineProps<{
+  label?: string;
+  modelValue: number | string;
+  options: (number | string | Option)[];
+  displayLabels?: string[];
+  tooltipPrefix?: string;
+  suffix?: string;
+  tooltipSuffix?: string;
+  minWidthClass?: string;
+}>(), {
+  label: '',
+  displayLabels: () => [],
+  tooltipPrefix: 'Change to',
+  suffix: '',
+  tooltipSuffix: '',
+  minWidthClass: 'min-w-[60px]'
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: any): void;
+}>();
 
 const isTooltipVisible = ref(false);
 const tooltipMessage = ref('');
-const previewLabel = ref(null);
+const previewLabel = ref<string | null>(null);
 
 // Helper to normalized option structure
-const normalizedOptions = computed(() => {
-  return props.options.map((opt, index) => {
+const normalizedOptions = computed((): Option[] => {
+  return props.options.map((opt: any, index: number) => {
     if (typeof opt === 'object' && opt !== null && 'value' in opt) {
-      return opt;
+      return opt as Option;
     }
     const label = props.displayLabels[index] || `${opt}${props.suffix}`;
     return { value: opt, label, tooltip: '' };

@@ -45,15 +45,15 @@
       <DataGuideMessage
         v-if="!hasExposureDateTime && !isIndividualExposureColumnVisible"
         icon="event"
-        title="의심원 노출시간을 설정해주세요"
-        description="잠복기 분석을 위해 기준이 되는 의심원 노출시간을 설정해야 합니다."
+        title="노출시간 설정 필요"
+        description="잠복기 분석의 기준이 됩니다."
         :steps="exposureGuideSteps"
       />
       <DataGuideMessage
         v-else
         icon="schedule"
-        title="증상 발현 시간 데이터가 필요합니다"
-        description="유행곡선을 생성하려면 환자들의 증상 발현 시간 정보가 필요합니다."
+        title="증상 발현 시간 필요"
+        description="유행곡선 생성을 위한 필수 정보입니다."
         :steps="symptomGuideSteps"
       />
     </div>
@@ -63,73 +63,64 @@
       <span class="ml-[0.2em]">잠복기 요약 정보</span>
     </div>
 
-    <div class="mx-5 mb-5 mt-5 p-4 bg-[#f8f9fa] rounded-lg border border-slate-100">
-      <div class="flex items-center gap-2.5 mb-2 last:mb-0">
-        <span class="text-sm text-[#666] min-w-[100px]">최소 잠복기 :</span>
+    <div class="mx-5 mb-5 mt-5 p-4 bg-[#f8f9fa] rounded-lg border border-slate-100 grid grid-cols-2 gap-x-4 gap-y-2">
+      <div class="flex items-center gap-2.5">
+        <span class="text-sm text-[#666] min-w-[80px]">최소 잠복기 :</span>
         <span class="text-sm text-[#333] font-medium">{{ minIncubation }}</span>
       </div>
-      <div class="flex items-center gap-2.5 mb-2 last:mb-0">
-        <span class="text-sm text-[#666] min-w-[100px]">최대 잠복기 :</span>
+      <div class="flex items-center gap-2.5">
+        <span class="text-sm text-[#666] min-w-[80px]">최대 잠복기 :</span>
         <span class="text-sm text-[#333] font-medium">{{ maxIncubation }}</span>
       </div>
-      <div class="flex items-center gap-2.5 mb-2 last:mb-0">
-        <span class="text-sm text-[#666] min-w-[100px]">평균 잠복기 :</span>
+      <div class="flex items-center gap-2.5">
+        <span class="text-sm text-[#666] min-w-[80px]">평균 잠복기 :</span>
         <span class="text-sm text-[#333] font-medium">{{ avgIncubation }}</span>
       </div>
-      <div class="flex items-center gap-2.5 mb-2 last:mb-0">
-        <span class="text-sm text-[#666] min-w-[100px]">중앙 잠복기 :</span>
+      <div class="flex items-center gap-2.5">
+        <span class="text-sm text-[#666] min-w-[80px]">중앙 잠복기 :</span>
         <span class="text-sm text-[#333] font-medium">{{ medianIncubation }}</span>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import DataGuideMessage from '../../../DataGuideMessage.vue';
 import { useClipboardOperations } from '../../composables/useClipboardOperations';
 
 // 안내 메시지 steps
 const exposureGuideSteps = [
-  { number: '1', text: '위의 의심원 노출시간 입력란을 클릭하세요' },
-  { number: '2', text: '모든 환자에게 공통으로 적용될 기준 노출시간을 설정하세요' },
-  { number: '3', text: '설정 후 잠복기 분석이 자동으로 시작됩니다' }
+  { number: '1', text: '상단 입력란 클릭' },
+  { number: '2', text: '기준 노출시간 설정' },
+  { number: '3', text: '설정 시 자동 분석' }
 ];
 
 const symptomGuideSteps = [
-  { number: '1', text: '데이터 입력 화면에서 증상발현시간 열에 시간을 입력하세요' },
-  { number: '2', text: '최소 2명 이상의 환자 데이터가 필요합니다' },
-  { number: '3', text: '시간 형식: YYYY-MM-DD HH:MM (예: 2024-01-15 14:30)' }
+  { number: '1', text: '증상발현시간 입력' },
+  { number: '2', text: '최소 2명 이상 데이터' },
+  { number: '3', text: '형식: YYYY-MM-DD HH:MM' }
 ];
 
-defineProps({
-  tableData: {
-    type: Array,
-    required: true
-  },
-  minIncubation: {
-    type: String,
-    default: '--:--'
-  },
-  maxIncubation: {
-    type: String,
-    default: '--:--'
-  },
-  avgIncubation: {
-    type: String,
-    default: '--:--'
-  },
-  medianIncubation: {
-    type: String,
-    default: '--:--'
-  },
-  hasExposureDateTime: {
-    type: Boolean,
-    default: false
-  },
-  isIndividualExposureColumnVisible: {
-    type: Boolean,
-    default: false
-  }
+interface TableItem {
+  intervalLabel: string;
+  count: number | string;
+}
+
+withDefaults(defineProps<{
+  tableData: TableItem[];
+  minIncubation?: string;
+  maxIncubation?: string;
+  avgIncubation?: string;
+  medianIncubation?: string;
+  hasExposureDateTime?: boolean;
+  isIndividualExposureColumnVisible?: boolean;
+}>(), {
+  minIncubation: '--:--',
+  maxIncubation: '--:--',
+  avgIncubation: '--:--',
+  medianIncubation: '--:--',
+  hasExposureDateTime: false,
+  isIndividualExposureColumnVisible: false
 });
 
 const { isIncubationTableCopied, copyIncubationTableToClipboard } = useClipboardOperations();

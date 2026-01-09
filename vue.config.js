@@ -1,4 +1,5 @@
 const { defineConfig } = require('@vue/cli-service');
+
 module.exports = defineConfig({
   transpileDependencies: true,
   
@@ -10,6 +11,24 @@ module.exports = defineConfig({
 
   // 오프라인 실행을 위한 추가 설정
   configureWebpack: {
+    entry: {
+      app: './src/main.ts'
+    },
+    resolve: {
+      extensions: ['.ts', '.tsx', '.js', '.vue', '.json']
+    },
+    module: {
+      rules: [
+        {
+          test: /\.tsx?$/,
+          loader: 'ts-loader',
+          options: {
+            appendTsSuffixTo: [/\.vue$/],
+          },
+          exclude: /node_modules/,
+        }
+      ]
+    },
     optimization: {
       splitChunks: {
         chunks: 'all',

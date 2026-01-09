@@ -11,7 +11,7 @@
 
       <div class="flex flex-col gap-8">
         <!-- 첫 번째 행: 증상 발현 테이블 + 유행곡선 차트 -->
-        <div class="flex gap-6 items-stretch flex-wrap xl:flex-nowrap">
+        <div class="flex gap-5 items-stretch flex-wrap xl:flex-nowrap">
           <div class="flex-1 min-w-[500px] bg-white rounded-2xl shadow-premium border border-slate-100 overflow-hidden flex flex-col xl:max-w-[450px]">
             <div class="p-4 border-b border-slate-100 bg-slate-50/50">
               <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -33,7 +33,7 @@
             </div>
           </div>
 
-          <div class="flex-[2] min-w-[600px] bg-white rounded-2xl shadow-premium border border-slate-100 p-6 flex flex-col gap-6">
+          <div class="flex-[2] min-w-[600px] bg-white rounded-2xl shadow-premium border border-slate-100 p-5 flex flex-col gap-5">
             <EpiCurveControls
               :selectedInterval="selectedSymptomInterval"
               :chartFontSize="epiChartFontSize"
@@ -71,7 +71,7 @@
         </div>
 
         <!-- 두 번째 행: 잠복기 테이블 + 잠복기 차트 -->
-        <div class="flex gap-6 items-stretch flex-wrap xl:flex-nowrap">
+        <div class="flex gap-5 items-stretch flex-wrap xl:flex-nowrap">
           <div class="flex-1 min-w-[500px] bg-white rounded-2xl shadow-premium border border-slate-100 overflow-hidden flex flex-col xl:max-w-[450px]">
             <div class="p-4 border-b border-slate-100 bg-slate-50/50">
               <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -80,6 +80,13 @@
               </h3>
             </div>
             <div class="p-4">
+              <div class="px-5">
+                <ExposureTimeControl
+                  :formattedExposureDateTime="formattedExposureDateTime"
+                  :isIndividualExposureColumnVisible="isIndividualExposureColumnVisible"
+                  @showExposureDateTimePicker="showExposureDateTimePicker"
+                />
+              </div>
               <IncubationTable
                 :tableData="incubationPeriodTableData"
                 :minIncubation="minIncubationPeriodFormatted"
@@ -92,7 +99,7 @@
             </div>
           </div>
 
-          <div class="flex-[2] min-w-[600px] bg-white rounded-2xl shadow-premium border border-slate-100 p-6 flex flex-col gap-6">
+          <div class="flex-[2] min-w-[600px] bg-white rounded-2xl shadow-premium border border-slate-100 p-5 flex flex-col gap-5">
             <IncubationControls
               :selectedInterval="selectedIncubationInterval"
               :chartFontSize="incubationChartFontSize"
@@ -145,11 +152,10 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onActivated, nextTick } from 'vue';
-import { useStoreBridge } from '../../store/storeBridge.js';
-import { useSettingsStore } from '../../stores/settingsStore.js';
-import { useUndoRedo } from '../../hooks/useUndoRedo.js';
+import { useSettingsStore } from '../../stores/settingsStore';
+// import { useUndoRedo } from '../../hooks/useUndoRedo'; // storeBridge dependency removed
 
 // 컴포넌트 가져오기
 import SummaryBar from './components/SummaryBar.vue';
@@ -157,6 +163,7 @@ import SuspectedFoodSelector from './components/SuspectedFoodSelector.vue';
 import SymptomOnsetTable from './components/SymptomOnsetSection/SymptomOnsetTable.vue';
 import EpiCurveControls from './components/SymptomOnsetSection/EpiCurveControls.vue';
 import EpiCurveChart from './components/SymptomOnsetSection/EpiCurveChart.vue';
+import ExposureTimeControl from './components/IncubationSection/ExposureTimeControl.vue';
 import IncubationTable from './components/IncubationSection/IncubationTable.vue';
 import IncubationControls from './components/IncubationSection/IncubationControls.vue';
 import IncubationChart from './components/IncubationSection/IncubationChart.vue';
@@ -173,8 +180,6 @@ import { generateEpiCurveChartOptions } from './composables/useEpiCurveChartOpti
 import { generateIncubationChartOptions } from './composables/useIncubationChartOptions';
 
 const settingsStore = useSettingsStore();
-const storeBridge = useStoreBridge();
-useUndoRedo(storeBridge);
 
 const {
   isIndividualExposureColumnVisible,
@@ -237,10 +242,10 @@ const {
 } = useClipboardOperations();
 
 // 차트 참조
-const epiCurveChartRef = ref(null);
-const incubationChartRef = ref(null);
-const epiCurveChartInstance = ref(null);
-const incubationChartInstance = ref(null);
+const epiCurveChartRef = ref<any>(null);
+const incubationChartRef = ref<any>(null);
+const epiCurveChartInstance = ref<any>(null);
+const incubationChartInstance = ref<any>(null);
 
 // 차트 저장 상태
 const isEpiChartSaved = ref(false);
@@ -251,9 +256,17 @@ const showIncubationChartSavedTooltip = ref(false);
 // 확진자 꺾은선 표시 여부
 const showConfirmedCaseLine = ref(true);
 
+import type { DateInfo } from '@/types/virtualGridContext';
+
+interface DateTimePickerState {
+  visible: boolean;
+  position: { top: number; left: number };
+  initialValue: DateInfo | null;
+}
+
 // DateTimePicker 상태
-const exposureDateTimePickerRef = ref(null);
-const exposureDateTimePickerState = ref({
+const exposureDateTimePickerRef = ref<any>(null);
+const exposureDateTimePickerState = ref<DateTimePickerState>({
   visible: false,
   position: { top: 0, left: 0 },
   initialValue: null
@@ -266,9 +279,9 @@ const incubationPeriodTableData = computed(() => {
 
 // 잠복기 경고 메시지 표시 여부
 const showIncubationWarningMessage = computed(() => {
-  return exposureDateTime.value && 
+  return !!(exposureDateTime.value && 
          incubationDurations.value.length === 0 && 
-         !isIndividualExposureColumnVisible.value;
+         !isIndividualExposureColumnVisible.value);
 });
 
 // 차트 옵션 생성
@@ -297,28 +310,26 @@ const incubationChartOptions = computed(() => {
 });
 
 // 이벤트 핸들러
-const onSymptomIntervalChange = (value) => {
-  storeBridge.updateSymptomInterval(value);
+const onSymptomIntervalChange = (value: number) => {
+  settingsStore.updateSymptomInterval(value);
 };
 
-const onIncubationIntervalChange = (value) => {
-  storeBridge.updateIncubationInterval(value);
+const onIncubationIntervalChange = (value: number) => {
+  settingsStore.updateIncubationInterval(value);
 };
-
-
 
 const toggleConfirmedCaseLine = () => {
   showConfirmedCaseLine.value = !showConfirmedCaseLine.value;
 };
 
 // 차트 인스턴스 핸들러
-const onEpiChartInstance = (instance) => {
+const onEpiChartInstance = (instance: any) => {
   epiCurveChartInstance.value = instance;
-  window.epidemicCurveChartInstance = instance;
-  window.currentEpidemicChartInstance = instance;
+  (window as any).epidemicCurveChartInstance = instance;
+  (window as any).currentEpidemicChartInstance = instance;
 };
 
-const onIncubationChartInstance = (instance) => {
+const onIncubationChartInstance = (instance: any) => {
   incubationChartInstance.value = instance;
 };
 
@@ -367,70 +378,69 @@ const saveIncubationChartForReport = () => {
   setTimeout(() => (showIncubationChartSavedTooltip.value = false), 1500);
 };
 
-const handleCopyEpiChart = (instance) => {
+const handleCopyEpiChart = (instance: any) => {
   copyEpiChartToClipboard(instance, epiChartWidth.value);
 };
 
-const handleCopyIncubationChart = (instance) => {
+const handleCopyIncubationChart = (instance: any) => {
   copyIncubationChartToClipboard(instance, incubationChartWidth.value);
 };
 
-const handleExportEpiChart = (instance) => {
+const handleExportEpiChart = (instance: any) => {
   exportEpiChart(instance, epiChartWidth.value, selectedSymptomInterval.value);
 };
 
-const handleExportIncubationChart = (instance) => {
+const handleExportIncubationChart = (instance: any) => {
   exportIncubationChart(instance, incubationChartWidth.value, selectedIncubationInterval.value);
 };
 
-// 헬퍼: 날짜 문자열 -> 객체
-const parseDateString = (dateStr) => {
-  if (!dateStr) return null;
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) {
-    const now = new Date();
-    return {
-      year: now.getFullYear(),
-      month: now.getMonth() + 1,
-      day: now.getDate(),
-      hour: String(now.getHours()).padStart(2, '0'),
-      minute: String(now.getMinutes()).padStart(2, '0')
-    };
-  }
-  return {
-    year: date.getFullYear(),
-    month: date.getMonth() + 1,
-    day: date.getDate(),
-    hour: String(date.getHours()).padStart(2, '0'),
-    minute: String(date.getMinutes()).padStart(2, '0')
-  };
-};
+import { parseDateTime } from '../DataInputVirtualScroll/utils/dateTimeUtils';
+
+// ... (existing imports)
+
+// ... (existing code)
 
 // 헬퍼: 객체 -> 날짜 문자열
-const formatDateObject = (dateObj) => {
+const formatDateObject = (dateObj: any) => {
   if (!dateObj) return '';
   const { year, month, day, hour, minute } = dateObj;
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${hour}:${minute}`;
 };
 
 // DateTimePicker 핸들러
-const showExposureDateTimePicker = (event) => {
+const showExposureDateTimePicker = (event: Event) => {
   if (!event || !event.target) return;
-  const rect = event.target.getBoundingClientRect();
+  const rect = (event.target as HTMLElement).getBoundingClientRect();
+  
+  // Use robust parsing
+  let initialValue = parseDateTime(exposureDateTime.value);
+  
+  // Fallback to now if parsing failed
+  if (!initialValue) {
+      const now = new Date();
+      initialValue = {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        day: now.getDate(),
+        hour: String(now.getHours()).padStart(2, '0'),
+        minute: String(now.getMinutes()).padStart(2, '0')
+      };
+  }
+
   exposureDateTimePickerState.value = {
     visible: true,
     position: { 
       top: rect.bottom + window.scrollY + 5, 
       left: rect.left + window.scrollX 
     },
-    initialValue: parseDateString(exposureDateTime.value)
+    initialValue: initialValue
   };
 };
 
-const onExposureDateTimeConfirm = (dateTimeObject) => {
+const onExposureDateTimeConfirm = (dateTimeObject: any) => {
   try {
     const formattedDateTime = formatDateObject(dateTimeObject);
-    storeBridge.updateExposureDateTime(formattedDateTime);
+    settingsStore.updateExposureDateTime(formattedDateTime);
     console.log('노출시간 설정 완료:', formattedDateTime);
   } catch (error) {
     console.error('노출시간 설정 오류:', error);

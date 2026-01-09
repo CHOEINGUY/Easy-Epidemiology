@@ -17,7 +17,7 @@
         >
           <div class="step-indicator">
             <span class="step-badge">{{ step.number }}</span>
-            <div v-if="index < steps.length - 1" class="step-line"></div>
+            <div v-if="Number(index) < steps.length - 1" class="step-line"></div>
           </div>
           <div class="step-content">
             <div class="step-text">{{ step.text }}</div>
@@ -28,24 +28,20 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  icon: {
-    type: String,
-    default: 'info'
-  },
-  title: {
-    type: String,
-    required: true
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  steps: {
-    type: Array,
-    default: () => []
-  }
+<script setup lang="ts">
+interface GuideStep {
+  number: string | number;
+  text: string;
+}
+
+withDefaults(defineProps<{
+  icon?: string;
+  title: string;
+  description: string;
+  steps?: GuideStep[];
+}>(), {
+  icon: 'info',
+  steps: () => []
 });
 </script>
 

@@ -119,22 +119,20 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, defineProps } from 'vue';
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import { ReportData } from '../../../types/report';
 
-const props = defineProps({
-  reportData: {
-    type: Object,
-    required: true
-  }
-});
+const props = defineProps<{
+  reportData: ReportData
+}>();
 
 // Tooltip state
 const showFoodAnalysisTooltip = ref(false);
 const showDesignNoticeTooltip = ref(false);
 
-const foodAnalysisTooltipRef = ref(null);
-const designNoticeTooltipRef = ref(null);
+const foodAnalysisTooltipRef = ref<HTMLElement | null>(null);
+const designNoticeTooltipRef = ref<HTMLElement | null>(null);
 
 // Tooltip Positioning
 const foodAnalysisTooltipStyle = computed(() => {
@@ -142,7 +140,7 @@ const foodAnalysisTooltipStyle = computed(() => {
   const badgeRect = foodAnalysisTooltipRef.value.parentElement?.getBoundingClientRect();
   if (!badgeRect) return {};
   return {
-    position: 'fixed',
+    position: 'fixed' as const,
     bottom: `${window.innerHeight - badgeRect.top + 8}px`,
     left: `${badgeRect.left + badgeRect.width / 2}px`,
     transform: 'translateX(-50%)',
@@ -155,7 +153,7 @@ const designNoticeTooltipStyle = computed(() => {
   const elRect = designNoticeTooltipRef.value.parentElement?.getBoundingClientRect();
   if (!elRect) return {};
   return {
-    position: 'fixed',
+    position: 'fixed' as const,
     bottom: `${window.innerHeight - elRect.top + 8}px`,
     left: `${elRect.left + elRect.width / 2}px`,
     transform: 'translateX(-50%)',

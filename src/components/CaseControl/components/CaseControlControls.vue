@@ -37,21 +37,17 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue';
 
-const props = defineProps({
-  rowsCount: {
-    type: Number,
-    default: 0
-  },
-  fontSize: {
-    type: Number,
-    default: 14
-  }
-});
+const props = defineProps<{
+  rowsCount: number;
+  fontSize: number;
+}>();
 
-const emit = defineEmits(['update:fontSize']);
+const emit = defineEmits<{
+  (e: 'update:fontSize', value: number): void;
+}>();
 
 const fontSizes = [12, 14, 16];
 const fontSizeLabels = ['작게', '보통', '크게'];
@@ -62,10 +58,10 @@ const fontSizeButtonText = computed(() => {
 });
 
 // 툴팁 상태 관리
-const activeTooltip = ref(null);
+const activeTooltip = ref<string | null>(null);
 const tooltipText = ref('');
 
-const showTooltip = (key, text) => {
+const showTooltip = (key: string, text: string) => {
   activeTooltip.value = key;
   tooltipText.value = text;
 };
@@ -86,7 +82,7 @@ const handleFontSizeMouseLeave = () => {
   hideTooltip();
 };
 
-const getNextValue = (currentValue, valueArray) => {
+const getNextValue = (currentValue: number, valueArray: number[]) => {
   const currentIndex = valueArray.indexOf(currentValue);
   const nextIndex = (currentIndex + 1) % valueArray.length;
   return valueArray[nextIndex];

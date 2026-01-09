@@ -47,34 +47,38 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 
-// eslint-disable-next-line no-undef
-const props = defineProps({
-  year: {
-    type: Number,
-    default: null
-  },
-  month: {
-    type: Number,
-    default: null
-  },
-  day: {
-    type: Number,
-    default: null
-  }
+interface Props {
+  year?: number | null;
+  month?: number | null;
+  day?: number | null;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  year: null,
+  month: null,
+  day: null
 });
 
-// eslint-disable-next-line no-undef
-const emit = defineEmits(['update:year', 'update:month', 'update:day', 'select']);
+const emit = defineEmits<{
+  (e: 'update:year', value: number): void;
+  (e: 'update:month', value: number): void;
+  (e: 'update:day', value: number): void;
+  (e: 'select', date: any): void;
+}>();
 
 // 캘린더 표시용 현재 년/월
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 
 // 키보드 포커스된 날짜 (내부 상태)
-const focusedDate = reactive({
+const focusedDate = reactive<{
+  year: number | null;
+  month: number | null;
+  day: number | null;
+}>({
   year: null,
   month: null,
   day: null
@@ -86,16 +90,27 @@ const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 // 연도 범위 (현재 연도 기준 과거 5년)
 const availableYears = computed(() => {
   const cYear = new Date().getFullYear();
-  const years = [];
+  const years: number[] = [];
   for (let y = cYear - 5; y <= cYear; y++) {
     years.push(y);
   }
   return years;
 });
 
+interface CalendarDate {
+  key: string;
+  day: number;
+  year: number;
+  month: number;
+  disabled: boolean;
+  isPrevMonth?: boolean;
+  isCurrentMonth?: boolean;
+  isNextMonth?: boolean;
+}
+
 // 캘린더 날짜 생성
 const calendarDates = computed(() => {
-  const dates = [];
+  const dates: CalendarDate[] = [];
   const year = currentYear.value;
   const month = currentMonth.value;
   
@@ -154,26 +169,27 @@ const calendarDates = computed(() => {
 });
 
 // 날짜 클래스 계산
-const getDateClass = (date) => {
-  const baseClasses = 'bg-transparent border-none py-2.5 px-1 cursor-pointer rounded-lg text-sm transition-all min-h-[36px] flex items-center justify-center';
-  const classes = [baseClasses];
+const getDateClass = (date: CalendarDate) => {
+  // bg-transparent 제거 (조건부 적용을 위해)
+  const baseClasses = 'border-none py-2.5 px-1 cursor-pointer rounded-lg text-sm transition-all min-h-[36px] flex items-center justify-center';
+  const classes: string[] = [baseClasses];
   
   if (date.disabled) {
-    classes.push('text-gray-300 cursor-not-allowed');
-  } else {
-    // Standard hover for enabled dates (excluding selected)
-    // Note: 'hover:bg-gray-100' is applied conditionally below to avoid overriding selection style
-  }
-  
-  if (date.isCurrentMonth && !date.disabled) {
-    classes.push('text-gray-800');
+    classes.push('text-gray-300 cursor-not-allowed bg-transparent');
   }
   
   if (isSelected(date)) {
-    classes.push('bg-blue-600 text-white font-semibold');
-  } else if (!date.disabled) {
-    // Only apply hover if not selected
-    classes.push('hover:bg-gray-100');
+    // 선택된 경우: 파란 배경 + 흰색 텍스트 (bg-blue-600 강제 적용)
+    classes.push('bg-blue-600 text-white font-semibold shadow-sm');
+  } else {
+    // 선택되지 않은 경우: 배경 투명
+    if (!date.disabled) {
+      classes.push('bg-transparent hover:bg-gray-100');
+    }
+    
+    if (date.isCurrentMonth && !date.disabled) {
+      classes.push('text-gray-800');
+    }
   }
   
   // 키보드 포커스된 날짜 표시
@@ -198,13 +214,13 @@ const getDateClass = (date) => {
   return classes.join(' ');
 };
 
-const isSelected = (date) => {
+const isSelected = (date: CalendarDate) => {
   return props.year === date.year && 
          props.month === date.month && 
          props.day === date.day;
 };
 
-const isFocused = (date) => {
+const isFocused = (date: CalendarDate) => {
   return focusedDate.year === date.year && 
          focusedDate.month === date.month && 
          focusedDate.day === date.day;
@@ -230,7 +246,7 @@ const nextMonth = () => {
 };
 
 // 날짜 선택
-const selectDate = (date) => {
+const selectDate = (date: any) => {
   if (date.disabled) return;
   
   emit('update:year', date.year);
@@ -252,7 +268,7 @@ const selectDate = (date) => {
 
 // --- 키보드 네비게이션 ---
 
-const handleKeyDown = (event) => {
+const handleKeyDown = (event: KeyboardEvent) => {
   switch(event.key) {
   case 'ArrowLeft':
     event.preventDefault();
@@ -301,8 +317,8 @@ const handleKeyDown = (event) => {
   }
 };
 
-const navigateDate = (direction) => {
-  if (!focusedDate.year || !focusedDate.month || !focusedDate.day) {
+const navigateDate = (direction: 'left' | 'right' | 'up' | 'down') => {
+  if (focusedDate.year === null || focusedDate.month === null || focusedDate.day === null) {
     // 초기화
     if (props.year && props.month && props.day) {
       focusedDate.year = props.year;
@@ -316,7 +332,7 @@ const navigateDate = (direction) => {
     }
   }
   
-  const currentDate = new Date(focusedDate.year, focusedDate.month - 1, focusedDate.day);
+  const currentDate = new Date(focusedDate.year!, (focusedDate.month || 1) - 1, (focusedDate.day || 1));
   
   switch (direction) {
   case 'left':
@@ -339,12 +355,12 @@ const navigateDate = (direction) => {
   
   // 뷰 동기화
   if (focusedDate.month !== currentMonth.value || focusedDate.year !== currentYear.value) {
-    currentYear.value = focusedDate.year;
-    currentMonth.value = focusedDate.month;
+    currentYear.value = focusedDate.year!;
+    currentMonth.value = focusedDate.month!;
   }
 };
 
-const navigateYear = (delta) => {
+const navigateYear = (delta: number) => {
   currentYear.value += delta;
 };
 
@@ -374,6 +390,7 @@ const selectFocusedDate = () => {
 
 // 외부 Watchers
 watch(() => [props.year, props.month, props.day], ([newY, newM, newD]) => {
+  console.log('[CalendarPicker Debug] Props update:', { newY, newM, newD }, 'dayType:', typeof newD);
   if (newY && newM && newD) {
     focusedDate.year = newY;
     focusedDate.month = newM;
@@ -393,7 +410,6 @@ watch(() => [props.year, props.month, props.day], ([newY, newM, newD]) => {
   }
 }, { immediate: true });
 
-// eslint-disable-next-line no-undef
 defineExpose({
   handleKeyDown,
   prevMonth,

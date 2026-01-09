@@ -4,11 +4,11 @@
     <div class="relative group">
       <select 
         :value="modelValue" 
-        @input="$emit('update:modelValue', $event.target.value)" 
+        @change="onSelectChange"
         class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 pr-10 hover:border-slate-300"
       >
         <option value="">전체</option>
-        <option v-for="option in normalizedOptions" :key="option.value" :value="option.value">
+        <option v-for="(option, idx) in normalizedOptions" :key="idx" :value="option.value">
           {{ option.label }}
         </option>
       </select>
@@ -17,27 +17,36 @@
   </div>
 </template>
 
-<script setup>
-import { computed, defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
+import { computed } from 'vue';
 
-const props = defineProps({
-  modelValue: { type: [String, Number], default: '' },
-  label: { type: String, default: '' },
-  options: { 
-    type: Array, 
-    default: () => []
-    // Can be array of strings or objects { label, value }
-  }
-});
+interface OptionItem {
+  label: string;
+  value: string | number;
+}
 
-defineEmits(['update:modelValue']);
+const props = defineProps<{
+  modelValue?: string | number;
+  label?: string;
+  options?: (string | OptionItem)[];
+}>();
 
-const normalizedOptions = computed(() => {
-  return props.options.map(opt => {
+const emit = defineEmits<{
+  'update:modelValue': [value: string];
+}>();
+
+const normalizedOptions = computed<OptionItem[]>(() => {
+  if (!props.options) return [];
+  return props.options.map((opt: string | OptionItem) => {
     if (typeof opt === 'object' && opt !== null && 'value' in opt) {
-      return opt;
+      return opt as OptionItem;
     }
-    return { label: opt, value: opt };
+    return { label: String(opt), value: String(opt) };
   });
 });
+
+function onSelectChange(event: Event) {
+  const target = event.target as HTMLSelectElement;
+  emit('update:modelValue', target.value);
+}
 </script>

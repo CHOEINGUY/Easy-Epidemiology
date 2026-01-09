@@ -16,18 +16,15 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // VariableSelector.vue - 변수 선택 버튼 컴포넌트
-defineProps({
-  headers: {
-    type: Array,
-    required: true
-  },
-  selectedIndex: {
-    type: Number,
-    default: null
-  }
-});
 
-defineEmits(['select']);
+defineProps<{
+  headers: string[];
+  selectedIndex?: number | null;
+}>();
+
+defineEmits<{
+  (e: 'select', index: number): void;
+}>();
 </script>

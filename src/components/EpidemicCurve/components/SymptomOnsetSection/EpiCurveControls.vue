@@ -17,11 +17,8 @@
     
     :displayMode="displayMode"
     @update:displayMode="$emit('update:displayMode', $event)"
-    
-    :displayModeOptions="[
-      { value: 'time', label: '시 단위', tooltip: '간단한 시 단위 표시' },
-      { value: 'datetime', label: '날짜+시간', tooltip: '정확한 날짜와 시간 표시' }
-    ]"
+
+    :displayModeOptions="displayModeOptions"
     
     :fontSizes="fontSizes"
     :fontSizeLabels="fontSizeLabels"
@@ -54,35 +51,45 @@
   </EpidemicChartControls>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import EpidemicChartControls from '../EpidemicChartControls.vue';
 import { useTooltip } from '../../composables/useTooltip';
 
-defineProps({
-  selectedInterval: { type: Number, required: true },
-  chartFontSize: { type: Number, required: true },
-  chartWidth: { type: Number, required: true },
-  barColor: { type: String, required: true },
-  displayMode: { type: String, required: true },
-  
-  fontSizes: { type: Array, default: () => [] },
-  fontSizeLabels: { type: Array, default: () => [] },
-  chartWidths: { type: Array, default: () => [] },
-  barColors: { type: Array, default: () => [] },
-  
-  showConfirmedCaseToggle: { type: Boolean, default: false },
-  showConfirmedCaseLine: { type: Boolean, default: true }
+withDefaults(defineProps<{
+  selectedInterval: number;
+  chartFontSize: number;
+  chartWidth: number;
+  barColor: string;
+  displayMode: string;
+  fontSizes?: number[];
+  fontSizeLabels?: string[];
+  chartWidths?: number[];
+  barColors?: string[];
+  showConfirmedCaseToggle?: boolean;
+  showConfirmedCaseLine?: boolean;
+}>(), {
+  fontSizes: () => [],
+  fontSizeLabels: () => [],
+  chartWidths: () => [],
+  barColors: () => [],
+  showConfirmedCaseToggle: false,
+  showConfirmedCaseLine: true
 });
 
-defineEmits([
-  'update:selectedInterval',
-  'update:chartFontSize',
-  'update:chartWidth',
-  'update:barColor',
-  'update:displayMode',
-  'toggleConfirmedCaseLine',
-  'resetSettings'
-]);
+defineEmits<{
+  (e: 'update:selectedInterval', value: number): void;
+  (e: 'update:chartFontSize', value: number): void;
+  (e: 'update:chartWidth', value: number): void;
+  (e: 'update:barColor', value: string): void;
+  (e: 'update:displayMode', value: string): void;
+  (e: 'toggleConfirmedCaseLine'): void;
+  (e: 'resetSettings'): void;
+}>();
 
 const { activeTooltip, tooltipText, showTooltip, hideTooltip } = useTooltip();
+
+const displayModeOptions = [
+  { value: 'time', label: '시 단위', tooltip: '간단한 시 단위 표시' },
+  { value: 'datetime', label: '날짜+시간', tooltip: '정확한 날짜와 시간 표시' }
+];
 </script>

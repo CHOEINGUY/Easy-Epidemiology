@@ -31,17 +31,23 @@
   </div>
 </template>
 
-<script setup>
-import { ref, defineEmits, defineProps } from 'vue';
+<script setup lang="ts">
+import { ref } from 'vue';
 
-const props = defineProps({
-  isFiltered: {
-    type: Boolean,
-    default: false
-  }
+interface Props {
+  isFiltered?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isFiltered: false
 });
 
-const emit = defineEmits(['add-rows', 'delete-empty-rows', 'clear-selection']);
+const emit = defineEmits<{
+  (e: 'add-rows', count: number): void;
+  (e: 'delete-empty-rows'): void;
+  (e: 'clear-selection'): void;
+}>();
+
 const rowsToAdd = ref(10);
 
 function emitAdd() {

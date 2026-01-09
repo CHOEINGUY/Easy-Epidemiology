@@ -61,12 +61,11 @@
   </footer>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
-
-defineProps({
-  contactInfo: { type: Object, required: true }
-});
+<script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+defineProps<{
+  contactInfo: any;
+}>();
 </script>
 
 <style scoped>

@@ -7,6 +7,6 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // SummaryBar.vue - 상단 요약 바 컴포넌트
 </script>

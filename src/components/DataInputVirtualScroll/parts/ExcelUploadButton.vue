@@ -29,26 +29,36 @@
   </div>
 </template>
 
-<script setup>
-import { ref, defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
+import { ref } from 'vue';
 
-const props = defineProps({
-  isUploading: { type: Boolean, default: false },
-  uploadProgress: { type: Number, default: 0 } // 0-100
+const props = withDefaults(defineProps<{
+  isUploading?: boolean;
+  uploadProgress?: number;
+}>(), {
+  isUploading: false,
+  uploadProgress: 0
 });
-const emit = defineEmits(['file-selected']);
-const fileInput = ref(null);
+
+const emit = defineEmits<{
+  (e: 'file-selected', file: File): void;
+}>();
+
+const fileInput = ref<HTMLInputElement | null>(null);
+
 function triggerFileSelect() {
-  if (!props.isUploading) {
+  if (!props.isUploading && fileInput.value) {
     fileInput.value.click();
   }
 }
-function handleFileSelect(event) {
-  const file = event.target.files[0];
+
+function handleFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
   if (file) {
     emit('file-selected', file);
   }
-  event.target.value = '';
+  target.value = '';
 }
 </script>
 

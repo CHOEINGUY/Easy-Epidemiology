@@ -7,11 +7,8 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  title: {
-    type: String,
-    default: '유행곡선 및 잠복기 분석'
-  }
-});
+<script setup lang="ts">
+defineProps<{
+  title?: string;
+}>();
 </script>

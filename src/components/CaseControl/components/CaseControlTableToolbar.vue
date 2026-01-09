@@ -48,30 +48,24 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useTableExport } from '../../../composables/useTableExport';
+// @ts-ignore
 import { generateCaseControlTsv, generateCaseControlHtml } from '../../../utils/tableHtmlGenerators';
+import { CaseControlResult } from '@/types/analysis';
 
-const props = defineProps({
-  filteredAnalysisResults: {
-    type: Array,
-    required: true
-  },
-  currentOrThreshold: {
-    type: Number,
-    required: true
-  },
-  isOrFilterActive: {
-    type: Boolean,
-    required: true
-  },
-  useYatesCorrection: {
-    type: Boolean,
-    required: true
-  }
-});
+const props = defineProps<{
+  filteredAnalysisResults: CaseControlResult[];
+  currentOrThreshold: number;
+  isOrFilterActive: boolean;
+  useYatesCorrection: boolean;
+}>();
 
-defineEmits(['toggleOrFilter', 'cycleOrThreshold', 'toggleYatesCorrection']);
+defineEmits<{
+  (e: 'toggleOrFilter'): void;
+  (e: 'cycleOrThreshold'): void;
+  (e: 'toggleYatesCorrection'): void;
+}>();
 
 const { isCopied: isTableCopied, copyToClipboard } = useTableExport();
 

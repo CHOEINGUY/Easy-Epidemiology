@@ -23,8 +23,8 @@
  
       <!-- 조직 정보 -->
       <SettingsOrganization 
-        :config="localConfig.org" 
-        @update:config="localConfig.org = $event"
+        :config="localConfig.organization" 
+        @update:config="localConfig.organization = $event"
       />
  
       <!-- 기능 및 시스템 특징 -->
@@ -58,8 +58,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
+import { ref, watch } from 'vue';
 import SettingsBasic from './settings/SettingsBasic.vue';
 import SettingsOrganization from './settings/SettingsOrganization.vue';
 import SettingsFeatures from './settings/SettingsFeatures.vue';

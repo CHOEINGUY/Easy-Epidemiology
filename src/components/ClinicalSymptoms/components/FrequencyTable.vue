@@ -51,17 +51,15 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  data: {
-    type: Array,
-    default: () => []
-  },
-  isTableCopied: {
-    type: Boolean,
-    default: false
-  }
-});
+<script setup lang="ts">
+import type { SymptomStat } from '../composables/useSymptomStats';
 
-defineEmits(['copy']);
+defineProps<{
+  data?: SymptomStat[];
+  isTableCopied?: boolean;
+}>();
+
+defineEmits<{
+  (e: 'copy'): void;
+}>();
 </script>

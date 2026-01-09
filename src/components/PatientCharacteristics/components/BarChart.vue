@@ -17,72 +17,57 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // BarChart.vue - 차트 표시 컴포넌트
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import * as echarts from 'echarts';
 import { debounce } from 'lodash-es';
 import { useClipboardOperations } from '../composables/useClipboardOperations';
-import { generateTotalChartOptions, generatePatientChartOptions } from '../composables/useChartOptions';
+import { generateTotalChartOptions, generatePatientChartOptions, type ChartOptions } from '../composables/useChartOptions';
 import SharedIconButton from './SharedIconButton.vue';
+import type { FrequencyData } from '../composables/usePatientStats';
 
-const props = defineProps({
-  chartWidth: {
-    type: Number,
-    default: 700
-  },
-  selectedVariableIndex: {
-    type: Number,
-    default: null
-  },
-  selectedChartType: {
-    type: String,
-    default: 'total'
-  },
-  selectedDataType: {
-    type: String,
-    default: 'count'
-  },
-  frequencyData: {
-    type: Array,
-    default: () => []
-  },
-  headers: {
-    type: Object,
-    default: () => ({ basic: [] })
-  },
-  chartFontSize: {
-    type: Number,
-    default: 18
-  },
-  barWidthPercent: {
-    type: Number,
-    default: 50
-  },
-  selectedBarColor: {
-    type: String,
-    default: '#5470c6'
-  },
-  currentHighlight: {
-    type: String,
-    default: 'none'
-  },
-  labelMappings: {
-    type: Object,
-    default: () => ({})
-  }
+const props = withDefaults(defineProps<{
+  chartWidth?: number;
+  selectedVariableIndex?: number | null;
+  selectedChartType?: 'total' | 'patient';
+  selectedDataType?: 'count' | 'percentage';
+  frequencyData?: FrequencyData[];
+  headers?: { basic: string[] };
+  chartFontSize?: number;
+  barWidthPercent?: number;
+  selectedBarColor?: string;
+  currentHighlight?: 'none' | 'max' | 'min' | 'both';
+  labelMappings?: Record<string, string>;
+}>(), {
+  chartWidth: 700,
+  selectedVariableIndex: null,
+  selectedChartType: 'total',
+  selectedDataType: 'count',
+  frequencyData: () => [],
+  headers: () => ({ basic: [] }),
+  chartFontSize: 18,
+  barWidthPercent: 50,
+  selectedBarColor: '#5470c6',
+  currentHighlight: 'none',
+  labelMappings: () => ({})
 });
 
-const emit = defineEmits(['chartUpdated']);
+const emit = defineEmits<{
+  (e: 'copyChart', instance: any): void;
+  (e: 'exportChart', instance: any): void;
+  (e: 'chartInstance', instance: any): void;
+  (e: 'chartUpdated'): void;
+}>();
 
-const chartContainer = ref(null);
-const chartInstance = ref(null);
+const chartContainer = ref<HTMLElement | null>(null);
+const chartInstance = ref<any | null>(null);
 
 const { isChartCopied, copyChartToClipboard, exportChart } = useClipboardOperations();
 
 // 라벨 매핑 헬퍼 함수
-const getMappedLabel = (originalCat) => {
-  if (Object.prototype.hasOwnProperty.call(props.labelMappings, originalCat)) {
+const getMappedLabel = (originalCat: string): string => {
+  if (props.labelMappings && Object.prototype.hasOwnProperty.call(props.labelMappings, originalCat)) {
     const mapped = props.labelMappings[originalCat];
     if (mapped && String(mapped).trim()) {
       return String(mapped).trim();
@@ -93,7 +78,7 @@ const getMappedLabel = (originalCat) => {
 
 // 차트 업데이트
 const updateCharts = () => {
-  if (!chartInstance.value || props.selectedVariableIndex === null) return;
+  if (!chartInstance.value || props.selectedVariableIndex === null || props.selectedVariableIndex === undefined) return;
   if (!props.headers?.basic || !props.frequencyData || props.frequencyData.length <= props.selectedVariableIndex) {
     console.warn('차트 업데이트 건너뛰기: 데이터 준비 안됨'); 
     return;
@@ -107,7 +92,7 @@ const updateCharts = () => {
     return;
   }
   
-  const chartOptions = {
+  const chartOptions: ChartOptions = {
     chartFontSize: props.chartFontSize,
     barWidthPercent: props.barWidthPercent,
     selectedBarColor: props.selectedBarColor,
@@ -173,16 +158,16 @@ const triggerChartUpdate = debounce(() => {
 // 리사이즈 핸들러
 const handleResize = debounce(() => {
   if (chartInstance.value && 
-      typeof chartInstance.value.resize === 'function' && 
+      typeof (chartInstance.value as any).resize === 'function' && 
       props.selectedVariableIndex !== null) {
     try { 
       console.log('Resizing chart due to window resize...'); 
-      chartInstance.value.resize({
+      (chartInstance.value as any).resize({
         animation: {
           duration: 200,
           easing: 'cubicOut'
         }
-      });
+      } as any);
     }
     catch (error) { 
       console.error('ECharts resize 오류 (window):', error); 
@@ -192,14 +177,14 @@ const handleResize = debounce(() => {
 
 // 클립보드 작업 핸들러
 const handleCopyChart = () => {
-  if (chartInstance.value) {
+  if (chartInstance.value && props.chartWidth) {
     copyChartToClipboard(chartInstance.value, props.chartWidth);
   }
 };
 
 const handleExportChart = () => {
-  if (chartInstance.value) {
-    const header = props.headers?.basic?.[props.selectedVariableIndex] || '(없음)';
+  if (chartInstance.value && props.chartWidth) {
+    const header = props.headers?.basic?.[props.selectedVariableIndex || 0] || '(없음)';
     exportChart(chartInstance.value, props.chartWidth, header, props.selectedChartType);
   }
 };
@@ -226,11 +211,11 @@ onUnmounted(() => {
     }
   }
   
-  if (triggerChartUpdate && typeof triggerChartUpdate.cancel === 'function') {
-    triggerChartUpdate.cancel();
+  if (triggerChartUpdate && typeof (triggerChartUpdate as any).cancel === 'function') {
+    (triggerChartUpdate as any).cancel();
   }
-  if (handleResize && typeof handleResize.cancel === 'function') {
-    handleResize.cancel();
+  if (handleResize && typeof (handleResize as any).cancel === 'function') {
+    (handleResize as any).cancel();
   }
   
   chartContainer.value = null;

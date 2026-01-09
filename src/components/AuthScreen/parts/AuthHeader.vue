@@ -6,14 +6,13 @@
   </div>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
+<script setup lang="ts">
+interface Props {
+  title?: string;
+}
 
-defineProps({
-  title: {
-    type: String,
-    default: '로그인'
-  }
+withDefaults(defineProps<Props>(), {
+  title: '로그인'
 });
 </script>
 

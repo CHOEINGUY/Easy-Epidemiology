@@ -37,23 +37,20 @@
   </div>
 </template>
 
-<script setup>
-import { ref, defineExpose } from 'vue';
+<script setup lang="ts">
+import { ref } from 'vue';
 
-defineProps({
-  chartWidth: {
-    type: Number,
-    default: 700
-  },
-  isChartCopied: {
-    type: Boolean,
-    default: false
-  }
-});
+defineProps<{
+  chartWidth?: number;
+  isChartCopied?: boolean;
+}>();
 
-defineEmits(['copy', 'export']);
+defineEmits<{
+  (e: 'copy'): void;
+  (e: 'export'): void;
+}>();
 
-const chartContainerRef = ref(null);
+const chartContainerRef = ref<HTMLElement | null>(null);
 
 // 부모 컴포넌트에서 차트 컨테이너에 접근할 수 있도록 expose
 defineExpose({

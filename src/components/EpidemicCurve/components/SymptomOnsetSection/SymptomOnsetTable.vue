@@ -44,8 +44,8 @@
     <div v-else class="p-5 text-center text-[#666]">
       <DataGuideMessage
         icon="schedule"
-        title="증상 발현 시간 데이터가 필요합니다"
-        description="유행곡선을 생성하려면 환자들의 증상 발현 시간 정보가 필요합니다."
+        title="증상 발현 시간 필요"
+        description="유행곡선 생성을 위한 필수 정보입니다."
         :steps="guideSteps"
       />
     </div>
@@ -68,30 +68,29 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import DataGuideMessage from '../../../DataGuideMessage.vue';
 import { useClipboardOperations } from '../../composables/useClipboardOperations';
 
 // 안내 메시지 steps
 const guideSteps = [
-  { number: '1', text: '데이터 입력 화면에서 증상발현시간 열에 시간을 입력하세요' },
-  { number: '2', text: '최소 2명 이상의 환자 데이터가 필요합니다' },
-  { number: '3', text: '시간 형식: YYYY-MM-DD HH:MM (예: 2024-01-15 14:30)' }
+  { number: '1', text: '증상발현시간 입력' },
+  { number: '2', text: '최소 2명 이상 데이터' },
+  { number: '3', text: '형식: YYYY-MM-DD HH:MM' }
 ];
 
-defineProps({
-  tableData: {
-    type: Array,
-    required: true
-  },
-  firstOnsetTime: {
-    type: String,
-    default: 'N/A'
-  },
-  lastOnsetTime: {
-    type: String,
-    default: 'N/A'
-  }
+interface TableItem {
+  intervalLabel: string;
+  count: number | string;
+}
+
+withDefaults(defineProps<{
+  tableData: TableItem[];
+  firstOnsetTime?: string;
+  lastOnsetTime?: string;
+}>(), {
+  firstOnsetTime: 'N/A',
+  lastOnsetTime: 'N/A'
 });
 
 const { isSymptomTableCopied, copySymptomTableToClipboard } = useClipboardOperations();

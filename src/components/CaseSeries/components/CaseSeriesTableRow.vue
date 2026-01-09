@@ -8,13 +8,12 @@
   </tr>
 </template>
 
-<script setup>
-defineProps({
-  result: {
-    type: Object,
-    required: true
-  }
-});
+<script setup lang="ts">
+import { CaseSeriesResult } from '@/types/analysis';
+
+defineProps<{
+  result: CaseSeriesResult;
+}>();
 </script>
 
 <style scoped>

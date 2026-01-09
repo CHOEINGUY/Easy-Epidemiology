@@ -131,8 +131,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch, onMounted, nextTick, defineProps, defineEmits, defineExpose } from 'vue';
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import StepIndicator from './StepIndicator.vue';
 import { 
   isValidEmail, 
@@ -141,17 +141,25 @@ import {
   formatPhoneNumber
 } from '../../logic/inputHandlers';
 
-const props = defineProps({
-  isLoading: { type: Boolean, default: false },
-  initialData: { type: Object, default: () => ({}) }
+interface Props {
+  isLoading?: boolean;
+  initialData?: any;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
+  initialData: () => ({})
 });
 
-const emit = defineEmits(['next', 'update:data']);
+const emit = defineEmits<{
+  (e: 'next', data: any): void;
+  (e: 'update:data', value: any): void;
+}>();
 
 // Refs
-const nameInputRef = ref(null);
-const emailInputRef = ref(null);
-const phoneInputRef = ref(null);
+const nameInputRef = ref<HTMLInputElement | null>(null);
+const emailInputRef = ref<HTMLInputElement | null>(null);
+const phoneInputRef = ref<HTMLInputElement | null>(null);
 
 // State
 const formData = ref({
@@ -178,7 +186,7 @@ onMounted(() => {
 });
 
 // Methods
-function validateField(field) {
+function validateField(field: 'name' | 'email' | 'phone') {
   if (field === 'name') {
     if (!formData.value.name) errors.value.name = '이름을 입력해주세요.';
     else if (formData.value.name.length < 2) errors.value.name = '이름은 2자 이상 입력해주세요.';
@@ -194,8 +202,9 @@ function validateField(field) {
   }
 }
 
-function handleEmailInput(e) {
-  const input = e.target.value;
+function handleEmailInput(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const input = target.value;
   const atIndex = input.lastIndexOf('@');
   
   if (atIndex === -1) {
@@ -227,7 +236,7 @@ function handleEmailInput(e) {
   });
 }
 
-function handleEmailKeydown(e) {
+function handleEmailKeydown(e: KeyboardEvent) {
   if (e.key === 'Backspace' && suggestion.value) {
     e.preventDefault();
     userInput.value = userInput.value.slice(0, -1);
@@ -237,7 +246,8 @@ function handleEmailKeydown(e) {
   }
   
   if ((e.key === 'Tab' || e.key === 'Enter' || e.key === 'ArrowRight') && suggestion.value) {
-    if (e.target.selectionStart === userInput.value.length) {
+    const target = e.target as HTMLInputElement;
+    if (target.selectionStart === userInput.value.length) {
       e.preventDefault();
       userInput.value = displayValue.value;
       suggestion.value = '';
@@ -257,8 +267,9 @@ function handleEmailBlur() {
   }, 150);
 }
 
-function handlePhoneInput(e) {
-  const formatted = formatPhoneNumber(e.target.value);
+function handlePhoneInput(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const formatted = formatPhoneNumber(target.value);
   formData.value.phone = formatted;
   localError.value = '';
   if (errors.value.phone) validateField('phone');
@@ -274,7 +285,7 @@ function handleSubmit() {
   emit('next', formData.value);
 }
 
-function setError(field, message) {
+function setError(field: 'name' | 'email' | 'phone' | 'local', message: string) {
   if (field === 'local') {
     localError.value = message;
   } else {

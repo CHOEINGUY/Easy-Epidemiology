@@ -29,17 +29,13 @@
   </tr>
 </template>
 
-<script setup>
-defineProps({
-  result: {
-    type: Object,
-    required: true
-  },
-  useYatesCorrection: {
-    type: Boolean,
-    default: false
-  }
-});
+<script setup lang="ts">
+import { CaseControlResult } from '@/types/analysis';
+
+defineProps<{
+  result: CaseControlResult;
+  useYatesCorrection?: boolean;
+}>();
 </script>
 
 <style scoped>

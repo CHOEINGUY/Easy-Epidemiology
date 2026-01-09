@@ -4,6 +4,6 @@
   </h1>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // No props needed for now as the text is static across the app
 </script>
