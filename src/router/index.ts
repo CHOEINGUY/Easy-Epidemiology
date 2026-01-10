@@ -72,7 +72,13 @@ const routes: Array<RouteRecordRaw> = [
         path: '/info',
         name: 'HomePage',
         component: () => import(/* webpackChunkName: "info" */ '../components/Home/index.vue'),
-        meta: { title: '웹페이지 정보' }
+        meta: { title: '웹페이지 정보', public: true }
+    },
+    {
+        path: '/manual',
+        name: 'UserManual',
+        component: () => import(/* webpackChunkName: "manual" */ '../components/UserManual/index.vue'),
+        meta: { title: '사용자 매뉴얼', public: true }
     },
     {
         path: '/admin',
@@ -106,7 +112,7 @@ router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, n
     const isAdmin = user && (user.role === 'admin' || user.role === 'support');
 
     // 2. Redirect to Login if not authenticated
-    if (to.name !== 'Login' && !isAuthenticated) {
+    if (to.name !== 'Login' && !to.meta.public && !isAuthenticated) {
         return next({ name: 'Login' });
     }
 

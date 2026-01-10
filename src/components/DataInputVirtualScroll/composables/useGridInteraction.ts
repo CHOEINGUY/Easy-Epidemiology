@@ -130,9 +130,10 @@ export function useGridInteraction(
       return;
     }
 
-    const virtualRowIndex = rowIndex;
+    // VirtualGridBody에서 이미 원본 인덱스(originalIndex)를 emit하므로
+    // rowIndex는 이미 원본 데이터 인덱스입니다.
+    const originalRowIndex = rowIndex;
     const row = rows.value[rowIndex] as any;
-    const originalRowIndex = rowIndex >= 0 ? (row?._originalIndex ?? rowIndex) : -1;
 
     if (
       selectionSystem.state.isEditing &&
@@ -168,7 +169,7 @@ export function useGridInteraction(
          
          devLog(`[UseGridInteraction] 다른 셀 클릭으로 편집 완료: ${editRow}, ${editCol} = ${tempValue}`);
          if (validationManager) {
-           validationManager.validateCell(editRow as number, editCol as number, tempValue, columnMeta.type);
+           validationManager.validateCell(editRow as number, editCol as number, tempValue, columnMeta.type, true);
          }
       }
 
@@ -179,7 +180,9 @@ export function useGridInteraction(
     focusGrid();
 
     const context = createHandlerContext();
-    handleVirtualCellMouseDown(virtualRowIndex, colIndex, event, context);
+    // 이미 originalRowIndex가 전달되므로, getOriginalIndex 변환이 필요 없음
+    // handleVirtualCellMouseDown은 이 값을 그대로 사용해야 함
+    handleVirtualCellMouseDown(originalRowIndex, colIndex, event, context);
 
     onDocumentMouseMoveBound.value = (e) => onDocumentMouseMove(e);
     onDocumentMouseUpBound.value = (e) => onDocumentMouseUp(e);
@@ -280,12 +283,12 @@ export function useGridInteraction(
          };
          
          storageManager.executeSave(editData);
-         storageManager.scheduleSave(editData);
+         // storageManager.scheduleSave(editData); // REMOVED: Prevent double save
          
          devLog(`[DataInputVirtual] Validation 호출: row=${rowIndex}, col=${colIndex}, value="${tempValue}", type="${columnMeta.type}"`);
 
          if (validationManager) {
-           validationManager.validateCell(rowIndex, colIndex, tempValue, columnMeta.type);
+           validationManager.validateCell(rowIndex, colIndex, tempValue, columnMeta.type, true);
          }
       }
     }

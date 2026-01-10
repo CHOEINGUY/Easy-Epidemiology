@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy-Epidemiology Web - 간단 사용법</title>
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Pretendard', 'sans-serif'] },
+            colors: {
+              slate: { 850: '#1e293b' }
+            },
+            boxShadow: {
+              'premium': '0 20px 40px -15px rgba(0, 0, 0, 0.05)',
+              'inner-soft': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.02)'
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body { background-color: #f8fafc; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .nav-item.active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-left: 3px solid #2563eb;
+        }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="text-slate-600 antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-icons-round text-blue-600 text-3xl">health_and_safety</span>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">Easy-Epidemiology <span class="text-blue-600 font-extrabold">Quick Start</span></h1>
+            </div>
+            <a href="manual.html" class="flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors">
+                <span class="material-icons-round text-lg">menu_book</span> 전체 매뉴얼
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-5xl mx-auto w-full px-6 py-10 flex gap-8 items-start">
+        
+        <!-- Sidebar Nav -->
+        <aside class="w-64 flex-shrink-0 sticky top-24">
+            <nav class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden py-2">
+                <button onclick="showTab('execution')" class="nav-item w-full text-left px-5 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3 active">
+                    <span class="material-icons-round text-lg">rocket_launch</span> 실행 방법
+                </button>
+                <button onclick="showTab('data-input')" class="nav-item w-full text-left px-5 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">
+                    <span class="material-icons-round text-lg">grid_on</span> 데이터 입력
+                </button>
+                <button onclick="showTab('analysis')" class="nav-item w-full text-left px-5 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">
+                    <span class="material-icons-round text-lg">analytics</span> 환자 및 분석
+                </button>
+                <button onclick="showTab('report')" class="nav-item w-full text-left px-5 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">
+                    <span class="material-icons-round text-lg">description</span> 보고서 작성
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="flex-1 bg-white rounded-3xl shadow-premium border border-slate-200 p-8 min-h-[500px]">
+            
+            <!-- Tab: Execution -->
+            <div id="execution" class="content-panel animate-fade-in block">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center material-icons-round">rocket_launch</span>
+                    실행 방법
+                </h2>
+                <div class="space-y-4">
+                    <div class="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-700 shadow-sm shrink-0">1</div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 mb-1">압축 해제</h3>
+                            <p class="text-sm">다운로드 받은 <code>Easy-Epidemiology Web.zip</code> 파일의 압축을 풉니다.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-700 shadow-sm shrink-0">2</div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 mb-1">실행 파일 클릭</h3>
+                            <p class="text-sm">폴더 내의 <strong>Easy-Epidemiology.bat</strong> 파일을 실행하면 브라우저가 자동으로 열립니다.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm flex gap-3 items-start">
+                    <span class="material-icons-round text-amber-600 mt-0.5">warning</span>
+                    <p><strong>주의:</strong> 폴더 내의 파일 이름이나 위치를 변경하면 프로그램이 실행되지 않을 수 있습니다.</p>
+                </div>
+            </div>
+
+            <!-- Tab: Data Input -->
+            <div id="data-input" class="content-panel animate-fade-in hidden">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center material-icons-round">grid_on</span>
+                    데이터 입력
+                </h2>
+                <ul class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <li class="p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all">
+                        <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2"><span class="material-icons-round text-slate-400">content_paste</span> 엑셀 호환</h3>
+                        <p class="text-sm text-slate-500">Ctrl+C, Ctrl+V로 엑셀 데이터를 그대로 붙여넣을 수 있습니다.</p>
+                    </li>
+                    <li class="p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all">
+                        <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2"><span class="material-icons-round text-slate-400">upload_file</span> 드래그 앤 드롭</h3>
+                        <p class="text-sm text-slate-500">엑셀 파일을 화면 위로 끌어다 놓으면 자동으로 업로드됩니다.</p>
+                    </li>
+                    <li class="p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all">
+                        <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2"><span class="material-icons-round text-slate-400">save</span> 자동 저장</h3>
+                        <p class="text-sm text-slate-500">입력하는 모든 내용은 브라우저에 실시간으로 안전하게 자동 저장됩니다.</p>
+                    </li>
+                    <li class="p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all">
+                        <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2"><span class="material-icons-round text-slate-400">error_outline</span> 오류 알림</h3>
+                        <p class="text-sm text-slate-500">날짜 형식이나 필수 값이 누락되면 빨간색 테두리로 즉시 알려줍니다.</p>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Tab: Analysis -->
+            <div id="analysis" class="content-panel animate-fade-in hidden">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center material-icons-round">analytics</span>
+                    분석 기능
+                </h2>
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">환자 특성 & 임상 증상</h3>
+                        <p class="text-slate-600 mb-2">입력된 데이터를 바탕으로 성별, 연령, 지역별 통계와 증상 발현율을 <strong>자동으로 계산하고 시각화</strong>합니다.</p>
+                    </div>
+                    <hr class="border-slate-100">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">역학 조사 (유행곡선 등)</h3>
+                        <p class="text-slate-600 mb-2">환자-대조군 연구, 코호트 연구를 위한 <strong>OR(오즈비), RR(상대위험비), P-value</strong>를 자동으로 산출합니다.</p>
+                        <div class="flex gap-2">
+                            <span class="text-xs px-2 py-1 bg-slate-100 rounded text-slate-500">#유행곡선</span>
+                            <span class="text-xs px-2 py-1 bg-slate-100 rounded text-slate-500">#잠복기추정</span>
+                            <span class="text-xs px-2 py-1 bg-slate-100 rounded text-slate-500">#통계검정</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Report -->
+            <div id="report" class="content-panel animate-fade-in hidden">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center material-icons-round">description</span>
+                    보고서 작성
+                </h2>
+                <div class="text-center p-8 bg-slate-50 rounded-2xl border border-slate-100">
+                    <span class="material-icons-round text-4xl text-slate-300 mb-4">edit_document</span>
+                    <p class="text-slate-600 mb-4">
+                        분석이 완료되면 [보고서 작성] 탭에서<br>
+                        <strong>한글(.hwpx) 보고서를 자동으로 생성</strong>할 수 있습니다.
+                    </p>
+                    <p class="text-sm text-slate-400">차트와 표가 포함된 초안이 완성됩니다.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        function showTab(tabId) {
+            // Hide all panels
+            document.querySelectorAll('.content-panel').forEach(el => el.classList.add('hidden'));
+            
+            // Show target panel
+            document.getElementById(tabId).classList.remove('hidden');
+            
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active', 'bg-blue-50', 'text-blue-700', 'border-l-4', 'border-blue-600');
+                if(el.getAttribute('onclick').includes(tabId)) {
+                    el.classList.add('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

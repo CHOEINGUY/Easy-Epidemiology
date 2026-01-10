@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-wrap items-center gap-4 p-4 bg-slate-50/80 rounded-xl border border-slate-200 shadow-sm backdrop-blur-sm w-full mb-[18px]">
+  <div class="flex flex-wrap items-center gap-4 p-4 bg-slate-50/80 rounded-xl border border-slate-200 shadow-sm backdrop-blur-sm w-full">
     <!-- 막대 방향 -->
     <ControlCycleText
       label="막대 방향:"

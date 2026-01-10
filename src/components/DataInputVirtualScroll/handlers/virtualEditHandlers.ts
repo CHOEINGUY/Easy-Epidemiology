@@ -196,7 +196,7 @@ export async function handleInlineEdit(
 
                 try {
                     if (context.validationManager) {
-                        context.validationManager.validateCell(rowIndex, colIndex, tempValue, columnMeta.type);
+                        context.validationManager.validateCell(rowIndex, colIndex, tempValue, columnMeta.type, true);
                     }
                 } catch (error) {
                     console.error('[DoubleClick] Validation failed:', error);

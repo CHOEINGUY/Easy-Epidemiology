@@ -44,10 +44,17 @@ BUILD_SUMMARY.md
 worker/DEPLOYMENT_CHECKLIST.md
 worker/DEPLOYMENT_GUIDE.md
 worker/README.md
-docs/
+# docs/
 env.development
 env.noauth
 temp_template/
 .wrangler/
 worker/.wrangler/
 worker/node_modules/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

@@ -3,13 +3,12 @@
     <div class="progress-container">
       <div class="progress-header">
         <span class="progress-title">데이터 검증 중...</span>
-        <span class="progress-percentage">{{ progress }}%</span>
+        <span class="progress-percentage">{{ Math.round(progress) }}%</span>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" :style="{ width: progress + '%' }"></div>
       </div>
       <div class="progress-details">
-        <span>{{ processed }}/{{ total }} 셀 처리됨</span>
         <span v-if="errorCount > 0" class="error-count">오류: {{ errorCount }}개</span>
       </div>
     </div>

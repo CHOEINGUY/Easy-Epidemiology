@@ -1,6 +1,6 @@
 
 import { nextTick, type Ref } from 'vue';
-import { COL_TYPE_BASIC, COL_TYPE_IS_PATIENT, COL_TYPE_CONFIRMED_CASE, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE } from '../constants/index';
+import { COL_TYPE_BASIC, COL_TYPE_IS_PATIENT, COL_TYPE_CONFIRMED_CASE, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE, COL_IDX_SERIAL } from '../constants/index';
 // useContextMenu is used in the parent component
 import { handleContextMenu } from '../handlers/contextMenuHandlers';
 import { devLog, logger } from '../../../utils/logger';
@@ -65,6 +65,11 @@ export function useGridContextMenu(
     }
 
     function onContextMenu(event: MouseEvent, virtualRowIndex: number, colIndex: number) {
+        // 연번 열(0번 인덱스)에서는 컨텍스트 메뉴 표시 안 함
+        if (colIndex === COL_IDX_SERIAL) {
+            return;
+        }
+
         devLog('[DataInputVirtual] 컨텍스트 메뉴 이벤트:', {
             virtualRowIndex,
             colIndex,

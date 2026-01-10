@@ -6,15 +6,14 @@
         <span class="ml-[0.2em]">증상 발현 시간별 환자 수</span>
       </div>
       <div class="relative group">
-        <button @click="handleCopyTable" class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all shadow-sm cursor-pointer">
-          <span class="flex items-center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </span>
-          <span class="font-['Noto_Sans_KR'] font-normal">복사</span>
-        </button>
+        <BaseButton 
+          @click="handleCopyTable" 
+          variant="secondary"
+          size="sm"
+          icon="content_copy"
+        >
+          복사
+        </BaseButton>
         <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
           <div v-if="isTableCopied" class="absolute left-1/2 top-[110%] -translate-x-1/2 z-10 pointer-events-none flex items-center justify-center w-8 h-8 rounded-full shadow-sm bg-white border border-slate-100">
             <svg width="24" height="24" viewBox="0 0 24 24">
@@ -71,6 +70,7 @@
 <script setup lang="ts">
 import DataGuideMessage from '../../../DataGuideMessage.vue';
 import { useClipboardOperations } from '../../composables/useClipboardOperations';
+import BaseButton from '../../../Common/BaseButton.vue';
 
 // 안내 메시지 steps
 const guideSteps = [

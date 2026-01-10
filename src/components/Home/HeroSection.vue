@@ -23,7 +23,18 @@
         </h1>
         
         <!-- Description -->
-        <p class="text-[1.25rem] md:text-[1.4rem] text-slate-500 leading-relaxed max-w-[680px] mx-auto font-medium mb-12">{{ description }}</p>
+        <p class="text-[1.25rem] md:text-[1.4rem] text-slate-500 leading-relaxed max-w-[680px] mx-auto font-medium mb-10">{{ description }}</p>
+
+        <!-- Manual Button -->
+        <div class="flex justify-center">
+          <router-link 
+            to="/manual" 
+            class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-full hover:bg-slate-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm hover:shadow-md group"
+          >
+            <span class="material-icons text-xl text-slate-400 group-hover:text-blue-500 transition-colors">menu_book</span>
+            <span>사용자 매뉴얼 보기</span>
+          </router-link>
+        </div>
       </div>
     </div>
   </section>

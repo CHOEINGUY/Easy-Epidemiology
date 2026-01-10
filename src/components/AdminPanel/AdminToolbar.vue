@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-wrap justify-between items-center gap-6 p-1 mb-2">
+  <div class="flex flex-wrap justify-between items-center gap-6 p-1">
     <!-- Filter Section (Left) -->
     <div class="flex flex-wrap items-center gap-3">
       <!-- Affiliation Type Filter -->

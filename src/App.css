@@ -347,3 +347,16 @@ body {
 .row-individual-selected {
   background-color: rgba(37, 99, 235, 0.05) !important;
 }
+
+@keyframes bounce-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-short {
+  animation: bounce-soft 2s ease-in-out infinite;
+}

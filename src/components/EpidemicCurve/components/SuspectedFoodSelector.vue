@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-4 mb-2 mx-auto w-full max-w-4xl">
+  <div class="mx-auto w-full max-w-4xl">
     <div class="flex flex-col gap-3">
       <div class="flex items-center gap-2 text-lg font-medium text-slate-800">
         <span class="w-1.5 h-1.5 rounded-full bg-slate-800"></span>
@@ -77,9 +77,10 @@
                   RR: {{ food.relativeRisk }}
                 </span>
               </div>
+
               <div class="flex gap-2 p-2.5 bg-slate-50 border-t border-slate-100 sticky bottom-0">
-                <button @click="applySelectedFoods" class="bg-blue-600 text-white border-none py-1.5 px-4 rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors">닫기</button>
-                <button @click="closeDropdown" class="bg-white text-slate-600 border border-slate-300 py-1.5 px-4 rounded-lg text-xs hover:bg-slate-50 transition-colors">취소</button>
+                <BaseButton @click="applySelectedFoods" variant="primary" size="xs" class="px-4 py-1.5 rounded-lg">닫기</BaseButton>
+                <BaseButton @click="closeDropdown" variant="secondary" size="xs" class="px-4 py-1.5 rounded-lg border-slate-300">취소</BaseButton>
               </div>
             </div>
           </div>
@@ -92,6 +93,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useSuspectedFood } from '../composables/useSuspectedFood';
+import BaseButton from '../../Common/BaseButton.vue';
 
 const dropdownRef = ref<HTMLElement | null>(null);
 

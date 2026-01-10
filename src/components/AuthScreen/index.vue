@@ -38,6 +38,17 @@
             <span class="text-slate-600 font-medium tracking-tight">OR/RR 통계 분석</span>
           </div>
         </div>
+        
+        <!-- Public Access Link -->
+        <div class="mt-12 pt-8 border-t border-slate-100/50 flex justify-center lg:justify-start">
+          <router-link to="/info" class="inline-flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-all duration-300 text-sm font-medium group">
+            <span class="bg-slate-50 p-1.5 rounded-lg group-hover:bg-blue-50 transition-colors">
+              <span class="material-icons text-lg group-hover:text-blue-500">space_dashboard</span>
+            </span>
+            <span>로그인 없이 기능 둘러보기</span>
+            <span class="material-icons text-sm opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all">arrow_forward</span>
+          </router-link>
+        </div>
       </div>
     </div>
     

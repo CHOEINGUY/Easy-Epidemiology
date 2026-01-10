@@ -223,12 +223,12 @@ export function useEditOverlay(options: UseEditOverlayOptions) {
       };
       
       storageManager.executeSave(editData);
-      storageManager.scheduleSave(editData);
+      // storageManager.scheduleSave(editData); // REMOVED: Prevent double save
 
       // 유효성 검증
       if (validationManager) {
         try {
-          validationManager.validateCell(rowIndex, colIndex, value, columnMeta.type);
+          validationManager.validateCell(rowIndex, colIndex, value, columnMeta.type, true); // immediate=true to sync with history
         } catch (error) {
           console.error('[EditOverlay] Validation failed:', error);
         }

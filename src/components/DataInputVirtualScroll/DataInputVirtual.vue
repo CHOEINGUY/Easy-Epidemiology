@@ -212,8 +212,32 @@ const validationErrorCount = ref(0);
 const validationManager = new ValidationManager(epidemicStore, { 
   debug: false, 
   useWorker: true,
-  showToast: showToast
+  showToast: showToast,
+  onProgress: (progress: number) => {
+    isValidationProgressVisible.value = true;
+    validationProgress.value = progress;
+    // Note: ValidationManager's onProgress callback signature in TS definition is (progress: number) => void.
+    // The legacy global function accepted (progress, processed, total, errors). 
+    // If we need detailed info, we might need to update ValidationManager's interface or just use progress for now.
+    // Looking at ValidationManager.ts, it calls onProgress(percent). 
+    // Ideally we'd want processed/total counts too, but let's stick to the interface for now to be safe, 
+    // or if ValidationManager supports it (it seems to only accept number in interface).
+    // Let's assume progress is 0-100.
+    
+    if (progress >= 100) {
+       // Hide after a short delay
+       setTimeout(() => {
+           isValidationProgressVisible.value = false;
+       }, 500);
+    }
+  }
 });
+
+// Note: The legacy 'updateValidationProgress' callback had (progress, processed, total, errors).
+// The current ValidationManager interface defines onProgress: (progress: number) => void.
+// We are losing detailed stats (processed/total) in this refactor unless we update ValidationManager.
+// However, the goal is to remove 'window' pollution. The detailed stats were likely from a legacy worker implementation.
+// The current ValidationManager.ts uses `asyncProcessor` or `worker` which reports percentage.
 
 // --- DateTimePicker System ---
 const {
@@ -286,24 +310,6 @@ const {
   gridHeaderRef,
   gridBodyRef
 });
-
-// 전역 함수 관리
-import { useGlobalFunctions } from '../../hooks/useGlobalFunctions';
-const { registerFunction } = useGlobalFunctions();
-
-if (typeof window !== 'undefined') {
-  registerFunction('showToast', showToast);
-  registerFunction('updateValidationProgress', (progress: number, processed: number, total: number, errors: number) => {
-    isValidationProgressVisible.value = true;
-    validationProgress.value = progress;
-    validationProcessed.value = processed;
-    validationTotal.value = total;
-    validationErrorCount.value = errors;
-  });
-  registerFunction('hideValidationProgress', () => {
-    isValidationProgressVisible.value = false;
-  });
-}
 
 // --- Interaction System (useGridInteraction) ---
 

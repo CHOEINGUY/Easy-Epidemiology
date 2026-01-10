@@ -38,26 +38,31 @@
         
         <!-- 로그아웃 버튼 (로그인 모드에서만 표시) -->
         <div v-if="requiresAuth" class="flex items-center pl-2 ml-2 border-l border-slate-200 h-[24px]">
-          <button 
-            class="group flex items-center justify-center gap-1.5 px-3 py-1.5 h-[34px] bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-lg transition-all duration-200 text-xs font-semibold shadow-sm hover:shadow-md" 
+          <BaseButton 
+            class="group hover:bg-red-50 hover:text-red-600 hover:border-red-200" 
+            variant="secondary"
+            size="sm"
+            rounded="lg"
             @click="handleLogoutClick"
             title="로그아웃"
           >
             <span class="material-icons text-[16px] transition-transform duration-300 group-hover:-translate-x-0.5">logout</span>
             <span class="hidden sm:inline">로그아웃</span>
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>
     
     <!-- 로그아웃 모달 (Tailwind Refactors) -->
-    <div v-if="requiresAuth && showLogoutConfirmModal" 
-      class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
-      @click="closeLogoutConfirmModal"
+    <BaseModal 
+      v-if="requiresAuth"
+      v-model="showLogoutConfirmModal"
+      size="sm"
+      :show-close-button="false"
+      class="max-w-md"
     >
-      <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300" @click.stop>
         <!-- 1단계: 로그아웃 확인 -->
-        <div v-if="!isLogoutProcessing" class="p-8 text-center">
+        <div v-if="!isLogoutProcessing" class="p-4 text-center">
           <div class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <span class="material-icons text-3xl">logout</span>
           </div>
@@ -67,45 +72,54 @@
             진행 중인 모든 작업은 안전하게 저장됩니다.
           </p>
           <div class="flex gap-3">
-            <button 
-              class="flex-1 py-4 px-6 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-2xl transition-all duration-200 active:scale-95" 
+            <BaseButton 
+              class="flex-1 py-3" 
+              variant="secondary"
+              size="lg"
+              rounded="lg"
               @click="closeLogoutConfirmModal"
             >
               취소
-            </button>
-            <button 
-              class="flex-1 py-4 px-6 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-2xl shadow-lg shadow-red-500/30 transition-all duration-200 active:scale-95" 
+            </BaseButton>
+            <BaseButton 
+              class="flex-1 py-3" 
+              variant="danger"
+              size="lg"
+              rounded="lg"
+              shadow="lg"
               @click="confirmLogout"
             >
               로그아웃
-            </button>
+            </BaseButton>
           </div>
         </div>
         
         <!-- 2단계: 데이터 저장 완료 -->
-        <div v-else class="p-8 text-center">
-          <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <span class="material-icons text-3xl">check_circle</span>
+        <div v-else class="p-6 text-center">
+          <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm animate-bounce-short">
+            <span class="material-icons text-4xl">check</span>
           </div>
-          <h3 class="text-2xl font-bold text-slate-900 mb-2">저장 완료!</h3>
+          <h3 class="text-2xl font-bold text-slate-900 mb-2 tracking-tight">저장 완료!</h3>
           <p class="text-slate-500 mb-8 leading-relaxed">
             모든 데이터가 안전하게 저장되었습니다.<br>
-            잠시 후 로그인 화면으로 이동합니다.
+            <span class="font-medium text-slate-700">잠시 후 로그인 화면으로 이동합니다.</span>
           </p>
           
-          <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-8">
-            <div class="h-full bg-emerald-500 transition-all duration-300" :style="{ width: timerProgress + '%' }"></div>
+          <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-8 shadow-inner">
+            <div class="h-full bg-emerald-500 transition-all duration-300 ease-linear" :style="{ width: timerProgress + '%' }"></div>
           </div>
 
-          <button 
-            class="w-full py-4 px-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-2xl transition-all duration-200 active:scale-95" 
+          <BaseButton 
+            class="w-full py-3.5 shadow-lg shadow-blue-500/20" 
+            variant="primary"
+            size="lg"
+            rounded="xl"
             @click="closeLogoutConfirmModal"
           >
             지금 이동
-          </button>
+          </BaseButton>
         </div>
-      </div>
-    </div>
+    </BaseModal>
     
     <!-- Toast Container (Global) -->
     <ToastContainer />
@@ -116,6 +130,8 @@
 import { ref, computed, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ToastContainer from './components/DataInputVirtualScroll/parts/ToastContainer.vue';
+import BaseModal from './components/Common/BaseModal.vue';
+import BaseButton from './components/Common/BaseButton.vue';
 import { showConfirmToast } from './components/DataInputVirtualScroll/logic/toast';
 import { tokenManager } from './services/authApi';
 import { isAuthRequired, logEnvironmentInfo } from './utils/environmentUtils';
@@ -178,7 +194,7 @@ const contentClass = computed(() => {
     classes.push('has-tabs');
   }
 
-  if (['DataInputVirtual', 'ReportWriter'].includes(currentRouteName.value as string)) {
+  if (['DataInputVirtual', 'ReportWriter', 'UserManual'].includes(currentRouteName.value as string)) {
     classes.push('no-scroll');
   } else {
     classes.push('scrollable');
@@ -197,14 +213,30 @@ const timerProgress = computed(() => {
 // Run immediately (like created hook)
 logEnvironmentInfo();
 
+// --- Initialization Logic ---
+// Run immediately (like created hook)
+logEnvironmentInfo();
+
+// 항상 초기 인증 상태 복원 시도 (공개 라우트 포함)
+updateAuthState();
+
 if (!requiresAuth.value) {
-  isAuthenticated.value = true;
-  console.log('🚀 비로그인 모드로 실행됨');
-  loadInitialData();
+  // 공개 페이지인 경우
+  if (!isAuthenticated.value) {
+     console.log('🚀 비로그인 모드로 실행됨 (공개 페이지)');
+     // 비로그인 상태여도 초기 데이터는 로드 (단, 권한 필요한 데이터는 로드 안됨)
+     loadInitialData();
+  } else {
+     console.log('✅ 공개 페이지지만 로그인 상태임');
+     checkAuthAndLoadData();
+  }
 } else {
-  updateAuthState();
+  // 인증이 필요한 페이지
   if (isAuthenticated.value) {
     checkAuthAndLoadData();
+  } else {
+    // 이미 updateAuthState()에서 처리됨, 토큰 없으면 유지
+    // 라우터 가드에서 리다이렉트 처리되므로 여기서는 패스
   }
 }
 
@@ -295,10 +327,9 @@ async function updateAuthStateAsync() {
 }
 
 function handleLogout() {
-  if (requiresAuth.value) {
-    updateAuthState();
-    router.push({ name: 'Login' });
-  }
+  // Always redirect to login on logout, regardless of current page auth requirement
+  updateAuthState();
+  router.push({ name: 'Login' });
 }
 
 function handleLogoutClick() {
@@ -339,13 +370,14 @@ async function confirmLogout() {
 }
 
 function startLogoutTimer() {
+  const step = 0.02; // 20ms
   logoutModalTimer.value = window.setInterval(() => {
-    remainingSeconds.value--;
+    remainingSeconds.value = Math.max(0, remainingSeconds.value - step);
     if (remainingSeconds.value <= 0) {
       closeLogoutConfirmModal();
       router.push({ name: 'Login' });
     }
-  }, 1000);
+  }, 20);
 }
 
 function handleTabClick(routeName: string) {

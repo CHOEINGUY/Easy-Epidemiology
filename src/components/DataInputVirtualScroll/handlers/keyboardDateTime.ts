@@ -253,7 +253,7 @@ export function setupDateTimeInputHandling(cellElement: HTMLElement, initialKey:
                 console.log(`[DateTimeInput] Auto-saved value: ${formattedValue} for cell: ${rowIndex}, ${colIndex}`);
                 
                 if (context.validationManager) {
-                    context.validationManager.validateCell(rowIndex, colIndex, formattedValue, columnMeta.type);
+                    context.validationManager.validateCell(rowIndex, colIndex, formattedValue, columnMeta.type, true);
                 }
 
                 context.gridStore.confirmEditing();

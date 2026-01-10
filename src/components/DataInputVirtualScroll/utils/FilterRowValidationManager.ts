@@ -65,21 +65,25 @@ export class FilterRowValidationManager {
         }
     }
 
-    isErrorVisible(rowIndex: number): boolean {
+    /**
+     * 원본 행 인덱스에 대한 에러가 현재 필터 상태에서 보이는지 확인
+     * @param originalRowIndex - 원본 데이터의 행 인덱스 (VirtualGridBody에서 item.originalIndex로 전달됨)
+     */
+    isErrorVisible(originalRowIndex: number): boolean {
         if (!this.isFiltered) {
-            return this._isRowVisibleAfterChanges(rowIndex);
+            // 필터가 없으면 삭제된 행만 확인
+            return this._isRowVisibleAfterChanges(originalRowIndex);
         }
 
-        if (rowIndex >= this.filteredRows.length) {
+        // 필터가 적용된 경우: 해당 원본 인덱스를 가진 행이 filteredRows에 존재하는지 확인
+        const isInFilteredRows = this.filteredRows.some(
+            row => row._originalIndex === originalRowIndex
+        );
+        
+        if (!isInFilteredRows) {
             return false;
         }
 
-        const filteredRow = this.filteredRows[rowIndex];
-        if (!filteredRow || filteredRow._originalIndex === undefined) {
-            return false;
-        }
-
-        const originalRowIndex = filteredRow._originalIndex as number;
         return this._isRowVisibleAfterChanges(originalRowIndex);
     }
 
@@ -114,11 +118,11 @@ export class FilterRowValidationManager {
         return visibleErrors;
     }
 
-    getErrorMessage(rowIndex: number, colIndex: number, columnMeta: GridHeader | null): any | null {
+    getErrorMessage(originalRowIndex: number, colIndex: number, columnMeta: GridHeader | null): any | null {
         if (!columnMeta) return null;
 
         const uniqueKey = this._generateColumnUniqueKey(columnMeta);
-        const originalRowIndex = this._getOriginalRowIndex(rowIndex);
+        // VirtualGridBody에서 이미 원본 인덱스를 전달하므로 변환 불필요
         const key = `${originalRowIndex}_${uniqueKey}`;
         return this.validationErrors.get(key) || null;
     }

@@ -4,8 +4,6 @@
       
       <!-- Dashboard Stats Bar (Light Theme & Grid Layout) -->
       <div class="stats-bar">
-        <!-- Decoration Background -->
-        <div class="absolute inset-0 bg-white/40 backdrop-blur-3xl z-0"></div>
         
         <!-- #1 System Status -->
         <div class="stat-group relative z-10">

@@ -16,21 +16,16 @@
         </div>
       </div>
       <div class="flex gap-2">
-        <button 
-          :class="[
-            'flex items-center gap-1.5 px-4 py-2 border-none rounded-md text-sm font-medium cursor-pointer transition-colors relative',
-            (reportData.studyDesign.value && !reportData.hasTooManyFoodItems.value) 
-              ? 'bg-blue-600 text-white hover:bg-blue-700' 
-              : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-yellow-400 text-orange-500 shadow-sm hover:from-orange-50 hover:to-orange-100 hover:border-amber-500'
-          ]"
+        <BaseButton 
+          class="relative"
+          :variant="(reportData.studyDesign.value && !reportData.hasTooManyFoodItems.value) ? 'primary' : 'warning'"
           @click="handleDownload"
           @mouseenter="showDownloadTooltip = true"
           @mouseleave="showDownloadTooltip = false"
         >
-          <span class="material-icons">{{ !reportData.studyDesign.value ? 'info' : (reportData.hasTooManyFoodItems.value ? 'warning' : 'description') }}</span>
           {{ !reportData.studyDesign.value ? '조사 디자인 선택 필요' : '보고서 다운로드' }}
           <div ref="downloadTooltipRef"></div>
-        </button>
+        </BaseButton>
       </div>
     </div>
     
@@ -66,6 +61,7 @@
 import { ref, computed } from 'vue';
 import { ReportData } from '../../../types/report';
 import { showToast } from '../../DataInputVirtualScroll/logic/toast';
+import BaseButton from '../../Common/BaseButton.vue';
 
 const props = defineProps<{
   reportData: ReportData

@@ -29,7 +29,7 @@ const userManager = new UserManager();
 
 // 전역 설정
 
-(window as any).userManager = userManager;
+// (window as any).userManager = userManager; // Removed legacy window pollution
 
 // Vuex 호환성 제거됨
 

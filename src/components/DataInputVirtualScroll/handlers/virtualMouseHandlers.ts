@@ -14,8 +14,9 @@ export function stopAutoScroll(): void {
 
 /**
  * Handles clicks on a virtualized cell.
- * Note: It receives the virtual (visible) row index, which needs to be
- * translated to the original data index.
+ * Note: The rowIndex passed here is already the ORIGINAL data index
+ * (converted by VirtualGridBody.vue before emitting).
+ * For header cells, rowIndex is a negative index.
  */
 export function handleVirtualCellMouseDown(
     rowIndex: number,
@@ -23,16 +24,11 @@ export function handleVirtualCellMouseDown(
     event: MouseEvent,
     context: GridContext
 ): void {
-    const { getOriginalIndex, selectionSystem, allColumnsMeta } = context;
-    let originalRowIndex: number;
-
-    if (rowIndex >= 0) {
-        // Body cell: rowIndex is a virtual index, convert it
-        originalRowIndex = getOriginalIndex(rowIndex);
-    } else {
-        // Header cell: rowIndex is already the correct negative index
-        originalRowIndex = rowIndex;
-    }
+    const { selectionSystem, allColumnsMeta } = context;
+    
+    // rowIndex는 이미 원본 인덱스입니다 (VirtualGridBody에서 변환됨)
+    // 헤더 셀의 경우 음수 인덱스
+    const originalRowIndex = rowIndex;
 
     if (originalRowIndex === null || originalRowIndex === undefined) {
         console.error('Could not determine original row index.');

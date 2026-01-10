@@ -32,15 +32,16 @@
       <div v-if="showConfirmedCaseToggle" class="flex items-center gap-2">
         <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">확진자 꺾은선:</label>
         <div class="relative group">
-          <button 
+          <BaseButton 
             @click="$emit('toggleConfirmedCaseLine')" 
-            :class="[showConfirmedCaseLine ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-600']" 
-            class="px-3 py-1.5 border rounded-lg text-sm font-medium shadow-sm transition-colors"
+            :variant="showConfirmedCaseLine ? 'primary' : 'secondary'"
+            size="sm"
             @mouseenter="showTooltip('confirmedCaseLine', '확진자 꺾은선 표시/숨김')" 
             @mouseleave="hideTooltip"
           >
             {{ showConfirmedCaseLine ? '표시' : '숨김' }}
-          </button>
+          </BaseButton>
+          <!-- Tooltip -->
           <div v-if="activeTooltip === 'confirmedCaseLine'" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-3 py-2 rounded shadow-lg text-xs whitespace-nowrap z-50">
             {{ tooltipText }}
             <div class="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
@@ -53,6 +54,7 @@
 
 <script setup lang="ts">
 import EpidemicChartControls from '../EpidemicChartControls.vue';
+import BaseButton from '../../../Common/BaseButton.vue';
 import { useTooltip } from '../../composables/useTooltip';
 
 withDefaults(defineProps<{

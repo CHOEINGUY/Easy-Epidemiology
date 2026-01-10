@@ -62,7 +62,7 @@ export function useDateTimePicker(
 
       // 유효성 검사 실행
       if (validationManager) {
-        validationManager.validateCell(rowIndex, colIndex, formattedValue, columnMeta.type);
+        validationManager.validateCell(rowIndex, colIndex, formattedValue, columnMeta.type, true);
       }
 
       devLog(`[DateTimePicker] Successfully saved date: ${formattedValue}`);

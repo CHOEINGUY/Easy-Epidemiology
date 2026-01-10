@@ -14,7 +14,7 @@ export function isTypingKey(key: string): boolean {
  * 선택된 셀에서 타이핑을 시작하면 편집 모드로 전환합니다.
  */
 export async function handleTypeToEdit(event: KeyboardEvent, context: GridContext) {
-    const { selectionSystem, rows, allColumnsMeta, startEditing, getCellValue, gridStore, storageManager, epidemicStore, focusGrid } = context;
+    const { selectionSystem, rows, allColumnsMeta, startEditing, getCellValue, gridStore, storageManager, epidemicStore, focusGrid, ensureCellIsVisible } = context;
     const { state } = selectionSystem;
 
     if (state.isEditing) return;
@@ -105,9 +105,35 @@ export async function handleTypeToEdit(event: KeyboardEvent, context: GridContex
                 };
 
                 const handleKeyDown = (e: KeyboardEvent) => {
+                    const totalRows = rows.value.length;
+                    const totalCols = allColumnsMeta.length;
+
                     if (e.key === 'Enter') {
                         e.preventDefault();
+                        e.stopPropagation(); // Bubbling prevention to avoid Double Save
                         handleEditComplete();
+                        
+                        // Manual Navigation (Enter -> Next Row)
+                        const nextRow = rowIndex < totalRows - 1 ? rowIndex + 1 : rowIndex;
+                        const targetRow = rowIndex < 0 ? 0 : nextRow;
+                        
+                        selectionSystem.selectCell(targetRow, colIndex);
+                        if (ensureCellIsVisible) ensureCellIsVisible(targetRow, colIndex);
+
+                        nextTick(() => {
+                            focusGrid();
+                        });
+                    } else if (e.key === 'Tab') {
+                        e.preventDefault();
+                        e.stopPropagation(); // Bubbling prevention
+                        handleEditComplete();
+
+                        // Manual Navigation (Tab -> Next Cell)
+                        const tabTarget = findNextNavigableCell(rowIndex, colIndex, 'right', allColumnsMeta, totalRows, totalCols);
+                        
+                        selectionSystem.selectCell(tabTarget.rowIndex, tabTarget.colIndex);
+                        if (ensureCellIsVisible) ensureCellIsVisible(tabTarget.rowIndex, tabTarget.colIndex);
+
                         nextTick(() => {
                             focusGrid();
                         });

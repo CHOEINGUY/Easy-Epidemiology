@@ -44,48 +44,20 @@
         </div>
       </div>
       
-      <div class="mb-6 transition-all duration-300 ease-in-out" :class="{ 'has-error': loginErrors.password }">
-        <label for="login-password" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight">비밀번호</label>
-        <div class="relative group/field">
-          <input
-            id="login-password"
-            v-model="loginData.password"
-            :type="showLoginPassword ? 'text' : 'password'"
-            placeholder="비밀번호"
-            required
-            :disabled="isLoading"
-            @keydown="handleKeydown"
-            @blur="validateLoginField('password')"
-            ref="loginPasswordRef"
-            class="w-full px-4 py-3.5 border border-slate-200 rounded-xl text-[15px] transition-all duration-200 ease-out bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 pr-20"
-            :class="{
-              'border-red-500 bg-red-50 focus:ring-red-500/10 focus:border-red-500 shadow-sm shadow-red-500/5': loginErrors.password,
-              'border-emerald-500 bg-emerald-50 focus:ring-emerald-500/10 focus:border-emerald-500': !loginErrors.password && loginData.password
-            }"
-          />
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-1 pr-1.5">
-            <button
-              type="button"
-              class="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all duration-200 active:scale-90"
-              @click="showLoginPassword = !showLoginPassword"
-              :disabled="isLoading"
-              tabindex="0"
-              title="비밀번호 보기/숨기기"
-            >
-              <span class="material-icons text-xl">
-                {{ showLoginPassword ? 'visibility' : 'visibility_off' }}
-              </span>
-            </button>
-            <span v-if="loginErrors.password" class="text-red-500 pointer-events-none flex items-center">
-              <span class="material-icons text-xl">error</span>
-            </span>
-          </div>
-        </div>
-        <div class="h-6 mt-1">
-          <small v-if="loginErrors.password" class="block text-xs text-red-500 font-bold tracking-tight px-1 transition-all duration-300 animate-slideIn">
-            {{ loginErrors.password }}
-          </small>
-        </div>
+      <div class="mb-6">
+        <BaseInput
+          id="login-password"
+          label="비밀번호"
+          v-model="loginData.password"
+          type="password"
+          placeholder="비밀번호"
+          :disabled="isLoading"
+          :error="loginErrors.password"
+          rounded="lg"
+          ref="loginPasswordRef"
+          @keydown="handleKeydown"
+          @blur="validateLoginField('password')"
+        />
       </div>
       
       <div v-if="error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-[13px] font-bold flex items-center gap-2.5 animate-slideIn shadow-sm shadow-red-500/5" role="alert">
@@ -94,21 +66,20 @@
       </div>
       
       <div class="mt-8">
-        <button 
-          type="submit" 
-          class="w-full px-6 py-4 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2.5 transition-all duration-300 shadow-premium hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10 active:translate-y-0 active:scale-[0.98] disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed group overflow-hidden relative"
-          :disabled="isLoading"
+        <BaseButton
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          class="!py-4 !rounded-2xl !text-[15px] shadow-premium hover:shadow-xl hover:shadow-slate-900/10"
+          :loading="isLoading"
           ref="loginSubmitRef"
         >
-          <span v-if="isLoading" class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-          <span v-if="isLoading">로그인 중...</span>
-          <template v-else>
-            <span class="material-icons text-xl transition-transform duration-300 group-hover:translate-x-1">login</span>
+          <div class="flex items-center justify-center gap-2.5">
+            <span class="material-icons text-xl group-hover:translate-x-1 transition-transform" v-if="!isLoading">login</span>
             <span>체험용 자동 로그인</span>
-          </template>
-          <!-- Subtle shine effect -->
-          <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
-        </button>
+          </div>
+        </BaseButton>
       </div>
     </form>
   </div>
@@ -116,6 +87,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import BaseInput from '../../Common/BaseInput.vue';
+import BaseButton from '../../Common/BaseButton.vue';
 import { 
   isValidEmail, 
   isValidPhone, 
@@ -141,12 +114,11 @@ const emit = defineEmits<{
 
 // Refs for DOM elements
 const loginIdentifierRef = ref<HTMLInputElement | null>(null);
-const loginPasswordRef = ref<HTMLInputElement | null>(null);
-const loginSubmitRef = ref<HTMLButtonElement | null>(null);
+const loginPasswordRef = ref<any | null>(null); // BaseInput instance
+const loginSubmitRef = ref<any | null>(null);   // BaseButton instance
 
 // State
 const loginData = ref({ identifier: '', password: '' });
-const showLoginPassword = ref(false);
 const loginUserInput = ref('');
 const loginSuggestion = ref('');
 const currentInputType = ref<'phone' | 'email' | 'ambiguous'>('ambiguous'); 
