@@ -11,6 +11,7 @@ import {
   downloadHwpxFile
 } from '../../../utils/hwpxProcessor';
 import { ReportData, StudyDesign, AnalysisResultItem, SymptomStat, StatAnalysisText } from '../../../types/report';
+import { showToast } from '../../DataInputVirtualScroll/logic/toast';
 
 const logger = createComponentLogger('ReportWriter');
 
@@ -671,7 +672,7 @@ export function useReportData(): ReportData {
       logger.info('HWPX file creation complete!');
     } catch (error: any) {
       logger.error('HWPX creation error:', error);
-      alert(`${t('reportWriter.preview.toast.error')}: ${error.message}`);
+      showToast(`${t('reportWriter.preview.toast.error')}: ${error.message}`, 'error');
     }
   }
 
@@ -814,14 +815,13 @@ export function useReportData(): ReportData {
       foodIntakeAnalysisHtml,
       incubationExposureText: wrapPlaceholder(incubationExposureText.value),
       foodIntakeTable: generateFoodIntakeTable(),
-      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %식품섭취력분석% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': foodIntakeAnalysis.value || generateFoodIntakeText() || t('reportWriter.editor.items.foodAnalysis'),
-      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %최초환자발생일시% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': t('reportWriter.generation.descriptions.firstCaseSummary', {
+      firstCaseSummary: t('reportWriter.generation.descriptions.firstCaseSummary', {
         firstCaseDateTime: firstCaseDateTime.value || unknown,
         symptomList: symptomList.value || unknown,
         lastCaseDateTime: lastCaseDateTime.value || unknown,
         patientCount: patientCount.value || unknown
       }),
-      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %발병률결과% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': t('reportWriter.generation.descriptions.attackRateResult', {
+      attackRateResult: t('reportWriter.generation.descriptions.attackRateResult', {
         total: totalParticipants.value || unknown,
         patientCount: patientCount.value || unknown,
         caseAttackRate: caseAttackRate.value ? `${caseAttackRate.value}%` : unknown,

@@ -8,7 +8,7 @@
         @click="$emit('saveReport')"
         @mouseenter="showTooltip('saveReport')"
         @mouseleave="hideTooltip"
-        :class="{ 'bg-green-50 text-green-700 border-green-200': isSaved }"
+        class="min-w-[120px]"
       >
         {{ isSaved ? $t('common.chart.saved') : $t('common.chart.saveReport') }}
       </BaseButton>

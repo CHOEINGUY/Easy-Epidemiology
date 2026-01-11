@@ -110,10 +110,10 @@ export const getReportTemplate = (t: (key: string) => string): string => {
   <h2 id="section-results" class="section-heading" style="page-break-before:always;">${t('reportWriter.template.sections.results')}</h2>
 
   <h3 style="margin-top:24px;">${t('reportWriter.template.sections.firstCase')}</h3>
-  <p>% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %최초환자발생일시% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %</p>
-
+  <p>%firstCaseSummary%</p>
+  
   <h3 style="margin-top:24px;">${t('reportWriter.template.sections.attackRate')}</h3>
-  <p>% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %발병률결과% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %</p>
+  <p>%attackRateResult%</p>
 
   <h3 style="margin-top:24px;">${t('reportWriter.template.sections.commonExposure')}</h3>
   <p style="height:80px;">${t('reportWriter.template.labels.omitted')}</p>

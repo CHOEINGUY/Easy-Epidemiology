@@ -26,7 +26,12 @@ export function isValidPhone(phone: string): boolean {
 export function findEmailSuggestion(domainPart: string | null | undefined): string | undefined {
   if (!domainPart) return undefined;
   const lowerDomainPart = domainPart.toLowerCase();
-  return EMAIL_DOMAINS.find(domain => domain.startsWith(lowerDomainPart));
+  
+  // Find the best match that starts with the input
+  const match = EMAIL_DOMAINS.find(domain => domain.startsWith(lowerDomainPart));
+  
+  // console.log(`Searching for: ${lowerDomainPart}, Found: ${match}`);
+  return match;
 }
 
 export type AuthInputType = 'email' | 'phone' | 'ambiguous';

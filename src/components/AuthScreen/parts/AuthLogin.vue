@@ -96,9 +96,9 @@ import {
   isValidEmail, 
   isValidPhone, 
   detectInputType, 
-  findEmailSuggestion,
   formatPhoneNumber
 } from '../logic/inputHandlers';
+import { useEmailAutocomplete } from '../logic/useEmailAutocomplete';
 
 interface Props {
   isLoading?: boolean;
@@ -121,17 +121,34 @@ const loginIdentifierRef = ref<HTMLInputElement | null>(null);
 const loginPasswordRef = ref<any | null>(null); // BaseInput instance
 const loginSubmitRef = ref<any | null>(null);   // BaseButton instance
 
+// Use Composable
+const { 
+  userInput: emailUserInput, 
+  suggestion: emailSuggestion, 
+  displayValue: emailDisplayValue, 
+  handleInput: handleEmailInput, 
+  handleKeydown: handleEmailKeydown,
+  reset: resetEmail,
+  setValue: setEmailValue
+} = useEmailAutocomplete(loginIdentifierRef);
+
 // State
 const loginData = ref({ identifier: '', password: '' });
-const loginUserInput = ref('');
-const loginSuggestion = ref('');
+// We use a local simple ref for phone/ambiguous, but for email we sync with composable
+const simpleUserInput = ref(''); 
 const currentInputType = ref<'phone' | 'email' | 'ambiguous'>('ambiguous'); 
 const previousInputType = ref<'phone' | 'email' | 'ambiguous'>('ambiguous');
 const identifierType = ref<string>('');
 const loginErrors = ref({ identifier: '', password: '' });
 
 // Computed
-const loginDisplayValue = computed(() => loginUserInput.value + loginSuggestion.value);
+// If email, use composable's display value. Else use simpleUserInput
+const loginDisplayValue = computed(() => {
+  if (currentInputType.value === 'email') {
+    return emailDisplayValue.value;
+  }
+  return simpleUserInput.value;
+});
 
 const placeholderText = computed(() => {
   switch (currentInputType.value) {
@@ -144,6 +161,13 @@ const placeholderText = computed(() => {
 // Watch
 watch(() => loginData.value.password, () => {
   if (loginErrors.value.password) validateLoginField('password');
+});
+
+// Sync changes from composable back to loginData if needed
+watch(emailDisplayValue, (val) => {
+  if (currentInputType.value === 'email') {
+    loginData.value.identifier = val;
+  }
 });
 
 // Mounted
@@ -166,119 +190,89 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 function handleLoginIdentifierKeydown(e: KeyboardEvent) {
-  if (e.key === 'Backspace' && loginSuggestion.value) {
-    e.preventDefault();
-    loginUserInput.value = loginUserInput.value.slice(0, -1);
-    loginSuggestion.value = '';
-    loginData.value.identifier = loginUserInput.value;
+  // If we are in email mode, let composable handle magic keys (Tab, etc)
+  if (currentInputType.value === 'email') {
+    // We still want to intercept Enter to move focus, IF composable didn't consume it
+    // Composable intercepts Enter if suggestion exists.
     
-    nextTick(() => {
-      loginIdentifierRef.value?.setSelectionRange(
-        loginUserInput.value.length,
-        loginUserInput.value.length
-      );
-    });
-    return;
-  }
-  
-  if ((e.key === 'Tab' || e.key === 'Enter' || e.key === 'ArrowRight') && loginSuggestion.value) {
-    const target = e.target as HTMLInputElement;
-    if (target.selectionStart === loginUserInput.value.length) {
-      e.preventDefault();
-      loginUserInput.value = loginDisplayValue.value;
-      loginSuggestion.value = '';
-      loginData.value.identifier = loginDisplayValue.value;
-      
-      nextTick(() => {
-        const fullLength = loginDisplayValue.value.length;
-        loginIdentifierRef.value?.setSelectionRange(fullLength, fullLength);
-      });
-      
-      if (e.key === 'Tab') {
-        setTimeout(() => loginPasswordRef.value?.focus(), 100);
-      }
+    // Check if composable consumes it
+    if (emailSuggestion.value && (e.key === 'Tab' || e.key === 'Enter' || e.key === 'ArrowRight')) {
+        // Composable logic duplicates check of SelectionStart. 
+        // We call it:
+        handleEmailKeydown(e);
+        // If suggestion was committed, we might want to move focus on Tab
+        if (e.key === 'Tab' && !e.defaultPrevented) {
+             // If composable didn't prevent default (meaning it didn't use it for completion),
+             // then native tab works. 
+             // If it did prevent default, it completed the email. 
+             // We might want to manually move focus to password?
+             setTimeout(() => loginPasswordRef.value?.focus(), 100);
+        }
+    } else {
+        // Normal keys or no suggestion
+        handleEmailKeydown(e);
     }
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    loginPasswordRef.value?.focus();
+    
+    // If Enter was pressed and NOT consumed by suggestion completion (suggestion empty or cursor not at end)
+    if (e.key === 'Enter' && !e.defaultPrevented) {
+        e.preventDefault();
+        loginPasswordRef.value?.focus();
+    }
+    
+    return;
+  } else {
+    // Normal behavior for non-email
+     if (e.key === 'Enter') {
+        e.preventDefault();
+        loginPasswordRef.value?.focus();
+     }
   }
 }
 
 function handleLoginIdentifierInput(e: Event) {
   const target = e.target as HTMLInputElement;
-  const currentUserInput = target.value;
-  const detectedType = detectInputType(currentUserInput);
+  const rawValue = target.value;
   
-  if (detectedType === 'phone') processPhoneInput(currentUserInput);
-  else if (detectedType === 'email') processEmailInput(currentUserInput);
-  else processAmbiguousInput(currentUserInput);
+  // Detect Type
+  const detectedType = detectInputType(rawValue);
   
   previousInputType.value = currentInputType.value;
   currentInputType.value = detectedType;
   
+  if (detectedType === 'email') {
+    // Delegate to composable
+    handleEmailInput(e);
+    identifierType.value = 'email';
+    // loginData updated via watch
+  } else if (detectedType === 'phone') {
+    // Phone Logic
+    const formatted = formatPhoneNumber(rawValue);
+    simpleUserInput.value = formatted;
+    // Clear email state if switching
+    if (previousInputType.value === 'email') resetEmail();
+    
+    loginData.value.identifier = formatted;
+    identifierType.value = 'phone';
+    
+    // If we formatted it, update the input value visually
+    if (formatted !== rawValue) {
+        target.value = formatted;
+    }
+  } else {
+    // Ambiguous
+    simpleUserInput.value = rawValue;
+     if (previousInputType.value === 'email') resetEmail();
+     
+    loginData.value.identifier = rawValue;
+    identifierType.value = '';
+  }
+
+  // Validate on input if error exists
   nextTick(() => {
-    if (currentInputType.value === 'email' && loginSuggestion.value) setupEmailSelectionRange();
-    if (loginErrors.value.identifier) validateLoginField('identifier');
+     if (loginErrors.value.identifier) validateLoginField('identifier');
   });
 }
 
-function processPhoneInput(currentInput: string) {
-  const formatted = formatPhoneNumber(currentInput);
-  loginUserInput.value = formatted;
-  loginSuggestion.value = '';
-  loginData.value.identifier = formatted;
-  identifierType.value = 'phone';
-}
-
-function processEmailInput(currentInput: string) {
-  let input = currentInput;
-  if (input.includes('@')) input = input.replace(/-/g, '');
-  
-  const atIndex = input.lastIndexOf('@');
-  if (atIndex === -1) {
-    loginUserInput.value = input;
-    loginSuggestion.value = '';
-    loginData.value.identifier = input;
-    return;
-  }
-  
-  const domainPart = input.slice(atIndex + 1);
-  const foundDomain = findEmailSuggestion(domainPart);
-  
-  if (foundDomain && domainPart.length > 0) {
-    loginUserInput.value = input.slice(0, atIndex + 1) + domainPart;
-    loginSuggestion.value = foundDomain.substring(domainPart.length);
-  } else {
-    loginUserInput.value = input;
-    loginSuggestion.value = '';
-  }
-  
-  loginData.value.identifier = loginDisplayValue.value;
-  identifierType.value = 'email';
-  setupEmailSelectionRange();
-}
-
-function processAmbiguousInput(currentInput: string) {
-  let input = currentInput;
-  if (input.includes('@')) input = input.replace(/-/g, '');
-  loginUserInput.value = input;
-  loginSuggestion.value = '';
-  loginData.value.identifier = input;
-  identifierType.value = '';
-}
-
-function setupEmailSelectionRange() {
-  if (loginSuggestion.value) {
-    [10, 50, 100].forEach(delay => {
-      setTimeout(() => {
-        loginIdentifierRef.value?.setSelectionRange(
-          loginUserInput.value.length,
-          loginDisplayValue.value.length
-        );
-      }, delay);
-    });
-  }
-}
 
 function validateLoginField(field: 'identifier' | 'password') {
   if (field === 'identifier') {
@@ -303,8 +297,11 @@ function validateLoginField(field: 'identifier' | 'password') {
 
 function handleLogin() {
   if (!loginData.value.identifier) {
-    loginData.value.identifier = 'demo@example.com';
-    loginUserInput.value = 'demo@example.com';
+    // Demo login logic
+    const demoEmail = 'demo@example.com';
+    currentInputType.value = 'email';
+    setEmailValue(demoEmail);
+    loginData.value.identifier = demoEmail;
     identifierType.value = 'email';
   }
   

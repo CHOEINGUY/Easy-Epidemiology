@@ -8,7 +8,6 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden; /* Prevent body-level scrolling */
-  font-family: Arial, sans-serif;
 }
 
 /* 메인 앱 컨테이너 */

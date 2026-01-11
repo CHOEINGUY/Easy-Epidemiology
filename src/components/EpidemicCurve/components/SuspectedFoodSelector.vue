@@ -8,7 +8,7 @@
           <span 
             v-if="analysisStatus" 
             ref="analysisTooltipRef"
-            class="px-2 py-0.5 rounded-full text-xs font-medium cursor-help" 
+            class="px-2 py-0.5 rounded-full text-xs font-medium cursor-help whitespace-nowrap" 
             :class="{
               'bg-green-50 text-green-700 border border-green-200': analysisStatus.type === 'success',
               'bg-orange-50 text-orange-700 border border-orange-200': analysisStatus.type === 'warning',

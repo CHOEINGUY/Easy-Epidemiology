@@ -10,7 +10,16 @@ export default {
       pending: 'Analysis Pending',
       analyzing: 'Analyzing...',
       completed: 'Analysis Complete',
+      caseControlSuccess: 'Case-Control Analysis Successful',
+      cohortSuccess: 'Cohort Analysis Successful',
       error: 'Analysis Error'
+    },
+    tooltip: {
+      success: 'Analysis completed successfully.',
+      pending: 'Analysis pending.',
+      noData: 'No data available.',
+      error: 'An error occurred during analysis.',
+      checking: 'Checking analysis status...'
     }
   },
   contextMenu: {

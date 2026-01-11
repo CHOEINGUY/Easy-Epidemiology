@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import * as echarts from 'echarts';
+import { showToast } from '../../DataInputVirtualScroll/logic/toast';
 
 // Workaround for ClipboardItem type if not available in current TS lib environment
 declare class ClipboardItem {
@@ -151,7 +152,7 @@ export function useClipboardOperations() {
   ): Promise<void> => {
     const instance = chartInstance;
     if (!instance || typeof instance.getDataURL !== 'function') {
-      alert('차트 내보내기 불가');
+      showToast('차트 내보내기 불가', 'error');
       return;
     }
     const chartKind = selectedChartType === 'total' ? '전체' : '환자';
@@ -198,7 +199,7 @@ export function useClipboardOperations() {
     } catch (error: any) {
       const message = `차트 내보내기 오류: ${error.message}`;
       console.error(message);
-      alert(message);
+      showToast(message, 'error');
     }
   };
 

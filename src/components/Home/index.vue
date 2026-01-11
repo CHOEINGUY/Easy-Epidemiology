@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full min-h-screen bg-white font-['Noto_Sans_KR',sans-serif]">
+  <div class="w-full min-h-screen bg-white">
     <HeroSection 
       :title="$t('home.hero.title')"
       :subtitle="$t('home.hero.subtitle')"

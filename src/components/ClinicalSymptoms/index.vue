@@ -65,6 +65,7 @@ import { useChartControls } from './composables/useChartControls';
 import { useChartOptions } from './composables/useChartOptions';
 import { useClipboardOperations } from './composables/useClipboardOperations';
 import { useI18n } from 'vue-i18n';
+import { showToast } from '../DataInputVirtualScroll/logic/toast';
 
 // Type for chart component ref
 interface SymptomBarChartInstance {
@@ -189,7 +190,7 @@ const recreateChart = (): void => {
         renderChart();
       } catch (error) { 
         console.error('ECharts 재초기화 실패:', error); 
-        alert('차트를 다시 그리는 중 오류가 발생했습니다.'); 
+        showToast('차트를 다시 그리는 중 오류가 발생했습니다.', 'error'); 
       }
     } else { 
       console.error('차트 컨테이너 DOM 요소를 찾을 수 없습니다.'); 

@@ -2,7 +2,7 @@ export default {
   title: 'Login',
   registerTitle: 'Register',
   logoutConfirmTitle: 'Logout',
-  logoutConfirmMessage: 'Are you sure you want to logout?{br}All ongoing work will be saved securely.',
+  logoutConfirmMessage: 'Are you sure you want to logout? {br}All ongoing work will be saved securely.',
   savedTitle: 'Saved Successfully!',
   savedMessage: 'All data has been saved securely.{br}Redirecting to login screen...',
   goToLoginNow: 'Go Now',

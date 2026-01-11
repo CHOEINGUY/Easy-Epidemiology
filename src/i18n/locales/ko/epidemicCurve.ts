@@ -13,6 +13,13 @@ export default {
       caseControlSuccess: '환자-대조군 연구 분석 성공',
       cohortSuccess: '코호트 연구 분석 성공',
       error: '분석 오류'
+    },
+    tooltip: {
+      success: '분석이 성공적으로 완료되었습니다.',
+      pending: '분석 대기 중입니다.',
+      noData: '분석할 데이터가 없습니다.',
+      error: '분석 중 오류가 발생했습니다.',
+      checking: '분석 상태 확인 중...'
     }
   },
   contextMenu: {

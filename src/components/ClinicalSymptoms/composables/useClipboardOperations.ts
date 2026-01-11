@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
 import * as echarts from 'echarts';
+import { showToast } from '../../DataInputVirtualScroll/logic/toast';
 
 export interface ClipboardOperationsParams {
   chartInstance: Ref<any | null>;
@@ -177,7 +178,7 @@ export function useClipboardOperations(options: ClipboardOperationsParams): UseC
   const exportChart = async (): Promise<void> => {
     const instance = chartInstance.value;
     if (!instance || typeof instance.getDataURL !== 'function') {
-      alert('차트 내보내기 불가');
+      showToast('차트 내보내기 불가', 'error');
       return;
     }
     const filename = `임상증상_분석_${new Date().toISOString().split('T')[0]}.png`;
@@ -224,7 +225,7 @@ export function useClipboardOperations(options: ClipboardOperationsParams): UseC
     } catch (error: any) {
       const message = `차트 내보내기 오류: ${error.message}`;
       console.error(message);
-      alert(message);
+      showToast(message, 'error');
     }
   };
 

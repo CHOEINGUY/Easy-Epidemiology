@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw, NavigationGuardNext, RouteLocationNormalized } from 'vue-router';
 import { isAuthRequired } from '../utils/environmentUtils';
+import { showToast } from '../components/DataInputVirtualScroll/logic/toast';
 
 const routes: Array<RouteRecordRaw> = [
     {
@@ -123,7 +124,7 @@ router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, n
 
     // 4. Admin Guard
     if (to.meta.requiresAdmin && !isAdmin) {
-        alert('접근 권한이 없습니다.');
+        showToast('접근 권한이 없습니다.', 'error');
         return next({ path: '/input' });
     }
 

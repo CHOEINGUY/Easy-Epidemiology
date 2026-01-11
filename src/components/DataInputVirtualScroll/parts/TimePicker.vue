@@ -81,6 +81,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { showToast } from '../logic/toast';
 
 const { t } = useI18n();
 
@@ -133,7 +134,7 @@ const handleMinuteChange = (event: Event) => {
 // 확인 버튼
 const confirm = () => {
   if (!props.year || !props.month || !props.day) {
-    alert(t('dataInput.datetime.alertSelectDate'));
+    showToast(t('dataInput.datetime.alertSelectDate'), 'warning');
     return;
   }
   emit('confirm');

@@ -8,6 +8,7 @@
           <component 
             :is="Component" 
             @logout="handleLogout" 
+            @request-logout="handleLogoutClick"
             @login-success="handleLoginSuccess"
           />
         </router-view>

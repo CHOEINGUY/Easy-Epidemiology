@@ -445,7 +445,7 @@ function onFilterButtonClick() {
 }
 
 .cell-id {
-  font-family: "Nanum Gothic";
+  /* font-family: "Nanum Gothic"; Removed for global font */
   font-size: 14px;
   font-weight: 400;
   color: black;
@@ -498,7 +498,7 @@ function onFilterButtonClick() {
   border-radius: 0;
   padding-left: 8px;
   font-size: 15px;
-  font-family: "Nanum Gothic";
+  /* font-family: "Nanum Gothic"; Removed for global font */
   flex-grow: 1;
   outline: none;
   height: 100%;
@@ -523,7 +523,7 @@ function onFilterButtonClick() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: "Google Sans", Roboto, Arial, sans-serif;
+  /* font-family: "Google Sans", Roboto, Arial, sans-serif; Removed for global font */
   font-size: 14px;
   font-weight: 400;
   border-radius: 4px;
@@ -676,7 +676,7 @@ function onFilterButtonClick() {
   padding: 8px 16px;
   text-align: left;
   width: 100%;
-  font-family: "Google Sans", Roboto, Arial, sans-serif;
+  /* font-family: "Google Sans", Roboto, Arial, sans-serif; Removed for global font */
   font-size: 14px;
   border-radius: 4px;
   white-space: nowrap;

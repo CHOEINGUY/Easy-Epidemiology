@@ -139,6 +139,7 @@ import { USER_ROLES } from '../../constants';
 import AdminStats from './AdminStats.vue';
 import AdminToolbar from './AdminToolbar.vue';
 import UserTable from './UserTable.vue';
+import { showConfirmToast } from '../DataInputVirtualScroll/logic/toast';
 
 // ...
 
@@ -319,7 +320,7 @@ async function approveUser(userId: string) {
 }
 
 async function rejectUser(userId: string) {
-  if (!confirm(t('admin.messages.confirmReject'))) {
+  if (!await showConfirmToast(t('admin.messages.confirmReject'))) {
     return;
   }
   try {
@@ -333,7 +334,7 @@ async function rejectUser(userId: string) {
 }
 
 async function deleteUser(userId: string) {
-  if (!confirm(t('admin.messages.confirmDelete'))) {
+  if (!await showConfirmToast(t('admin.messages.confirmDelete'))) {
     return;
   }
   try {
@@ -357,7 +358,7 @@ async function changeUserRole(user: { id: string; role: string }) {
 
 async function bulkApprove() {
   if (selectedCount.value === 0) return;
-  if (!confirm(t('admin.messages.confirmBulkApprove', { count: selectedCount.value }))) return;
+  if (!await showConfirmToast(t('admin.messages.confirmBulkApprove', { count: selectedCount.value }))) return;
 
   try {
     await adminApi.bulkApproveUsers(selectedUsers.value);
@@ -370,16 +371,10 @@ async function bulkApprove() {
   }
 }
 
-const emit = defineEmits(['logout']);
+const emit = defineEmits(['logout', 'request-logout']);
 
 function logout() {
-  if (confirm(t('admin.messages.confirmLogout'))) {
-    authStore.logout().then(() => {
-      emit('logout');
-    }).catch(() => {
-      emit('logout');
-    });
-  }
+  emit('request-logout');
 }
 
 function showMessage(msg: string, type: 'info' | 'success' | 'error' = 'info') {

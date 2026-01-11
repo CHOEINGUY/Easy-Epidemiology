@@ -1,6 +1,6 @@
-// useClipboardOperations.ts - 테이블/차트 복사 및 내보내기
 import { ref, type Ref } from 'vue';
 import * as echarts from 'echarts';
+import { showToast } from '../../DataInputVirtualScroll/logic/toast';
 
 export interface UseClipboardOperationsReturn {
   isSymptomTableCopied: Ref<boolean>;
@@ -199,7 +199,7 @@ export function useClipboardOperations(): UseClipboardOperationsReturn {
   // 차트 내보내기 헬퍼
   const exportChartHelper = async (chartInstance: any | null, chartWidth: number, filename: string) => {
     if (!chartInstance || typeof chartInstance.getDataURL !== 'function') {
-      alert('차트 내보내기 불가');
+      showToast('차트 내보내기 불가', 'error');
       return;
     }
 
@@ -242,7 +242,7 @@ export function useClipboardOperations(): UseClipboardOperationsReturn {
       console.log('차트 저장 완료:', filename);
     } catch (error: any) {
       console.error('차트 내보내기 오류:', error);
-      alert(`차트 내보내기 오류: ${error.message}`);
+      showToast(`차트 내보내기 오류: ${error.message}`, 'error');
     }
   };
 

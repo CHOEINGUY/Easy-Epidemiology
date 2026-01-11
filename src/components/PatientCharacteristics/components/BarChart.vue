@@ -25,6 +25,7 @@ import * as echarts from 'echarts';
 import { debounce } from 'lodash-es';
 import { useClipboardOperations } from '../composables/useClipboardOperations';
 import { generateTotalChartOptions, generatePatientChartOptions, type ChartOptions } from '../composables/useChartOptions';
+import { showToast } from '../../DataInputVirtualScroll/logic/toast';
 import SharedIconButton from './SharedIconButton.vue';
 import type { FrequencyData } from '../composables/usePatientStats';
 
@@ -140,7 +141,7 @@ const recreateChart = () => {
         updateCharts();
       } catch (error) { 
         console.error('ECharts 재초기화 실패:', error); 
-        alert('차트를 다시 그리는 중 오류가 발생했습니다.'); 
+        showToast('차트를 다시 그리는 중 오류가 발생했습니다.', 'error'); 
       }
     } else { 
       console.error('차트 컨테이너 DOM 요소를 찾을 수 없습니다.'); 

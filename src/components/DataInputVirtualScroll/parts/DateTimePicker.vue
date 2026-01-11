@@ -45,6 +45,7 @@ import { ref, reactive, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CalendarPicker from './CalendarPicker.vue';
 import TimePicker from './TimePicker.vue';
+import { showToast } from '../logic/toast';
 
 import type { DateInfo } from '@/types/virtualGridContext';
 
@@ -101,7 +102,7 @@ const onDateSelected = () => {
 // 확인 버튼
 const confirm = () => {
   if (!selectedDate.year || !selectedDate.month || !selectedDate.day) {
-    alert(t('dataInput.datetime.alertSelectDate'));
+    showToast(t('dataInput.datetime.alertSelectDate'), 'warning');
     return;
   }
   

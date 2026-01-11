@@ -43,7 +43,7 @@ export default {
     centerName: 'Department of Preventive Medicine',
     subCenterName: 'Research Center for Infectious Disease Epidemiology',
     members: {
-      role1: 'Statistical Verification & Advice (Specialist)',
+      role1: 'Statistical Verification & Advice',
       name1: 'Jeong-Ho Yang',
       role2: 'System Development & Design',
       name2: 'In-Gyu Choi'
@@ -64,7 +64,7 @@ export default {
     emailSupport: 'Email Inquiry',
     names: {
       yang: 'Jeong-Ho Yang',
-      choi: 'In-Gyu Choi'
+      choi: 'In-Gyu Choe'
     },
     roles: {
       chief: 'Chief',
