@@ -45,7 +45,7 @@ export default {
       },
       pvalue: {
         title: '유의확률 (P-value)',
-        description: '구해진 교차비(OR)가 우연히 나왔을 확률을 의미합니다. 통상적으로 {val} 미만일 때 통계적으로 유의하다고 판단합니다.',
+        description: '구해진 교차비(OR)가 우연히 나왔을 확률을 의미합니다. 통상적으로 {highlight} 미만일 때 통계적으로 유의하다고 판단합니다.',
         method: {
           title: '검정 방법 선택 기준',
           chiSquare: { label: '카이제곱 검정 (Chi-square)', desc: '관측 빈도가 충분할 때 사용' },

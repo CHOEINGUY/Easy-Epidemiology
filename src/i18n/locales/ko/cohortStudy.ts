@@ -45,7 +45,7 @@ export default {
       },
       pvalue: {
         title: '유의확률 (P-value)',
-        description: '계산된 상대위험비(RR)가 우연에 의해 관찰되었을 확률입니다. 통상적으로 {val} 미만일 때 통계적으로 유의하다고 판단합니다.',
+        description: '계산된 상대위험비(RR)가 우연에 의해 관찰되었을 확률입니다. 통상적으로 {highlight} 미만일 때 통계적으로 유의하다고 판단합니다.',
         method: {
           title: '검정 방법 선택 기준',
           chiSquare: { label: '카이제곱 검정 (Chi-square)', desc: '두 집단의 발병률 차이를 검정' },

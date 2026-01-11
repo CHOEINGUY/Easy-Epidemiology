@@ -82,7 +82,7 @@ export const siteConfig: SiteConfig = {
         subtitle: '감염병 역학조사 전문 플랫폼',
         description: '집단발생 사례 분석과 역학조사를 위한 통합 웹 기반 분석 솔루션',
         version: 'v2.0',
-        lastUpdate: '2025년 1월 27일',
+        lastUpdate: '2026년 1월 11일',
         platform: '웹 기반 (크로스 플랫폼)'
     },
     // 핵심 기능 카드
@@ -144,7 +144,7 @@ export const siteConfig: SiteConfig = {
     education: {
         timeline: [
             {
-                title: '2025년 광주전남 감염병 대응 실무자 교육',
+                title: '2026년 광주전남 감염병 대응 실무자 교육',
                 subtitle: 'FETP-F (Field Epidemiology Training Program)'
             },
             {

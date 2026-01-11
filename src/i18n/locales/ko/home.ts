@@ -23,7 +23,7 @@ export default {
       operational: '정상 운영',
       version: '버전',
       lastUpdate: '최근 업데이트',
-      lastUpdateDate: '2025년 1월 27일',
+      lastUpdateDate: '2026년 1월 11일',
       platform: '플랫폼',
       platformValue: '웹 기반 (크로스 플랫폼)'
     },

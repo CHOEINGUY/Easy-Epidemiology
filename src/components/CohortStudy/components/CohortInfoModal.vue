@@ -5,7 +5,7 @@
     :subtitle="$t('cohortStudy.guide.subtitle')"
     icon="groups"
     size="xl"
-    @update:modelValue="(val) => !val && $emit('close')"
+    @update:modelValue="(val: boolean) => !val && $emit('close')"
     @close="$emit('close')"
   >
     <!-- Scrollable Content -->
@@ -113,7 +113,7 @@
           <div class="space-y-6 text-sm text-slate-600 h-full">
             <p class="leading-relaxed text-slate-700">
               <i18n-t keypath="cohortStudy.guide.sections.pvalue.description" tag="span">
-                <template #val>
+                <template #highlight>
                   <span class="font-bold text-slate-900 border-b-2 border-yellow-300">0.05 (5%)</span>
                 </template>
               </i18n-t>

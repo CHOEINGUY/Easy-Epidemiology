@@ -23,7 +23,7 @@ export default {
       operational: 'Operational',
       version: 'Version',
       lastUpdate: 'Last Update',
-      lastUpdateDate: 'January 27, 2025',
+      lastUpdateDate: 'January 11, 2026',
       platform: 'Platform',
       platformValue: 'Web Based (Cross Platform)'
     },

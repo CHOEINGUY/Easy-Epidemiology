@@ -45,7 +45,7 @@ export default {
       },
       pvalue: {
         title: 'P-value',
-        description: 'The probability that the calculated Odds Ratio (OR) was observed by chance. Typically, a value less than {val} is considered statistically significant.',
+        description: 'The probability that the calculated Odds Ratio (OR) was observed by chance. Typically, a value less than {highlight} is considered statistically significant.',
         method: {
           title: 'Test Method Selection Criteria',
           chiSquare: { label: 'Chi-square Test', desc: 'Used when observed frequencies are sufficient' },

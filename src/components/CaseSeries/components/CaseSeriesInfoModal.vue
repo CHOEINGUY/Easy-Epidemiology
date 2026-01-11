@@ -5,7 +5,7 @@
     :subtitle="$t('caseSeries.guide.subtitle')"
     icon="insights"
     size="lg"
-    @update:modelValue="(val) => !val && $emit('close')"
+    @update:modelValue="(val: boolean) => !val && $emit('close')"
     @close="$emit('close')"
   >
     <!-- Scrollable Content -->

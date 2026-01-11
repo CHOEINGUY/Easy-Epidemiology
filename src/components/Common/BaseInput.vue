@@ -62,13 +62,15 @@
       </div>
     </div>
     
-    <!-- Helper Text / Error Message -->
-    <p v-if="error" class="text-xs text-red-500 mt-0.5 flex items-center gap-1 animate-in slide-in-from-top-1">
-      {{ error }}
-    </p>
-    <p v-else-if="helperText" class="text-xs text-slate-500 mt-0.5">
-      {{ helperText }}
-    </p>
+    <!-- Helper Text / Error Message (Reserved space to prevent layout shift) -->
+    <div class="h-5">
+      <p v-if="error" class="text-xs text-red-500 mt-0.5 flex items-center gap-1 animate-in slide-in-from-top-1">
+        {{ error }}
+      </p>
+      <p v-else-if="helperText" class="text-xs text-slate-500 mt-0.5">
+        {{ helperText }}
+      </p>
+    </div>
   </div>
 </template>
 
@@ -98,7 +100,7 @@ const props = withDefaults(defineProps<{
   disabled: false,
   readonly: false,
   clearable: false,
-  rounded: 'lg'
+  rounded: 'xl'
 });
 
 const emit = defineEmits<{
@@ -128,12 +130,13 @@ const roundedClasses: Record<string, string> = {
   sm: 'rounded-sm',
   md: 'rounded-md',
   lg: 'rounded-lg',
+  xl: 'rounded-xl',
   full: 'rounded-full'
 };
 
 const inputClasses = computed(() => {
   const classes = [
-    'w-full py-2 bg-white border outline-none transition-all duration-200 placeholder-slate-300',
+    'w-full py-3.5 bg-white border outline-none transition-all duration-200 placeholder-slate-300 text-[15px]',
     roundedClasses[props.rounded],
     props.icon ? 'pl-10' : 'pl-4',
     // Right padding calculation based on icons
