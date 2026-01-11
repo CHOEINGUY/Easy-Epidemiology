@@ -36,18 +36,24 @@
           </div>
         </div>
         
-        <!-- 로그아웃 버튼 (로그인 모드에서만 표시) -->
-        <div v-if="requiresAuth" class="flex items-center pl-2 ml-2 border-l border-slate-200 h-[24px]">
-          <BaseButton 
-            class="group hover:bg-red-50 hover:text-red-600 hover:border-red-200" 
+        <!-- Language Switcher -->
+        <div class="flex items-center pl-2 ml-2 border-l border-slate-200 h-[24px] gap-2">
+          <LanguageSwitcher :direction="'up'" />
+          
+           <!-- 로그아웃 버튼 (로그인 모드에서만 표시) -->
+           <BaseButton 
+            v-if="requiresAuth"
+            class="group bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200 hover:border-red-200 shadow-sm hover:shadow" 
             variant="secondary"
             size="sm"
-            rounded="lg"
+            rounded="full"
             @click="handleLogoutClick"
             title="로그아웃"
           >
-            <span class="material-icons text-[16px] transition-transform duration-300 group-hover:-translate-x-0.5">logout</span>
-            <span class="hidden sm:inline">로그아웃</span>
+            <div class="flex items-center gap-1.5">
+              <span class="material-icons text-[18px] text-slate-400 transition-transform duration-300 group-hover:text-red-500 group-hover:-translate-x-0.5 leading-none">logout</span>
+              <span class="hidden sm:inline font-medium text-[13px] leading-none pt-[1px]">{{ $t('common.logout') }}</span>
+            </div>
           </BaseButton>
         </div>
       </div>
@@ -66,10 +72,8 @@
           <div class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <span class="material-icons text-3xl">logout</span>
           </div>
-          <h3 class="text-2xl font-bold text-slate-900 mb-2">로그아웃</h3>
-          <p class="text-slate-500 mb-8 leading-relaxed">
-            정말로 로그아웃하시겠습니까?<br>
-            진행 중인 모든 작업은 안전하게 저장됩니다.
+          <h3 class="text-2xl font-bold text-slate-900 mb-2">{{ $t('auth.logoutConfirmTitle') }}</h3>
+          <p class="text-slate-500 mb-8 leading-relaxed" v-html="$t('auth.logoutConfirmMessage').replace('{br}', '<br>')">
           </p>
           <div class="flex gap-3">
             <BaseButton 
@@ -79,7 +83,7 @@
               rounded="lg"
               @click="closeLogoutConfirmModal"
             >
-              취소
+              {{ $t('common.cancel') }}
             </BaseButton>
             <BaseButton 
               class="flex-1 py-3" 
@@ -89,7 +93,7 @@
               shadow="lg"
               @click="confirmLogout"
             >
-              로그아웃
+              {{ $t('common.logout') }}
             </BaseButton>
           </div>
         </div>
@@ -99,10 +103,9 @@
           <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm animate-bounce-short">
             <span class="material-icons text-4xl">check</span>
           </div>
-          <h3 class="text-2xl font-bold text-slate-900 mb-2 tracking-tight">저장 완료!</h3>
+          <h3 class="text-2xl font-bold text-slate-900 mb-2 tracking-tight">{{ $t('auth.savedTitle') }}</h3>
           <p class="text-slate-500 mb-8 leading-relaxed">
-            모든 데이터가 안전하게 저장되었습니다.<br>
-            <span class="font-medium text-slate-700">잠시 후 로그인 화면으로 이동합니다.</span>
+            <span v-html="$t('auth.savedMessage').replace('{br}', '<br>')"></span>
           </p>
           
           <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-8 shadow-inner">
@@ -116,7 +119,7 @@
             rounded="xl"
             @click="closeLogoutConfirmModal"
           >
-            지금 이동
+            {{ $t('auth.goToLoginNow') }}
           </BaseButton>
         </div>
     </BaseModal>
@@ -132,14 +135,18 @@ import { useRoute, useRouter } from 'vue-router';
 import ToastContainer from './components/DataInputVirtualScroll/parts/ToastContainer.vue';
 import BaseModal from './components/Common/BaseModal.vue';
 import BaseButton from './components/Common/BaseButton.vue';
+import LanguageSwitcher from './components/Common/LanguageSwitcher.vue';
 import { showConfirmToast } from './components/DataInputVirtualScroll/logic/toast';
 import { tokenManager } from './services/authApi';
 import { isAuthRequired, logEnvironmentInfo } from './utils/environmentUtils';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from './stores/authStore';
 import { useEpidemicStore } from './stores/epidemicStore';
 import { USER_ROLES } from './constants';
 
+const { t } = useI18n();
 const route = useRoute();
+
 const router = useRouter();
 const authStore = useAuthStore();
 const epidemicStore = useEpidemicStore(); // store for validation checks
@@ -154,17 +161,19 @@ const logoutModalTimer = ref<number | null>(null);
 const remainingSeconds = ref(1.5);
 
 // Constants
-const baseTabs = [
-  { name: 'DataInputVirtual', label: '데이터 입력', icon: 'table_chart' },
-  { name: 'PatientCharacteristics', label: '환자특성', icon: 'accessibility_new' },
-  { name: 'EpidemicCurve', label: '유행곡선', icon: 'show_chart' },
-  { name: 'ClinicalSymptoms', label: '임상증상', icon: 'sick' },
-  { name: 'CaseControl', label: '환자대조군(OR)', icon: 'compare_arrows' },
-  { name: 'CohortStudy', label: '코호트(RR)', icon: 'groups' },
-  { name: 'CaseSeries', label: '사례군조사', icon: 'list_alt' },
-  { name: 'ReportWriter', label: '보고서 작성', icon: 'edit_note' },
-  { name: 'HomePage', label: '웹페이지 정보', icon: 'info' }
-];
+// Constants
+const baseTabs = computed(() => [
+  { name: 'DataInputVirtual', label: t('nav.dataInput'), icon: 'table_chart' },
+  { name: 'PatientCharacteristics', label: t('nav.patientCharacteristics'), icon: 'accessibility_new' },
+  { name: 'EpidemicCurve', label: t('nav.epidemicCurve'), icon: 'show_chart' },
+  { name: 'ClinicalSymptoms', label: t('nav.clinicalSymptoms'), icon: 'sick' },
+  { name: 'CaseControl', label: t('nav.caseControl'), icon: 'compare_arrows' },
+  { name: 'CohortStudy', label: t('nav.cohortStudy'), icon: 'groups' },
+  { name: 'CaseSeries', label: t('nav.caseSeries'), icon: 'list_alt' },
+  { name: 'ReportWriter', label: t('nav.reportWriter'), icon: 'edit_note' },
+  { name: 'HomePage', label: t('nav.webpageInfo'), icon: 'info' }
+]);
+
 
 // --- Computeds ---
 const requiresAuth = computed(() => isAuthRequired());
@@ -176,16 +185,17 @@ const showTabs = computed(() => {
 });
 
 const tabs = computed(() => {
-  const t = [...baseTabs];
+  const tArr = [...baseTabs.value];
   if (requiresAuth.value && isAdmin.value) {
-    t.push({
+    tArr.push({
       name: 'AdminPanel',
-      label: '관리자 패널',
+      label: t('nav.adminPanel'),
       icon: 'admin_panel_settings'
     });
   }
-  return t;
+  return tArr;
 });
+
 
 const contentClass = computed(() => {
   const classes = ['content'];
@@ -364,7 +374,7 @@ async function confirmLogout() {
     startLogoutTimer();
   } catch (error) {
     console.error('❌ 로그아웃 실패:', error);
-    showConfirmToast('로그아웃 중 오류가 발생했습니다.');
+    showConfirmToast(t('auth.login.errors.logoutError'));
     closeLogoutConfirmModal();
   }
 }
@@ -388,7 +398,7 @@ function handleTabClick(routeName: string) {
     const hasErrors = validationErrors && validationErrors.size > 0;
     
     if (hasErrors) {
-      const confirmMessage = `데이터 유효성 오류가 ${validationErrors.size}개 있습니다.\n다른 탭으로 이동하시겠습니까?`;
+      const confirmMessage = t('common.tabChangeConfirm', { count: validationErrors.size });
       showConfirmToast(confirmMessage).then((confirmed) => {
         if (confirmed) {
           router.push({ name: routeName });

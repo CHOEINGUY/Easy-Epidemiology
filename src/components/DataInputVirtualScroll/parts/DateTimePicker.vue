@@ -10,8 +10,8 @@
     tabindex="0"
     ref="pickerRef"
     role="dialog"
-    aria-modal="true"
-    aria-label="날짜 및 시간 선택"
+    aria-model="true"
+    :aria-label="$t('dataInput.datetime.selectDateTime')"
   >
     <div class="flex min-w-[480px] max-w-[600px]">
       <!-- 캘린더 부분 -->
@@ -42,10 +42,14 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import CalendarPicker from './CalendarPicker.vue';
 import TimePicker from './TimePicker.vue';
 
 import type { DateInfo } from '@/types/virtualGridContext';
+
+
+const { t } = useI18n();
 
 const props = defineProps<{
   visible: boolean;
@@ -72,10 +76,11 @@ const selectedDate = reactive({
 const selectedHour = ref('00');
 const selectedMinute = ref('00');
 
-// 피커 스타일
+// 피커 스타일 (수정된 위치 반영)
+const adjustedPosition = ref({ top: 0, left: 0 });
 const pickerStyle = computed(() => ({
-  top: `${props.position.top}px`,
-  left: `${props.position.left}px`
+  top: `${adjustedPosition.value.top}px`,
+  left: `${adjustedPosition.value.left}px`
 }));
 
 // Update Handlers
@@ -85,16 +90,35 @@ const updateDay = (val: number) => { selectedDate.day = val; };
 
 // Date Selected Handler
 const onDateSelected = () => {
-  // 선택 시 필요한 추가 로직이 있다면 여기에 작성 (예: 로그, 자동 닫기 등)
-  // 현재는 특별한 동작 없음, CalendarPicker에서 이미 update 이벤트를 발생시킴
-  
-  // 셀 포커스 복원 (blur 이벤트 방지)
   nextTick(() => {
     const cellElement = document.querySelector(`[data-row="${props.initialValue?.rowIndex}"][data-col="${props.initialValue?.colIndex}"]`);
     if (cellElement instanceof HTMLElement) {
       cellElement.focus();
     }
   });
+};
+
+// 확인 버튼
+const confirm = () => {
+  if (!selectedDate.year || !selectedDate.month || !selectedDate.day) {
+    alert(t('dataInput.datetime.alertSelectDate'));
+    return;
+  }
+  
+  const result: DateInfo = {
+    year: selectedDate.year,
+    month: selectedDate.month,
+    day: selectedDate.day,
+    hour: selectedHour.value,
+    minute: selectedMinute.value
+  };
+  
+  emit('confirm', result);
+};
+
+// 취소 버튼
+const cancel = () => {
+  emit('cancel');
 };
 
 // 키보드 이벤트 처리
@@ -126,29 +150,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 };
 
-// 확인 버튼
-const confirm = () => {
-  if (!selectedDate.year || !selectedDate.month || !selectedDate.day) {
-    alert('날짜를 선택해주세요.');
-    return;
-  }
-  
-  const result: DateInfo = {
-    year: selectedDate.year,
-    month: selectedDate.month,
-    day: selectedDate.day,
-    hour: selectedHour.value,
-    minute: selectedMinute.value
-  };
-  
-  emit('confirm', result);
-};
-
-// 취소 버튼
-const cancel = () => {
-  emit('cancel');
-};
-
 // 초기값 설정
 watch(() => props.initialValue, (newValue) => {
   if (newValue) {
@@ -171,20 +172,78 @@ watch(() => props.initialValue, (newValue) => {
   }
 }, { immediate: true });
 
-// 피커가 보여질 때 포커스 설정 및 스크롤 방지
+// 피커 위치 조정 함수
+const updatePosition = () => {
+  if (!pickerRef.value) return;
+
+  // 초기 위치 설정 (부모에서 전달받은 위치)
+  const currentTop = props.position.top;
+  const currentLeft = props.position.left;
+  
+  // 피커 높이 측정
+  const pickerRect = pickerRef.value.getBoundingClientRect();
+  const pickerHeight = pickerRect.height;
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
+
+  // 하단 여유 공간 확인 (10px 여유)
+  const spaceBelow = viewportHeight - currentTop;
+  const hasSpaceBelow = spaceBelow >= pickerHeight + 10;
+
+  // 기본 위치
+  let newTop = currentTop;
+  let newLeft = currentLeft;
+
+  // 하단 공간 부족 시 위쪽으로 표시
+  if (!hasSpaceBelow) {
+    // 셀 엘리먼트 찾기 (입력창 바로 위에 표시하기 위함)
+    if (props.initialValue) {
+      const cellSelector = `[data-row="${props.initialValue.rowIndex}"][data-col="${props.initialValue.colIndex}"]`;
+      const cellElement = document.querySelector(cellSelector);
+      
+      if (cellElement) {
+        const cellRect = cellElement.getBoundingClientRect();
+        // 셀의 위쪽 - 피커 높이
+        newTop = cellRect.top - pickerHeight;
+      } else {
+        // 셀을 못 찾으면 대략적인 높이(40px) 가정하고 위로 올림
+        newTop = currentTop - pickerHeight - 40;
+      }
+    } else {
+       newTop = currentTop - pickerHeight - 40;
+    }
+    
+    // 위쪽으로 보냈는데 위쪽도 잘리면? -> 그래도 화면 안에는 들어오게 조정
+    if (newTop < 10) newTop = 10;
+  }
+
+  // 우측 화면 밖으로 나가는 경우 조정
+  if (newLeft + pickerRect.width > viewportWidth) {
+    newLeft = viewportWidth - pickerRect.width - 20;
+  }
+  
+  // 최종 위치 적용
+  adjustedPosition.value = { top: newTop, left: newLeft };
+};
+
+// 피커가 보여질 때 위치 재조정
 watch(() => props.visible, (visible) => {
   if (visible) {
+    // 일단 초기 위치로 설정
+    adjustedPosition.value = { ...props.position };
+    
     nextTick(() => {
-      // pickerRef.value?.focus(); // 필요하면 포커스
+      // 렌더링 후 실제 크기 기반으로 위치 조정
+      updatePosition();
+      
+      // 스크롤 방지
+      preventScroll();
+      
+      // 외부 클릭 감지 이벤트 리스너 추가
+      setTimeout(() => {
+        document.addEventListener('click', handleOutsideClick);
+      }, 0);
     });
-    
-    // 스크롤 방지
-    preventScroll();
-    
-    // 외부 클릭 감지 이벤트 리스너 추가
-    setTimeout(() => {
-      document.addEventListener('click', handleOutsideClick);
-    }, 0);
   } else {
     // 스크롤 방지 해제
     restoreScroll();

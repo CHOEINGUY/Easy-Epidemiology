@@ -6,33 +6,13 @@ export interface IncubationDataPoint {
     count: number | string;
 }
 
-interface IncubationChartOptionsParams {
+export interface IncubationChartOptionsParams {
     incubationPeriodTableData: IncubationDataPoint[];
     incubationChartDisplayMode: string;
     incubationChartFontSize: number;
     incubationBarColor: string;
     suspectedFood: string;
-}
-
-/**
- * 잠복기 시간 라벨을 "N~M시간" 형식으로 변환
- */
-export function formatIncubationLabel(intervalLabel: string): string {
-    try {
-        const parts = intervalLabel.split(' ~ ');
-        if (parts.length !== 2)
-            return intervalLabel;
-        const startTime = parts[0].trim();
-        const endTime = parts[1].trim();
-        const startHour = parseInt(startTime.split(':')[0], 10);
-        let endHour = parseInt(endTime.split(':')[0], 10);
-        if (endHour === 0 && startHour > 0)
-            endHour = 24;
-        return `${startHour}~${endHour}시간`;
-    }
-    catch {
-        return intervalLabel;
-    }
+    t: (key: string) => string;
 }
 
 /**
@@ -43,7 +23,8 @@ export function generateIncubationChartOptions({
     incubationChartDisplayMode, 
     incubationChartFontSize, 
     incubationBarColor, 
-    suspectedFood 
+    suspectedFood,
+    t
 }: IncubationChartOptionsParams): any {
     const data = incubationPeriodTableData;
     if (!Array.isArray(data) || data.length === 0) {
@@ -70,7 +51,7 @@ export function generateIncubationChartOptions({
             return item.intervalLabel;
         }
         else {
-            return formatIncubationLabel(item.intervalLabel);
+            return item.intervalLabel;
         }
     });
 
@@ -79,7 +60,7 @@ export function generateIncubationChartOptions({
     const options: any = {
         textStyle: { fontFamily: 'Noto Sans KR, sans-serif' },
         title: {
-            text: '잠복기별 환자 수',
+            text: t('epidemicCurve.charts.incubationPeriod'),
             left: 'center',
             textStyle: { fontSize: (incubationChartFontSize || 15) + 4, fontWeight: 'bold' },
             top: 15
@@ -91,7 +72,7 @@ export function generateIncubationChartOptions({
                 if (!Array.isArray(params) || params.length === 0)
                     return '';
                 const param = params[0];
-                return `<strong>${param.name}</strong><br/>${param.seriesName}: <strong>${param.value}</strong> 명`;
+                return `<strong>${param.name}</strong><br/>${param.seriesName}: <strong>${param.value}</strong> ${t('epidemicCurve.controls.countUnit') || 'patients'}`; // Simplified, assuming countUnit might exist or fallback
             }
         },
         grid: {
@@ -118,7 +99,7 @@ export function generateIncubationChartOptions({
             }],
         yAxis: {
             type: 'value' as const,
-            name: '환자 수 (명)',
+            name: t('epidemicCurve.symptomTable.count'),
             nameTextStyle: { padding: [0, 0, 0, 60], fontSize: incubationChartFontSize || 15 },
             axisLabel: { fontSize: incubationChartFontSize || 15 },
             splitLine: { show: true, lineStyle: { type: 'dashed' } },
@@ -126,7 +107,7 @@ export function generateIncubationChartOptions({
             interval: step
         },
         series: [{
-                name: '환자 수',
+                name: t('epidemicCurve.symptomTable.count'),
                 type: 'bar',
                 data: seriesData,
                 barWidth: '100%',
@@ -160,7 +141,7 @@ export function generateIncubationChartOptions({
                 left: '5%',
                 bottom: '8%',
                 style: {
-                    text: `추정 감염원: ${suspectedFood}`,
+                    text: `${t('epidemicCurve.suspectedFood.title')}: ${suspectedFood}`,
                     fontSize: incubationChartFontSize || 15,
                     fill: '#333',
                     fontWeight: 'normal'

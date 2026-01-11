@@ -23,7 +23,7 @@
         hourglass_empty
       </span>
       <span class="upload-text">
-        {{ isUploading ? `처리 중... ${uploadProgress}%` : '데이터 가져오기' }}
+        {{ isUploading ? $t('dataInput.excel.processing', { progress: uploadProgress }) : $t('dataInput.excel.importData') }}
       </span>
     </button>
   </div>

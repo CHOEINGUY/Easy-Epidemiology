@@ -7,12 +7,12 @@
         <select v-model="currentYear" class="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm bg-white cursor-pointer min-w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 hover:border-blue-600" @click.stop>
           <option v-for="year in availableYears" :key="year" :value="year"
                   :class="{ 'bg-blue-50 text-blue-600 font-semibold': year === new Date().getFullYear() }">
-            {{ year }}년
+            {{ year }}{{ $t('dataInput.datetime.yearSuffix') }}
           </option>
         </select>
         
         <select v-model="currentMonth" class="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm bg-white cursor-pointer min-w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 hover:border-blue-600" @click.stop>
-          <option v-for="m in 12" :key="m" :value="m">{{ m }}월</option>
+          <option v-for="m in 12" :key="m" :value="m">{{ m }}{{ $t('dataInput.datetime.monthSuffix') }}</option>
         </select>
       </div>
       
@@ -28,7 +28,7 @@
     <div 
       class="grid grid-cols-7 gap-1"
       role="grid"
-      aria-label="달력"
+      :aria-label="$t('dataInput.datetime.selectDate')"
     >
       <button 
         v-for="date in calendarDates" 
@@ -37,7 +37,7 @@
         @click.stop="selectDate(date)"
         :disabled="date.disabled"
         role="gridcell"
-        :aria-label="`${date.year}년 ${date.month}월 ${date.day}일`"
+        :aria-label="`${date.year}${$t('dataInput.datetime.yearSuffix')} ${date.month}${$t('dataInput.datetime.monthSuffix')} ${date.day}${$t('dataInput.datetime.daySuffix')}`"
         :aria-selected="isSelected(date)"
         :tabindex="isFocused(date) ? '0' : '-1'"
       >
@@ -49,6 +49,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface Props {
   year?: number | null;
@@ -85,7 +88,15 @@ const focusedDate = reactive<{
 });
 
 // 요일 배열
-const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+const weekdays = computed(() => [
+  t('dataInput.datetime.weekdays.sun'),
+  t('dataInput.datetime.weekdays.mon'),
+  t('dataInput.datetime.weekdays.tue'),
+  t('dataInput.datetime.weekdays.wed'),
+  t('dataInput.datetime.weekdays.thu'),
+  t('dataInput.datetime.weekdays.fri'),
+  t('dataInput.datetime.weekdays.sat')
+]);
 
 // 연도 범위 (현재 연도 기준 과거 5년)
 const availableYears = computed(() => {

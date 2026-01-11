@@ -17,7 +17,8 @@ export function useGridRowOperations(
     dateTimePickerState: { visible: boolean },
     closeDateTimePicker: () => void,
     tryStartOperation: (op: string, options?: { blocking?: boolean; timeout?: number }) => boolean,
-    endOperation: (op: string) => void
+    endOperation: (op: string) => void,
+    t: (key: string, params?: any) => string = (k) => k
 ) {
     const epidemicStore = useEpidemicStore();
     const historyStore = useHistoryStore();
@@ -36,7 +37,7 @@ export function useGridRowOperations(
         historyStore.captureSnapshot('delete_empty_rows');
         epidemicStore.deleteEmptyRows();
         selectionSystem.clearSelection();
-        showToast('빈 행이 삭제되었습니다.', 'success');
+        showToast(t('dataInput.toast.grid.rowsDeleted'), 'success');
         endOperation('delete_empty_rows');
     }
 
@@ -54,7 +55,7 @@ export function useGridRowOperations(
 
         nextTick(() => {
             selectionSystem.clearSelection();
-            showToast(`${count}개 행이 추가되었습니다.`, 'success');
+            showToast(t('dataInput.toast.grid.rowAdded', { count: count }), 'success');
         });
     }
 

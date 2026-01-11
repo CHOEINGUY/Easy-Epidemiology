@@ -67,8 +67,8 @@
               <span class="material-icons text-2xl">help_outline</span>
             </div>
             <div>
-              <h3 class="text-lg font-black text-slate-800">확인 필요</h3>
-              <p class="text-xs font-medium text-slate-400 mt-0.5">작업을 계속하시겠습니까?</p>
+              <h3 class="text-lg font-black text-slate-800">{{ $t('dataInput.toast.confirmTitle') }}</h3>
+              <p class="text-xs font-medium text-slate-400 mt-0.5">{{ $t('dataInput.toast.confirmContext') }}</p>
             </div>
           </div>
 
@@ -85,13 +85,14 @@
               @click="toast.onCancel" 
               class="px-6 py-3 rounded-2xl text-sm font-bold text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all active:scale-95"
             >
-              취소
+              {{ $t('common.cancel') }}
             </button>
             <button 
               @click="toast.onConfirm" 
               class="px-8 py-3 rounded-2xl text-sm font-bold text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
             >
-              확인
+            >
+              {{ $t('common.confirm') }}
             </button>
           </div>
         </div>
@@ -103,8 +104,10 @@
 <script setup lang="ts">
 import { useToast } from '../logic/toast';
 import type { ToastType } from '../logic/toast';
+import { useI18n } from 'vue-i18n';
 
 const { toasts, removeToast } = useToast();
+const { t } = useI18n();
 
 function getIcon(type: ToastType) {
   switch (type) {
@@ -117,10 +120,10 @@ function getIcon(type: ToastType) {
 
 function getLabel(type: ToastType) {
   switch (type) {
-    case 'success': return '시스템 성공';
-    case 'error': return '시스템 오류';
-    case 'warning': return '시스템 경고';
-    default: return '시스템 알림';
+    case 'success': return t('dataInput.toast.success');
+    case 'error': return t('dataInput.toast.error');
+    case 'warning': return t('dataInput.toast.warning');
+    default: return t('dataInput.toast.info');
   }
 }
 </script>

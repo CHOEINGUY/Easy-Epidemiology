@@ -37,6 +37,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 defineProps<{
   activeSection: string;
   isLoggedIn: boolean;
@@ -46,18 +48,20 @@ defineEmits<{
   (e: 'navigate', id: string): void;
 }>();
 
-const navItems = [
-  { id: 'intro', label: '1. 프로그램 소개', icon: 'dashboard' },
-  { id: 'data-input', label: '2. 데이터 입력', icon: 'grid_on' },
-  { id: 'patient-characteristics', label: '3. 환자 특성', icon: 'people' },
-  { id: 'clinical-symptoms', label: '4. 임상 증상', icon: 'medical_services' },
-  { id: 'epidemic-curve', label: '5. 유행 곡선', icon: 'show_chart' },
-  { id: 'case-control', label: '6. 환자대조군', icon: 'compare_arrows' },
-  { id: 'cohort-study', label: '7. 코호트 연구', icon: 'groups' },
-  { id: 'report-writer', label: '8. 보고서 작성', icon: 'description' },
-  { id: 'case-series', label: '9. 사례군 조사', icon: 'list_alt' },
-  { id: 'team', label: '10. 개발진 소개', icon: 'info' },
-];
+const { t } = useI18n();
+
+const navItems = computed(() => [
+  { id: 'intro', label: t('manual.menu.intro'), icon: 'dashboard' },
+  { id: 'data-input', label: t('manual.menu.dataInput'), icon: 'grid_on' },
+  { id: 'patient-characteristics', label: t('manual.menu.patient'), icon: 'people' },
+  { id: 'clinical-symptoms', label: t('manual.menu.symptoms'), icon: 'medical_services' },
+  { id: 'epidemic-curve', label: t('manual.menu.epidemic'), icon: 'show_chart' },
+  { id: 'case-control', label: t('manual.menu.caseControl'), icon: 'compare_arrows' },
+  { id: 'cohort-study', label: t('manual.menu.cohort'), icon: 'groups' },
+  { id: 'report-writer', label: t('manual.menu.report'), icon: 'description' },
+  { id: 'case-series', label: t('manual.menu.caseSeries'), icon: 'list_alt' },
+  { id: 'team', label: t('manual.menu.team'), icon: 'info' },
+]);
 </script>
 
 <style scoped>

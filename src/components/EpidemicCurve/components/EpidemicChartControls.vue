@@ -39,25 +39,25 @@
     <div class="flex items-center gap-2">
       <!-- Font Size -->
       <ControlCycleText
-        label="폰트 크기:"
+        :label="$t('epidemicCurve.controls.fontSize')"
         :modelValue="chartFontSize"
         @update:modelValue="$emit('update:chartFontSize', $event)"
         :options="fontSizes"
         :displayLabels="fontSizeLabels"
-        tooltipPrefix="폰트 크기를"
-        suffix="로 변경합니다"
+        :tooltipPrefix="$t('epidemicCurve.controls.fontSizeTooltip')"
+        suffix=""
         minWidthClass="min-w-[60px]"
       />
 
       <!-- Chart Width -->
       <ControlCycleText
-        label="차트 너비:"
+        :label="$t('epidemicCurve.controls.chartWidth')"
         :modelValue="chartWidth"
         @update:modelValue="$emit('update:chartWidth', $event)"
         :options="chartWidths"
-        tooltipPrefix="차트 너비를"
+        :tooltipPrefix="$t('epidemicCurve.controls.chartWidthTooltip')"
         suffix="px"
-        tooltipSuffix="로 변경합니다"
+        tooltipSuffix=""
         minWidthClass="min-w-[70px]"
       />
     </div>
@@ -69,7 +69,7 @@
     <div class="flex items-center gap-2">
       <!-- Display Mode -->
       <ControlGroup
-        label="차트 표시:"
+        :label="$t('epidemicCurve.controls.chartDisplay')"
         :modelValue="displayMode"
         @update:modelValue="$emit('update:displayMode', $event as string)"
         :options="displayModeOptions"
@@ -77,10 +77,11 @@
 
       <!-- Bar Color -->
       <ControlCycleColor
-        label="색상:"
+        :label="$t('epidemicCurve.controls.color')"
         :modelValue="barColor"
         @update:modelValue="$emit('update:barColor', $event)"
         :options="barColors"
+        :tooltip="$t('epidemicCurve.controls.colorTooltip')"
       />
       
       <!-- Custom Append Slot (e.g. Confirmed Lines toggle) -->
@@ -97,14 +98,14 @@
         variant="secondary"
         size="sm"
         class="text-slate-500 hover:text-slate-800 hover:border-slate-400"
-        @mouseenter="showTooltip('reset', '차트 설정을 기본값으로 초기화합니다')" 
+        @mouseenter="showTooltip('reset', $t('common.chart.tooltip.reset'))" 
         @mouseleave="hideTooltip"
       >
-        초기화
+        {{ $t('common.chart.reset') }}
       </BaseButton>
       <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-[-4px]" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-[-4px]">
         <div v-if="activeTooltip === 'reset'" class="absolute top-full mt-2 right-0 bg-slate-800 text-white px-3 py-2 rounded shadow-lg text-xs whitespace-nowrap z-50">
-          차트 설정을 기본값으로 초기화합니다
+          {{ $t('common.chart.tooltip.reset') }}
           <div class="absolute bottom-full right-3 border-4 border-transparent border-b-slate-800"></div>
         </div>
       </transition>
@@ -114,6 +115,7 @@
 
 <script setup lang="ts">
 import { useTooltip } from '../composables/useTooltip';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../../Common/BaseButton.vue';
 import ControlCycleText from './controls/ControlCycleText.vue';
 import ControlCycleColor from './controls/ControlCycleColor.vue';
@@ -166,5 +168,6 @@ defineEmits<{
   (e: 'resetSettings'): void;
 }>();
 
+const { t } = useI18n();
 const { activeTooltip, showTooltip, hideTooltip } = useTooltip();
 </script>

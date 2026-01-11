@@ -1,5 +1,6 @@
 
 import { ref, computed, nextTick, watch, type ComputedRef } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   COL_TYPE_SERIAL,
   COL_TYPE_IS_PATIENT,
@@ -44,6 +45,8 @@ export function useGridColumns(
   endOperation: (op: string) => void
 ) {
   const epidemicStore = useEpidemicStore();
+  const { t } = useI18n();
+
 
   const settingsStore = useSettingsStore();
   const historyStore = useHistoryStore();
@@ -83,7 +86,7 @@ export function useGridColumns(
     // 연번 컬럼
     pushMeta({
       type: COL_TYPE_SERIAL,
-      headerText: '연번',
+      headerText: t('dataInput.headers.serial'),
       headerRow: 1,
       isEditable: false,
       style: COLUMN_STYLES[COL_TYPE_SERIAL],
@@ -94,25 +97,27 @@ export function useGridColumns(
     // 환자여부 컬럼
     pushMeta({
       type: COL_TYPE_IS_PATIENT,
-      headerText: '환자여부 <br />(환자 O - 1, 정상 - 0)',
+      headerText: t('dataInput.headers.isPatient'),
       headerRow: 1,
       isEditable: true,
       style: COLUMN_STYLES[COL_TYPE_IS_PATIENT],
       dataKey: 'isPatient',
-      cellIndex: undefined
+      cellIndex: undefined,
+      tooltip: t('dataInput.headerTooltips.isPatient')
     });
 
     // '확진자 여부' 열
     if (settingsStore.isConfirmedCaseColumnVisible) {
       pushMeta({
         type: COL_TYPE_CONFIRMED_CASE,
-        headerText: '확진여부 <br />(확진 O - 1, X - 0)',
+        headerText: t('dataInput.headers.confirmed'),
         headerRow: 1,
         isEditable: true,
         style: COLUMN_STYLES[COL_TYPE_CONFIRMED_CASE],
         dataKey: 'isConfirmedCase',
         cellIndex: undefined,
-        isCustom: true
+        isCustom: true,
+        tooltip: t('dataInput.headerTooltips.confirmed')
       });
     }
 
@@ -140,7 +145,8 @@ export function useGridColumns(
         isEditable: true,
         style: COLUMN_STYLES.default,
         dataKey: 'clinicalSymptoms',
-        cellIndex: index
+        cellIndex: index,
+        tooltip: t('dataInput.headerTooltips.clinical')
       });
     });
 
@@ -148,7 +154,7 @@ export function useGridColumns(
     if (settingsStore.isIndividualExposureColumnVisible) {
       pushMeta({
         type: COL_TYPE_INDIVIDUAL_EXPOSURE,
-        headerText: '의심원 노출시간',
+        headerText: t('dataInput.headers.exposure'),
         headerRow: 1,
         isEditable: true,
         style: COLUMN_STYLES[COL_TYPE_ONSET],
@@ -161,7 +167,7 @@ export function useGridColumns(
     // 증상발현시간 컬럼
     pushMeta({
       type: COL_TYPE_ONSET,
-      headerText: '증상발현시간',
+      headerText: t('dataInput.headers.onset'),
       headerRow: 1,
       isEditable: true,
       style: COLUMN_STYLES[COL_TYPE_ONSET],
@@ -179,7 +185,8 @@ export function useGridColumns(
         isEditable: true,
         style: COLUMN_STYLES.default,
         dataKey: 'dietInfo',
-        cellIndex: index
+        cellIndex: index,
+        tooltip: t('dataInput.headerTooltips.diet')
       });
     });
 
@@ -195,7 +202,7 @@ export function useGridColumns(
 
     // 연번
     groups.push({
-      text: '연번',
+      text: t('dataInput.headers.serial'),
       rowspan: 2,
       startColIndex: COL_IDX_SERIAL,
       style: COLUMN_STYLES[COL_TYPE_SERIAL]
@@ -204,7 +211,7 @@ export function useGridColumns(
 
     // 환자여부
     groups.push({
-      text: '환자여부 <br />(환자 O - 1, 정상 - 0)',
+      text: t('dataInput.headers.isPatient'),
       rowspan: 2,
       startColIndex: COL_IDX_IS_PATIENT,
       style: COLUMN_STYLES[COL_TYPE_IS_PATIENT]
@@ -214,7 +221,7 @@ export function useGridColumns(
     // 확진자 여부
     if (settingsStore.isConfirmedCaseColumnVisible) {
       groups.push({
-        text: '확진여부 <br />(확진 O - 1, X - 0)',
+        text: t('dataInput.headers.confirmed'),
         rowspan: 2,
         startColIndex: currentCol,
         style: COLUMN_STYLES[COL_TYPE_CONFIRMED_CASE]
@@ -226,7 +233,7 @@ export function useGridColumns(
     const basicStartCol = currentCol;
     if (basicLength > 0) {
       groups.push({
-        text: '기본정보',
+        text: t('dataInput.headers.basic'),
         colspan: basicLength,
         startColIndex: basicStartCol,
         type: COL_TYPE_BASIC,
@@ -237,7 +244,7 @@ export function useGridColumns(
       currentCol += basicLength;
     } else {
       groups.push({
-        text: '기본정보',
+        text: t('dataInput.headers.basic'),
         colspan: 1,
         startColIndex: basicStartCol,
         type: COL_TYPE_BASIC,
@@ -253,7 +260,7 @@ export function useGridColumns(
     const clinicalStartCol = currentCol;
     if (clinicalLength > 0) {
       groups.push({
-        text: '임상증상 (증상 O - 1, 증상 X - 0)',
+        text: t('dataInput.headers.clinical'),
         colspan: clinicalLength,
         startColIndex: clinicalStartCol,
         type: COL_TYPE_CLINICAL,
@@ -264,7 +271,7 @@ export function useGridColumns(
       currentCol += clinicalLength;
     } else {
       groups.push({
-        text: '임상증상 (증상 O - 1, 증상 X - 0)',
+        text: t('dataInput.headers.clinical'),
         colspan: 1,
         startColIndex: clinicalStartCol,
         type: COL_TYPE_CLINICAL,
@@ -280,7 +287,7 @@ export function useGridColumns(
     if (settingsStore.isIndividualExposureColumnVisible) {
       const exposureStartCol = currentCol;
       groups.push({
-        text: '의심원 노출시간',
+        text: t('dataInput.headers.exposure'),
         rowspan: 2,
         startColIndex: exposureStartCol,
         style: COLUMN_STYLES[COL_TYPE_ONSET]
@@ -291,7 +298,7 @@ export function useGridColumns(
     // 증상발현시간
     const onsetStartCol = currentCol;
     groups.push({
-      text: '증상발현시간',
+      text: t('dataInput.headers.onset'),
       rowspan: 2,
       startColIndex: onsetStartCol,
       style: COLUMN_STYLES[COL_TYPE_ONSET]
@@ -302,7 +309,7 @@ export function useGridColumns(
     const dietStartCol = currentCol;
     if (dietLength > 0) {
       groups.push({
-        text: '식단 (섭취 O - 1, 섭취 X - 0)',
+        text: t('dataInput.headers.diet'),
         colspan: dietLength,
         startColIndex: dietStartCol,
         type: COL_TYPE_DIET,
@@ -312,7 +319,7 @@ export function useGridColumns(
       });
     } else {
       groups.push({
-        text: '식단 (섭취 O - 1, 섭취 X - 0)',
+        text: t('dataInput.headers.diet'),
         colspan: 1,
         startColIndex: dietStartCol,
         type: COL_TYPE_DIET,
@@ -416,7 +423,7 @@ export function useGridColumns(
             newIndividualExposureColumnIndex,
             (progress: number) => {
               if (individualExposureBackupData.value.length > 100 && progress === 100) {
-                showToast(`개별 노출시간 열 ${individualExposureBackupData.value.length}개 셀의 유효성검사를 완료했습니다.`, 'success');
+                showToast(t('dataInput.toast.grid.exposureValidationComplete', { count: individualExposureBackupData.value.length }), 'success');
               }
             }
           );
@@ -491,7 +498,7 @@ export function useGridColumns(
             newConfirmedCaseColumnIndex,
             (progress: number) => {
               if (confirmedCaseBackupData.value.length > 100 && progress === 100) {
-                showToast(`확진자 여부 열 ${confirmedCaseBackupData.value.length}개 셀의 유효성검사를 완료했습니다.`, 'success');
+                showToast(t('dataInput.toast.grid.confirmedValidationComplete', { count: confirmedCaseBackupData.value.length }), 'success');
               }
             }
           );
@@ -597,11 +604,11 @@ export function useGridColumns(
       }
     });
     
-    showToast('비어있는 열이 삭제되었습니다.', 'info');
+    showToast(t('dataInput.toast.grid.colsDeleted'), 'info');
   }
 
   async function onResetSheet() {
-    if (await showConfirmToast('모든 데이터를 초기화하시겠습니까?')) {
+    if (await showConfirmToast(t('dataInput.toast.confirmContext'))) {
       historyStore.captureSnapshot('reset_sheet');
       
       gridStore.clearAllFilters(); // 필터 초기화 추가
@@ -615,7 +622,7 @@ export function useGridColumns(
         validationManager.clearTimers();
       }
       
-      showToast('시트가 초기화되었습니다.', 'success');
+      showToast(t('dataInput.toast.grid.sheetReset'), 'success');
       nextTick(() => {
         if (focusGrid) focusGrid();
       });

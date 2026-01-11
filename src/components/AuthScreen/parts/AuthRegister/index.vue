@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../../../stores/authStore';
 import { authApi } from '../../../../services/authApi';
 import Step1BasicInfo from './Step1BasicInfo.vue';
@@ -67,6 +68,7 @@ const emit = defineEmits<{
   (e: 'update:error', value: string): void;
 }>();
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const step1Ref = ref<any>(null);
 
@@ -105,12 +107,12 @@ async function handleStep1Next(data: any) {
     try {
       const emailCheck = await authApi.checkEmailAvailability(formData.value.email);
       if (emailCheck.available === false) {
-        step1Ref.value?.setError('email', '이미 사용 중인 이메일 주소입니다.');
+        step1Ref.value?.setError('email', t('auth.register.errors.emailExists'));
         isChecking.value = false;
         return;
       }
     } catch (e) {
-      step1Ref.value?.setError('local', '이메일 확인 중 오류가 발생했습니다.');
+      step1Ref.value?.setError('local', t('auth.register.errors.emailCheckError'));
       isChecking.value = false;
       return;
     }
@@ -120,19 +122,19 @@ async function handleStep1Next(data: any) {
       const cleanPhone = formData.value.phone.replace(/[^0-9]/g, '');
       const phoneCheck = await authApi.checkPhoneAvailability(cleanPhone);
       if (phoneCheck.available === false) {
-        step1Ref.value?.setError('phone', '이미 사용 중인 전화번호입니다.');
+        step1Ref.value?.setError('phone', t('auth.register.errors.phoneExists'));
         isChecking.value = false;
         return;
       }
     } catch (e) {
-      step1Ref.value?.setError('local', '전화번호 확인 중 오류가 발생했습니다.');
+      step1Ref.value?.setError('local', t('auth.register.errors.phoneCheckError'));
       isChecking.value = false;
       return;
     }
     
     currentStep.value = 2;
   } catch (err) {
-    step1Ref.value?.setError('local', '확인 중 오류가 발생했습니다.');
+    step1Ref.value?.setError('local', t('auth.register.errors.checkError'));
   } finally {
     isChecking.value = false;
   }

@@ -3,7 +3,7 @@
     <div class="p-2 bg-blue-100 text-blue-600 rounded-lg shadow-sm">
       <span class="material-icons text-2xl">people</span>
     </div>
-    <h2 class="text-xl font-bold text-slate-800 tracking-tight">대상자 특성 분포</h2>
+    <h2 class="text-xl font-bold text-slate-800 tracking-tight">{{ $t('patientChars.title') }}</h2>
   </div>
 </template>
 

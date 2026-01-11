@@ -10,7 +10,7 @@
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          <span class="font-medium">차트 복사</span>
+          <span class="font-medium">{{ $t('clinicalSymptoms.chart.copy') }}</span>
         </button>
         <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 scale-50" enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-50">
           <div v-if="isChartCopied" class="absolute top-full left-1/2 -translate-x-1/2 mt-2 flex items-center justify-center p-2 bg-white rounded-full shadow-lg border border-slate-100 z-50">
@@ -30,7 +30,7 @@
           <polyline points="7 10 12 15 17 10"></polyline>
           <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        <span class="font-medium">차트 저장</span>
+        <span class="font-medium">{{ $t('clinicalSymptoms.chart.save') }}</span>
       </button>
     </div>
     <div ref="chartContainerRef" class="w-full h-[600px] min-h-[600px] mx-auto" :style="{ width: chartWidth + 'px', minWidth: chartWidth + 'px' }"></div>

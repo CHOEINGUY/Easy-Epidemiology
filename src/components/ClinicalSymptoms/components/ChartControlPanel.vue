@@ -2,52 +2,52 @@
   <div class="flex flex-wrap items-center gap-4 p-4 bg-slate-50/80 rounded-xl border border-slate-200 shadow-sm backdrop-blur-sm w-full">
     <!-- 막대 방향 -->
     <ControlCycleText
-      label="막대 방향:"
+      :label="$t('clinicalSymptoms.controls.direction') + ':'"
       :modelValue="barDirection"
       @update:modelValue="$emit('update:barDirection', $event as 'horizontal' | 'vertical')"
       :options="['vertical', 'horizontal']"
-      :displayLabels="['세로', '가로']"
-      tooltipPrefix="막대 방향을"
-      suffix="로 변경합니다"
+      :displayLabels="[$t('clinicalSymptoms.controls.directionVertical'), $t('clinicalSymptoms.controls.directionHorizontal')]"
+      :tooltipPrefix="$t('clinicalSymptoms.controls.directionTooltip')"
+      :suffix="$t('clinicalSymptoms.controls.directionSuffix')"
     />
     
     <!-- 폰트 크기 -->
     <ControlCycleText
-      label="폰트 크기:"
+      :label="$t('clinicalSymptoms.controls.fontSize') + ':'"
       :modelValue="chartFontSize"
       @update:modelValue="$emit('update:chartFontSize', $event as number)"
       :options="fontSizes"
       :displayLabels="fontSizeLabels"
-      tooltipPrefix="폰트 크기를"
-      suffix="로 변경합니다"
+      :tooltipPrefix="$t('clinicalSymptoms.controls.fontSizePrefix')"
+      :suffix="$t('clinicalSymptoms.controls.fontSizeSuffix')"
       minWidthClass="min-w-[60px]"
     />
     
     <!-- 차트 너비 -->
     <ControlCycleText
-      label="차트 너비:"
+      :label="$t('clinicalSymptoms.controls.chartWidth') + ':'"
       :modelValue="chartWidth"
       @update:modelValue="$emit('update:chartWidth', $event as number)"
       :options="chartWidths"
-      tooltipPrefix="차트 너비를"
-      suffix="px"
+      :tooltipPrefix="$t('clinicalSymptoms.controls.chartWidthPrefix')"
+      :suffix="$t('clinicalSymptoms.controls.chartWidthSuffix')"
       minWidthClass="min-w-[70px]"
     />
     
     <!-- 막대 너비 -->
     <ControlCycleText
-      label="막대 너비:"
+      :label="$t('clinicalSymptoms.controls.barWidth') + ':'"
       :modelValue="barWidthPercent"
       @update:modelValue="$emit('update:barWidthPercent', $event as number)"
       :options="barWidthPercents"
-      tooltipPrefix="막대 너비를"
-      suffix="%"
+      :tooltipPrefix="$t('clinicalSymptoms.controls.barWidthPrefix')"
+      :suffix="$t('clinicalSymptoms.controls.barWidthSuffix')"
       minWidthClass="min-w-[50px]"
     />
     
     <!-- 막대 강조 -->
     <ControlCycleText
-      label="막대 강조:"
+      :label="$t('clinicalSymptoms.controls.highlight') + ':'"
       :modelValue="currentHighlight"
       @update:modelValue="$emit('update:currentHighlight', $event as 'none' | 'max' | 'min' | 'both')"
       :options="highlightOptionsNormalized"
@@ -56,7 +56,7 @@
     
     <!-- 정렬 -->
     <ControlCycleText
-      label="정렬:"
+      :label="$t('clinicalSymptoms.controls.sort') + ':'"
       :modelValue="currentSort"
       @update:modelValue="$emit('update:currentSort', $event as string)"
       :options="sortOptionsNormalized"
@@ -65,20 +65,24 @@
     
     <!-- 색상 -->
     <ControlCycleColor
-      label="막대 색상:"
+      :label="$t('clinicalSymptoms.controls.color') + ':'"
       :modelValue="selectedBarColor"
       @update:modelValue="$emit('update:selectedBarColor', $event)"
       :options="barColors"
+      :tooltip="$t('clinicalSymptoms.controls.colorTooltip')"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import ControlCycleText from './controls/ControlCycleText.vue';
 import ControlCycleColor from './controls/ControlCycleColor.vue';
 import type { CycleOption } from '@/types/ui';
 import type { HighlightOption, SortOption } from '../composables/useChartControls';
+
+const { t } = useI18n();
 
 const props = withDefaults(defineProps<{
   barDirection?: 'horizontal' | 'vertical';

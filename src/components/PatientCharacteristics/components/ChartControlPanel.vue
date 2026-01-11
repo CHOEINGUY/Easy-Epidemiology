@@ -2,12 +2,12 @@
   <div class="flex flex-wrap items-center gap-4 p-4 bg-slate-50/80 rounded-xl border border-slate-200 shadow-sm backdrop-blur-sm">
     <!-- 차트 대상 -->
     <ControlGroup
-      label="차트 대상:"
+      :label="$t('patientChars.chartControl.target')"
       :modelValue="chartType"
       @update:modelValue="$emit('update:chartType', $event as string)"
       :options="[
-        { value: 'total', label: '전체 대상자', tooltip: '차트 표시 대상을 전체 대상자로 변경합니다' },
-        { value: 'patient', label: '환자', tooltip: '차트 표시 대상을 환자로 변경합니다' }
+        { value: 'total', label: $t('patientChars.chartControl.total'), tooltip: $t('patientChars.chartControl.totalTooltip') },
+        { value: 'patient', label: $t('patientChars.chartControl.patient'), tooltip: $t('patientChars.chartControl.patientTooltip') }
       ]"
     />
 
@@ -15,52 +15,52 @@
 
     <!-- 데이터 유형 -->
     <ControlGroup
-      label="데이터 유형:"
+      :label="$t('patientChars.chartControl.dataType')"
       :modelValue="dataType"
       @update:modelValue="$emit('update:dataType', $event as string)"
       :options="[
-        { value: 'count', label: '수', tooltip: '데이터를 개수(명)으로 표시합니다' },
-        { value: 'percentage', label: '비율(%)', tooltip: '데이터를 비율(%)로 표시합니다' }
+        { value: 'count', label: $t('patientChars.chartControl.dataCount'), tooltip: $t('patientChars.chartControl.dataCountTooltip') },
+        { value: 'percentage', label: $t('patientChars.chartControl.dataPercent'), tooltip: $t('patientChars.chartControl.dataPercentTooltip') }
       ]"
     />
 
     <!-- 폰트 크기 -->
     <ControlCycleText
-      label="폰트 크기:"
+      :label="$t('patientChars.chartControl.fontSize')"
       :modelValue="fontSize"
       @update:modelValue="$emit('update:fontSize', $event as number)"
       :options="[12, 15, 18, 21, 24]"
-      :displayLabels="['매우 작게', '작게', '보통', '크게', '매우 크게']"
-      tooltipPrefix="폰트 크기를"
-      suffix="로 변경합니다"
+      :displayLabels="[$t('patientChars.chartControl.sizeVerySmall'), $t('patientChars.chartControl.sizeSmall'), $t('patientChars.chartControl.sizeNormal'), $t('patientChars.chartControl.sizeLarge'), $t('patientChars.chartControl.sizeVeryLarge')]"
+      :tooltipPrefix="$t('patientChars.chartControl.sizeTooltipPrefix')"
+      :suffix="$t('patientChars.chartControl.sizeTooltipSuffix')"
       minWidthClass="min-w-[60px]"
     />
 
     <!-- 차트 너비 -->
     <ControlCycleText
-      label="차트 너비:"
+      :label="$t('patientChars.chartControl.chartWidth')"
       :modelValue="chartWidth"
       @update:modelValue="$emit('update:chartWidth', $event as number)"
       :options="[500, 700, 900, 1100]"
-      tooltipPrefix="차트 너비를"
+      :tooltipPrefix="$t('patientChars.chartControl.widthTooltipPrefix')"
       suffix="px"
       minWidthClass="min-w-[70px]"
     />
 
     <!-- 막대 너비 -->
     <ControlCycleText
-      label="막대 너비:"
+      :label="$t('patientChars.chartControl.barWidth')"
       :modelValue="barWidth"
       @update:modelValue="$emit('update:barWidth', $event as number)"
       :options="[30, 50, 70]"
-      tooltipPrefix="막대 너비를"
+      :tooltipPrefix="$t('patientChars.chartControl.barWidthTooltipPrefix')"
       suffix="%"
       minWidthClass="min-w-[50px]"
     />
 
     <!-- 막대 강조 -->
     <ControlCycleText
-      label="막대 강조:"
+      :label="$t('patientChars.chartControl.highlight')"
       :modelValue="highlight"
       @update:modelValue="$emit('update:highlight', $event as string)"
       :options="highlightOptionsNormalized"
@@ -69,11 +69,11 @@
 
     <!-- 막대 색상 -->
     <ControlCycleColor
-      label="막대 색상:"
+      :label="$t('patientChars.chartControl.barColor')"
       :modelValue="barColor"
       @update:modelValue="$emit('update:barColor', $event)"
       :options="barColors"
-      tooltip="막대 색상을 변경합니다"
+      :tooltip="$t('patientChars.chartControl.barColorTooltip')"
     />
   </div>
 </template>
@@ -85,6 +85,9 @@ import ControlGroup from './controls/ControlGroup.vue';
 import ControlCycleText from './controls/ControlCycleText.vue';
 import ControlCycleColor from './controls/ControlCycleColor.vue';
 import type { BoxOption, CycleOption } from '@/types/ui';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const props = withDefaults(defineProps<{
   chartType?: string;
@@ -125,16 +128,16 @@ interface HighlightOption {
   tooltip: string;
 }
 
-const highlightOptions: HighlightOption[] = [
-  { key: 'none', label: '강조 없음', tooltip: '모든 막대를 같은 색상으로 표시합니다' },
-  { key: 'max', label: '최대값 강조', tooltip: '가장 큰 값의 막대를 다른 색상으로 강조합니다' },
-  { key: 'min', label: '최소값 강조', tooltip: '가장 작은 값의 막대를 다른 색상으로 강조합니다' },
-  { key: 'both', label: '최대/최소값 강조', tooltip: '가장 큰 값과 가장 작은 값의 막대를 강조합니다' }
-];
+const highlightOptions = computed<HighlightOption[]>(() => [
+  { key: 'none', label: t('patientChars.chartControl.highlightNone'), tooltip: t('patientChars.chartControl.highlightNoneTooltip') },
+  { key: 'max', label: t('patientChars.chartControl.highlightMax'), tooltip: t('patientChars.chartControl.highlightMaxTooltip') },
+  { key: 'min', label: t('patientChars.chartControl.highlightMin'), tooltip: t('patientChars.chartControl.highlightMinTooltip') },
+  { key: 'both', label: t('patientChars.chartControl.highlightBoth'), tooltip: t('patientChars.chartControl.highlightBothTooltip') }
+]);
 
 // Normalize highlight options to { value, label, tooltip }
 const highlightOptionsNormalized = computed<CycleOption[]>(() => {
-  return highlightOptions.map(opt => ({
+  return highlightOptions.value.map(opt => ({
     value: opt.key,
     label: opt.label,
     tooltip: opt.tooltip

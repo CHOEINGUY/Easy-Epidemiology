@@ -1,19 +1,19 @@
 <template>
   <div class="w-[210px] p-5 flex flex-col justify-between shrink-0 font-['Noto_Sans_KR',_sans-serif]">
     <div class="font-semibold mb-4 text-[#333]">
-      <span>시간 선택</span>
+      <span>{{ $t('dataInput.datetime.selectTime') }}</span>
     </div>
     
     <div class="flex-1">
       <div class="flex items-center justify-center gap-2 mb-5">
         <div class="flex flex-col items-center gap-1">
-          <label for="hour-select" class="text-xs text-gray-500 font-medium">시</label>
+          <label for="hour-select" class="text-xs text-gray-500 font-medium">{{ $t('dataInput.datetime.hour') }}</label>
           <select 
             id="hour-select"
             :value="hour"
             @change="handleHourChange"
             class="px-1.5 py-2 border border-gray-200 rounded-md text-sm bg-white cursor-pointer w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
-            aria-label="시간 선택"
+            :aria-label="$t('dataInput.datetime.selectTime')"
             @click.stop
           >
             <option v-for="h in 24" :key="h-1" :value="String(h-1).padStart(2, '0')">
@@ -25,13 +25,13 @@
         <div class="text-lg font-semibold text-[#333] mt-4">:</div>
         
         <div class="flex flex-col items-center gap-1">
-          <label for="minute-select" class="text-xs text-gray-500 font-medium">분</label>
+          <label for="minute-select" class="text-xs text-gray-500 font-medium">{{ $t('dataInput.datetime.minute') }}</label>
           <select 
             id="minute-select"
             :value="minute"
             @change="handleMinuteChange"
             class="px-1.5 py-2 border border-gray-200 rounded-md text-sm bg-white cursor-pointer w-[60px] focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
-            aria-label="분 선택"
+            :aria-label="$t('dataInput.datetime.minute')"
             @click.stop
           >
             <option v-for="m in 12" :key="m-1" :value="String((m-1) * 5).padStart(2, '0')">
@@ -44,7 +44,7 @@
       <!-- 직접 입력 필드 -->
       <div class="hidden">
         <div class="font-semibold mb-2 text-[#333] text-sm">
-          <span>직접 입력</span>
+          <span>{{ $t('dataInput.datetime.manualInput') }}</span>
         </div>
         <div class="mb-3">
           <input
@@ -71,8 +71,8 @@
       </div>
       
       <div class="flex gap-2">
-        <button @click.stop="$emit('cancel')" class="flex-1 py-2.5 px-4 border-none rounded-lg cursor-pointer text-sm font-medium transition-all bg-gray-100 text-[#333] hover:bg-gray-200">취소</button>
-        <button @click.stop="confirm" class="flex-1 py-2.5 px-4 border-none rounded-lg cursor-pointer text-sm font-medium transition-all bg-blue-600 text-white hover:bg-blue-700">확인</button>
+        <button @click.stop="$emit('cancel')" class="flex-1 py-2.5 px-4 border-none rounded-lg cursor-pointer text-sm font-medium transition-all bg-gray-100 text-[#333] hover:bg-gray-200">{{ $t('common.cancel') }}</button>
+        <button @click.stop="confirm" class="flex-1 py-2.5 px-4 border-none rounded-lg cursor-pointer text-sm font-medium transition-all bg-blue-600 text-white hover:bg-blue-700">{{ $t('common.confirm') }}</button>
       </div>
     </div>
   </div>
@@ -80,6 +80,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   year: number;
@@ -105,7 +108,7 @@ const directInputValue = ref('');
 // 현재 선택 상태 포맷
 const formatCurrentSelection = () => {
   if (!props.year || !props.month || !props.day) {
-    return '날짜를 선택하세요';
+    return t('dataInput.datetime.selectDate');
   }
   
   const formattedYear = props.year;
@@ -130,7 +133,7 @@ const handleMinuteChange = (event: Event) => {
 // 확인 버튼
 const confirm = () => {
   if (!props.year || !props.month || !props.day) {
-    alert('날짜를 선택해주세요.');
+    alert(t('dataInput.datetime.alertSelectDate'));
     return;
   }
   emit('confirm');

@@ -1,19 +1,12 @@
+import i18n from '@/i18n';
+
 export type AffiliationType = 'hospital' | 'clinic' | 'public_health' | 'university' | 'research' | 'government' | 'other';
 
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
-const affiliationLabels: Record<AffiliationType, string> = {
-  'hospital': '병원',
-  'clinic': '의원',
-  'public_health': '보건소',
-  'university': '대학교',
-  'research': '연구기관',
-  'government': '정부기관',
-  'other': '기타'
-};
-
 export const getAffiliationTypeLabel = (type: AffiliationType | string | null | undefined): string => {
-  return affiliationLabels[type as AffiliationType] || type || '-';
+  const { t } = i18n.global;
+  return t(`admin.toolbar.affiliationTypes.${type || 'other'}`);
 };
 
 export const getAffiliationTypeClass = (type: AffiliationType | string | null | undefined): string => {
@@ -31,15 +24,9 @@ export const getStatusClass = (status: UserStatus | string | null | undefined): 
   return statusClasses[status as UserStatus] || 'pending';
 };
 
-const statusLabels: Record<UserStatus, string> = {
-  'pending': '승인 대기',
-  'approved': '승인됨',
-  'rejected': '거부됨',
-  'suspended': '정지됨'
-};
-
 export const getStatusLabel = (status: UserStatus | string | null | undefined): string => {
-  return statusLabels[status as UserStatus] || '승인 대기';
+  const { t } = i18n.global;
+  return t(`admin.status.${status || 'pending'}`);
 };
 
 const statusIcons: Record<UserStatus, string> = {
@@ -56,5 +43,6 @@ export const getStatusIcon = (status: UserStatus | string | null | undefined): s
 export const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return '-';
   const date = new Date(dateString);
-  return date.toLocaleDateString('ko-KR');
+  const { locale } = i18n.global;
+  return date.toLocaleDateString((locale as any).value === 'ko' ? 'ko-KR' : 'en-US');
 };

@@ -2,7 +2,7 @@
   <div class="flex flex-col w-full h-full">
     <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100">
       <span class="flex items-center text-slate-800 font-semibold text-base">
-        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2"></span>임상증상별 빈도
+        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2"></span>{{ $t('clinicalSymptoms.frequencyTable.title') }}
       </span>
       <div class="relative">
         <button 
@@ -13,7 +13,7 @@
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          <span class="font-medium">테이블 복사</span>
+          <span class="font-medium">{{ $t('clinicalSymptoms.frequencyTable.copy') }}</span>
         </button>
         <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 scale-50" enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-50">
           <div v-if="isTableCopied" class="absolute top-full left-1/2 -translate-x-1/2 mt-2 flex items-center justify-center p-2 bg-white rounded-full shadow-lg border border-slate-100 z-50">
@@ -34,9 +34,9 @@
         </colgroup>
         <thead class="bg-slate-50 sticky top-0 z-10">
           <tr>
-            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">증상명</th>
-            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">환자수(명)</th>
-            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">백분율(%)</th>
+            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">{{ $t('clinicalSymptoms.frequencyTable.symptom') }}</th>
+            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">{{ $t('clinicalSymptoms.frequencyTable.count') }}</th>
+            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">{{ $t('clinicalSymptoms.frequencyTable.percent') }}</th>
           </tr>
         </thead>
         <tbody>

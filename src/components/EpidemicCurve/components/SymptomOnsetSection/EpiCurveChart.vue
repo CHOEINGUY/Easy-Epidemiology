@@ -135,8 +135,8 @@ defineExpose({
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  overflow-x: auto;
+  padding: 20px 15px; /* Slightly reduced horizontal padding to maximize chart area */
+  overflow-x: auto; /* Required to support manual chartWidth settings (700px, 900px, 1100px) on smaller screens */
   display: flex;
   flex-direction: column;
   align-items: center;

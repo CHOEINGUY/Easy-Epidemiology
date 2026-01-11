@@ -132,6 +132,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import i18n from '@/i18n';
 import VirtualAppHeader from './layout/VirtualAppHeader.vue';
 import VirtualFunctionBar from './layout/VirtualFunctionBar.vue';
 import VirtualGridHeader from './layout/VirtualGridHeader.vue';
@@ -208,11 +209,16 @@ const validationProcessed = ref(0);
 const validationTotal = ref(0);
 const validationErrorCount = ref(0);
 
+const { t } = i18n.global;
+
 // ValidationManager 인스턴스
 const validationManager = new ValidationManager(epidemicStore, { 
   debug: false, 
   useWorker: true,
-  showToast: showToast,
+  showToast: (msg, type) => {
+    showToast(msg, type);
+  },
+  t: (i18n.global as any).t,
   onProgress: (progress: number) => {
     isValidationProgressVisible.value = true;
     validationProgress.value = progress;
@@ -247,8 +253,13 @@ const {
   closeDateTimePicker
 } = useDateTimePicker(validationManager, focusGrid, storageManager);
 
-// --- 작업 가드 시스템 ---
-const { tryStartOperation, endOperation } = useOperationGuard();
+// --- Operation Guard (Locking) ---
+const { 
+  tryStartOperation, 
+  endOperation 
+} = useOperationGuard({ 
+  showBlockedMessage: true 
+}, t);
 
 // --- Selection System ---
 const selectionSystem = useVirtualSelectionSystem();
@@ -382,6 +393,7 @@ const {
   closeDateTimePicker,
   onDateTimeCancel,
   storageManager,
+  t,
   overlayController
 );
 
@@ -527,7 +539,8 @@ const {
   {
     hasIndividualExposure: computed(() => settingsStore.isIndividualExposureColumnVisible),
     hasConfirmedCase: computed(() => settingsStore.isConfirmedCaseColumnVisible)
-  }
+  },
+  t
 );
 
 // --- Row Operations ---
@@ -541,7 +554,8 @@ const {
   dateTimePickerState,
   closeDateTimePicker,
   tryStartOperation,
-  endOperation
+  endOperation,
+  t
 );
 
 // --- Undo/Redo Handlers ---

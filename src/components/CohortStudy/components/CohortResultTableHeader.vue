@@ -1,28 +1,29 @@
 <template>
   <thead>
     <tr>
-      <th rowspan="2" class="header-item">요인(식단)</th>
+
+      <th rowspan="2" class="header-item">{{ $t('cohortStudy.table.headers.factor') }}</th>
       <th colspan="3" class="header-group-exposed">
-        섭취자(노출군)
+        {{ $t('cohortStudy.table.headers.exposedGroup') }}
       </th>
       <th colspan="3" class="header-group-unexposed">
-        비섭취자(비노출군)
+        {{ $t('cohortStudy.table.headers.unexposedGroup') }}
       </th>
-      <th rowspan="2" class="header-stat">카이제곱<br />P-value</th>
-      <th rowspan="2" class="header-stat">
-        상대위험비<br />Relative Risk<br />
+      <th rowspan="2" class="header-stat whitespace-pre-line">{{ $t('cohortStudy.table.headers.pvalue') }}</th>
+      <th rowspan="2" class="header-stat whitespace-pre-line">
+        {{ $t('cohortStudy.table.headers.rr') }}
       </th>
-      <th colspan="2" class="header-stat">95% 신뢰구간</th>
+      <th colspan="2" class="header-stat">{{ $t('cohortStudy.table.headers.ci') }}</th>
     </tr>
     <tr>
-      <th class="header-sub">대상자수</th>
-      <th class="header-sub">환자수</th>
-      <th class="header-sub">발병률(%)</th>
-      <th class="header-sub">대상자수</th>
-      <th class="header-sub">환자수</th>
-      <th class="header-sub">발병률(%)</th>
-      <th class="header-sub">하한</th>
-      <th class="header-sub">상한</th>
+      <th class="header-sub">{{ $t('cohortStudy.table.headers.subjects') }}</th>
+      <th class="header-sub">{{ $t('cohortStudy.table.headers.cases') }}</th>
+      <th class="header-sub">{{ $t('cohortStudy.table.headers.incidence') }}</th>
+      <th class="header-sub">{{ $t('cohortStudy.table.headers.subjects') }}</th>
+      <th class="header-sub">{{ $t('cohortStudy.table.headers.cases') }}</th>
+      <th class="header-sub">{{ $t('cohortStudy.table.headers.incidence') }}</th>
+      <th class="header-sub">{{ $t('cohortStudy.table.headers.lower') }}</th>
+      <th class="header-sub">{{ $t('cohortStudy.table.headers.upper') }}</th>
     </tr>
   </thead>
 </template>

@@ -10,7 +10,7 @@
         @mouseleave="hideTooltip"
         :class="{ 'bg-green-50 text-green-700 border-green-200': isSaved }"
       >
-        {{ isSaved ? '저장 완료' : '보고서 저장' }}
+        {{ isSaved ? $t('common.chart.saved') : $t('common.chart.saveReport') }}
       </BaseButton>
 
       <!-- Control Tooltip (Below to avoid clipping) -->
@@ -19,7 +19,7 @@
           v-if="activeTooltip === 'saveReport'" 
           class="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-3 py-2 rounded shadow-lg text-xs whitespace-nowrap z-[100]"
         >
-          보고서 작성용으로 차트를 저장합니다
+          {{ $t('common.chart.tooltip.saveReport') }}
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
         </div>
       </transition>
@@ -42,7 +42,7 @@
         icon="content_copy"
         @click="$emit('copyChart')"
       >
-        차트 복사
+        {{ $t('common.chart.copy') }}
       </BaseButton>
 
       <!-- Feedback Tooltip (Below - Checkmark) -->
@@ -63,7 +63,7 @@
         icon="download"
         @click="$emit('exportChart')"
       >
-        차트 저장
+        {{ $t('common.chart.save') }}
       </BaseButton>
     </div>
   </div>

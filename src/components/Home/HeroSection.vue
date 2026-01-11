@@ -32,7 +32,7 @@
             class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-full hover:bg-slate-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm hover:shadow-md group"
           >
             <span class="material-icons text-xl text-slate-400 group-hover:text-blue-500 transition-colors">menu_book</span>
-            <span>사용자 매뉴얼 보기</span>
+            <span>{{ $t('home.hero.manualBtn') }}</span>
           </router-link>
         </div>
       </div>

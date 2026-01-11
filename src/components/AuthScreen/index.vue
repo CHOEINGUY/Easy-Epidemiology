@@ -13,9 +13,7 @@
           <span class="block text-slate-500 font-medium text-2xl mb-2">Easy</span>
           <span class="block bg-gradient-to-br from-blue-500 to-blue-700 bg-clip-text text-transparent pb-2">Epidemiology</span>
         </h1>
-        <p class="text-[1.1rem] text-slate-500 leading-relaxed mb-12">
-          신속하고 정확한 역학조사를 위한<br/>
-          전문 데이터 분석 솔루션
+        <p class="text-[1.1rem] text-slate-500 leading-relaxed mb-12" v-html="$t('auth.hero.subtitle').replace('{br}', '<br/>')">
         </p>
         
         <div class="flex flex-col gap-4 text-left">
@@ -23,19 +21,19 @@
             <div class="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center text-xl text-slate-900 transition-all duration-300 group-hover:bg-slate-900 group-hover:text-white">
               <span class="material-icons">edit_note</span>
             </div>
-            <span class="text-slate-600 font-medium tracking-tight">직관적인 데이터 입력</span>
+            <span class="text-slate-600 font-medium tracking-tight">{{ $t('auth.hero.feature1') }}</span>
           </div>
           <div class="flex items-center gap-3 text-[0.95rem] group">
             <div class="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center text-xl text-slate-900 transition-all duration-300 group-hover:bg-slate-900 group-hover:text-white">
               <span class="material-icons">bar_chart</span>
             </div>
-            <span class="text-slate-600 font-medium tracking-tight">자동화된 유행곡선 분석</span>
+            <span class="text-slate-600 font-medium tracking-tight">{{ $t('auth.hero.feature2') }}</span>
           </div>
           <div class="flex items-center gap-3 text-[0.95rem] group">
             <div class="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center text-xl text-slate-900 transition-all duration-300 group-hover:bg-slate-900 group-hover:text-white">
               <span class="material-icons">science</span>
             </div>
-            <span class="text-slate-600 font-medium tracking-tight">OR/RR 통계 분석</span>
+            <span class="text-slate-600 font-medium tracking-tight">{{ $t('auth.hero.feature3') }}</span>
           </div>
         </div>
         
@@ -45,7 +43,7 @@
             <span class="bg-slate-50 p-1.5 rounded-lg group-hover:bg-blue-50 transition-colors">
               <span class="material-icons text-lg group-hover:text-blue-500">space_dashboard</span>
             </span>
-            <span>로그인 없이 기능 둘러보기</span>
+            <span>{{ $t('auth.hero.guestAccess') }}</span>
             <span class="material-icons text-sm opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all">arrow_forward</span>
           </router-link>
         </div>
@@ -58,8 +56,12 @@
       <div class="absolute top-0 right-0 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
       <div class="absolute bottom-0 left-0 w-64 h-64 bg-violet-100/30 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none"></div>
 
+      <div class="absolute top-6 right-6 z-50">
+        <LanguageSwitcher />
+      </div>
+
       <div class="w-full max-w-[460px] bg-white/80 backdrop-blur-xl p-8 md:p-10 rounded-3.5xl border border-white/40 shadow-glass animate-slideIn relative z-10 transition-all duration-500">
-        <AuthHeader :title="showRegister ? '회원가입' : '로그인'" />
+        <AuthHeader :title="showRegister ? $t('auth.registerTitle') : $t('auth.title')" />
         <AuthTabs :show-register="showRegister" @update:showRegister="toggleView" />
         
         <div class="mt-8">
@@ -91,7 +93,11 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+
 import { useAuthStore } from '../../stores/authStore';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 // Parts
 import AuthHeader from './parts/AuthHeader.vue';
@@ -99,6 +105,7 @@ import AuthTabs from './parts/AuthTabs.vue';
 import AuthLogin from './parts/AuthLogin.vue';
 import AuthRegister from './parts/AuthRegister/index.vue';
 import RegistrationSuccessModal from './parts/RegistrationSuccessModal.vue';
+import LanguageSwitcher from '../Common/LanguageSwitcher.vue';
 
 // Emits
 const emit = defineEmits<{
@@ -147,15 +154,15 @@ async function handleLogin(credentials: any) {
   } catch (err: any) {
     const msg = err.message || '';
     if (msg.includes('Invalid credentials:')) {
-      error.value = '이메일/전화번호 또는 비밀번호가 올바르지 않습니다.';
+      error.value = t('auth.errors.invalidCredentials');
     } else if (msg.includes('User not found:')) {
-      error.value = '등록되지 않은 사용자입니다.';
+      error.value = t('auth.errors.userNotFound');
     } else if (msg.includes('Account not approved:')) {
-      error.value = '관리자 승인을 기다려주세요.';
+      error.value = t('auth.errors.accountNotApproved');
     } else if (msg.includes('Network')) {
-      error.value = '네트워크 연결을 확인해주세요.';
+      error.value = t('auth.errors.networkConnection');
     } else {
-      error.value = '로그인 중 오류가 발생했습니다.';
+      error.value = t('auth.errors.loginError');
     }
   } finally {
     isLoading.value = false;
@@ -173,11 +180,11 @@ async function handleRegister(registerData: any) {
   } catch (err: any) {
     const msg = err.message || '';
     if (msg.includes('Email already exists')) {
-      error.value = '이미 사용 중인 이메일입니다.';
+      error.value = t('auth.errors.emailExists');
     } else if (msg.includes('Phone already exists')) {
-      error.value = '이미 사용 중인 전화번호입니다.';
+      error.value = t('auth.errors.phoneExists');
     } else {
-      error.value = `오류: ${msg}`;
+      error.value = t('auth.errors.unknown', { msg });
     }
   } finally {
     isLoading.value = false;

@@ -18,7 +18,7 @@
           <tbody>
             <tr v-if="!results || results.length === 0">
               <td colspan="11" class="no-data-row">
-                분석할 데이터가 없거나 Vuex 스토어 연결을 확인하세요.
+                {{ $t('cohortStudy.table.noData') }}
               </td>
             </tr>
             <CohortResultTableRow

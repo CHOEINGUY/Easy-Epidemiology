@@ -7,7 +7,7 @@
         @change="onSelectChange"
         class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 pr-10 hover:border-slate-300"
       >
-        <option value="">전체</option>
+        <option value="">{{ $t('common.all') }}</option>
         <option v-for="(option, idx) in normalizedOptions" :key="idx" :value="option.value">
           {{ option.label }}
         </option>

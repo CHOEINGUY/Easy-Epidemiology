@@ -64,12 +64,12 @@ export async function handleCopy(context: GridContext) {
         await (navigator as any).clipboard.writeText(clipboardData);
     } catch (err) {
         console.error('Failed to copy text: ', err);
-        showToast('복사 실패: 클립보드 권한을 확인해주세요.', 'error');
+        showToast(context.t('common.copyFailed'), 'error');
     }
 }
 
 export async function handlePaste(context: GridContext) {
-    const { selectionSystem, ensureCellIsVisible, epidemicStore, allColumnsMeta } = context;
+    const { selectionSystem, ensureCellIsVisible, epidemicStore, allColumnsMeta, t } = context;
     const { selectedCell } = selectionSystem.state;
 
     if (selectedCell.rowIndex === null || selectedCell.colIndex === null) {
@@ -141,6 +141,6 @@ export async function handlePaste(context: GridContext) {
 
     } catch (err) {
         console.error('Failed to paste text: ', err);
-        showToast('붙여넣기 실패: 클립보드 권한을 허용해주세요.', 'error');
+        showToast(t('common.pasteFailed'), 'error');
     }
 }

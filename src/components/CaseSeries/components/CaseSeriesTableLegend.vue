@@ -1,11 +1,12 @@
 <template>
   <div class="table-legend">
     <div class="legend-header">
-      <span class="legend-title">통계 검정 방법 및 표시 기준</span>
+
+      <span class="legend-title">{{ $t('caseSeries.table.legend.title') }}</span>
     </div>
     <div class="legend-content legend-content--plain">
-      <div class="legend-item-plain">N/A : 계산 불가(셀 값이 0인 경우)</div>
-      <div class="legend-item-plain">발병률(%) : 사례군 내 해당 요인 노출자 비율</div>
+      <div class="legend-item-plain">{{ $t('caseSeries.table.legend.na') }}</div>
+      <div class="legend-item-plain">{{ $t('caseSeries.table.legend.incidenceRate') }}</div>
     </div>
   </div>
 </template>

@@ -9,16 +9,34 @@
       @exportChart="handleExportChart"
     />
 
-    <!-- 노출시간 경고 메시지 -->
-    <div v-if="showWarningMessage" class="no-data-message">
+    <!-- Exposure Date Time Empty State (No Scroll) -->
+    <div v-if="!formattedExposureDateTime" class="no-data-message">
       <DataGuideMessage
-        icon="warning"
-        title="증상발현시간을 노출시간 이후로 바꿔주세요"
-        description="잠복기는 '노출 이후' 경과시간으로 계산됩니다. 현재는 모두 노출 이전으로 입력되어 계산할 수 없습니다."
-        :steps="warningSteps"
+        icon="event"
+        :title="$t('epidemicCurve.incubationTable.guide.noExposureTitle')"
+        :description="$t('epidemicCurve.incubationTable.guide.noExposureDesc')"
+        :steps="[
+          { number: '1', text: $t('epidemicCurve.incubationTable.guide.step1') },
+          { number: '2', text: $t('epidemicCurve.incubationTable.guide.step2') },
+          { number: '3', text: $t('epidemicCurve.incubationTable.guide.step3') }
+        ]"
       />
     </div>
 
+    <!-- Warning Message State -->
+    <div v-else-if="showWarningMessage" class="no-data-message">
+      <DataGuideMessage
+        icon="warning"
+        :title="$t('epidemicCurve.warning.title')"
+        :description="$t('epidemicCurve.warning.desc')"
+        :steps="[
+          { number: '1', text: $t('epidemicCurve.warning.step1', { time: formattedExposureDateTime }) },
+          { number: '2', text: $t('epidemicCurve.warning.step2') }
+        ]"
+      />
+    </div>
+
+    <!-- Chart State -->
     <div v-else ref="chartContainer" class="chart-instance" :style="{ width: chartWidth + 'px', height: chartHeight + 'px' }"></div>
   </div>
 </template>
@@ -54,11 +72,8 @@ const emit = defineEmits<{
 }>();
 
 // 경고 메시지 steps
-const warningSteps = [
-  { number: '!', text: `현재 노출시간: ${props.formattedExposureDateTime}` },
-  { number: '1', text: '상단 의심원 노출시간 입력란을 클릭해 올바른 기준시간으로 다시 설정합니다' },
-  { number: '2', text: '또는 데이터 입력 화면에서 각 환자의 증상발현시간을 노출시간 이후로 수정합니다' }
-];
+// Warning steps removed as they use $t directly
+
 
 const chartContainer = ref<HTMLElement | null>(null);
 const chartInstance = ref<any | null>(null);
@@ -167,8 +182,8 @@ defineExpose({
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  overflow-x: auto;
+  padding: 20px 15px; /* Slightly reduced horizontal padding to maximize chart area */
+  overflow-x: auto; /* Required to support manual chartWidth settings (700px, 900px, 1100px) on smaller screens */
   display: flex;
   flex-direction: column;
   align-items: center;

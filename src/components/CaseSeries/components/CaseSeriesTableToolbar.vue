@@ -1,7 +1,8 @@
 <template>
   <div class="table-title table-title--with-copy">
     <span>
-      <span class="selected-variable-details__title-dot"></span>&nbsp;요인별 사례군 분석 결과
+
+      <span class="selected-variable-details__title-dot"></span>&nbsp;{{ $t('caseSeries.toolbar.title') }}
     </span>
     <div class="button-group">
       <div class="relative group">
@@ -12,7 +13,7 @@
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
           </span>
-          <span class="font-['Noto_Sans_KR'] font-normal">테이블 복사</span>
+          <span class="font-['Noto_Sans_KR'] font-normal">{{ $t('caseSeries.toolbar.copyTable') }}</span>
         </button>
         <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 scale-50" enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-50">
           <div v-if="isTableCopied" class="absolute top-full left-1/2 -translate-x-1/2 mt-2 flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-lg border border-slate-100 z-50">

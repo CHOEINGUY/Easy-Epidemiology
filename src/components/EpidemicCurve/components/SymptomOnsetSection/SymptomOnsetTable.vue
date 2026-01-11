@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between mx-5 mt-5 mb-2.5">
       <div class="flex items-center text-[1.1em] text-[#333] font-medium text-left">
         <span class="inline-block w-[0.3em] h-[0.3em] bg-current mr-[0.3em] align-middle rounded-full"></span>
-        <span class="ml-[0.2em]">증상 발현 시간별 환자 수</span>
+        <span class="ml-[0.2em]">{{ $t('epidemicCurve.symptomTable.title') }}</span>
       </div>
       <div class="relative group">
         <BaseButton 
@@ -12,7 +12,7 @@
           size="sm"
           icon="content_copy"
         >
-          복사
+          {{ $t('epidemicCurve.contextMenu.copy') || 'Copy' }}
         </BaseButton>
         <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
           <div v-if="isTableCopied" class="absolute left-1/2 top-[110%] -translate-x-1/2 z-10 pointer-events-none flex items-center justify-center w-8 h-8 rounded-full shadow-sm bg-white border border-slate-100">
@@ -28,8 +28,8 @@
     <table id="symptom-onset-table" v-if="tableData.length > 0" class="w-[calc(100%-40px)] text-sm border-collapse mx-5 mb-5 border border-slate-200">
       <thead>
         <tr>
-          <th class="bg-slate-50 font-semibold p-2 border border-slate-200 text-slate-700">증상 발현 시간</th>
-          <th class="bg-slate-50 font-semibold p-2 border border-slate-200 text-slate-700">수</th>
+          <th class="bg-slate-50 font-semibold p-2 border border-slate-200 text-slate-700">{{ $t('epidemicCurve.symptomTable.time') }}</th>
+          <th class="bg-slate-50 font-semibold p-2 border border-slate-200 text-slate-700">{{ $t('epidemicCurve.symptomTable.count') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -43,24 +43,28 @@
     <div v-else class="p-5 text-center text-[#666]">
       <DataGuideMessage
         icon="schedule"
-        title="증상 발현 시간 필요"
-        description="유행곡선 생성을 위한 필수 정보입니다."
-        :steps="guideSteps"
+        :title="$t('epidemicCurve.symptomTable.guide.title')"
+        :description="$t('epidemicCurve.symptomTable.guide.desc')"
+        :steps="[
+          { number: '1', text: $t('epidemicCurve.symptomTable.guide.step1') },
+          { number: '2', text: $t('epidemicCurve.symptomTable.guide.step2') },
+          { number: '3', text: $t('epidemicCurve.symptomTable.guide.step3') }
+        ]"
       />
     </div>
 
     <div class="flex items-center text-[1.1em] text-[#333] font-medium text-left mx-5 mt-5">
       <span class="inline-block w-[0.3em] h-[0.3em] bg-current mr-[0.3em] align-middle rounded-full"></span>
-      <span class="ml-[0.2em]">발생 요약 정보</span>
+      <span class="ml-[0.2em]">{{ $t('epidemicCurve.symptomTable.summary.title') }}</span>
     </div>
 
     <div class="mx-5 mb-5 mt-5 p-4 bg-[#f8f9fa] rounded-lg border border-slate-100">
       <div class="flex items-center gap-2.5 mb-2 last:mb-0">
-        <span class="text-sm text-[#666] min-w-[100px]">최초 발생일시 :</span>
+        <span class="text-sm text-[#666] min-w-[100px]">{{ $t('epidemicCurve.symptomTable.summary.first') }}</span>
         <span class="text-sm text-[#333] font-medium">{{ firstOnsetTime }}</span>
       </div>
       <div class="flex items-center gap-2.5 mb-2 last:mb-0">
-        <span class="text-sm text-[#666] min-w-[100px]">최종 발생일시 :</span>
+        <span class="text-sm text-[#666] min-w-[100px]">{{ $t('epidemicCurve.symptomTable.summary.last') }}</span>
         <span class="text-sm text-[#333] font-medium">{{ lastOnsetTime }}</span>
       </div>
     </div>
@@ -73,11 +77,7 @@ import { useClipboardOperations } from '../../composables/useClipboardOperations
 import BaseButton from '../../../Common/BaseButton.vue';
 
 // 안내 메시지 steps
-const guideSteps = [
-  { number: '1', text: '증상발현시간 입력' },
-  { number: '2', text: '최소 2명 이상 데이터' },
-  { number: '3', text: '형식: YYYY-MM-DD HH:MM' }
-];
+// Guide steps removed as they are now passed directly with $t
 
 interface TableItem {
   intervalLabel: string;

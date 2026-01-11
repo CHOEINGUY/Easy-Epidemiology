@@ -14,7 +14,7 @@
           <tbody>
             <tr v-if="!results || results.length === 0">
               <td colspan="5" class="no-data-row">
-                분석할 데이터가 없거나 Vuex 스토어 연결을 확인하세요.
+                {{ $t('caseSeries.table.noData') }}
               </td>
             </tr>
             <CaseSeriesTableRow

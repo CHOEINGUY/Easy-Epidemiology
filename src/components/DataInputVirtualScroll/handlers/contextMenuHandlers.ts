@@ -16,6 +16,13 @@ import {
 } from '../utils/contextMenuFilterUtils';
 import type { GridHeader } from '@/types/grid';
 import type { GridContextMenuContext } from '../../../types/virtualGridContext';
+import i18n from '@/i18n';
+
+// Access translation function
+const t = (key: string, props?: any) => {
+  // @ts-ignore
+  return i18n.global.t(key, props);
+};
 
 /**
  * 우클릭 이벤트를 처리하고 컨텍스트 메뉴를 표시합니다.
@@ -115,12 +122,14 @@ function getMenuItemsForContext(
   // --- 셀 데이터 삭제 메뉴 (맨 위에 추가) ---
   if (rowIndex >= 0 && colIndex > COL_IDX_SERIAL) {
     const cellCount = individualCellCount > 0 ? individualCellCount : 1;
-    const label = cellCount > 1 ? `셀 데이터 삭제 (${cellCount}개)` : '셀 데이터 삭제';
+    const label = cellCount > 1 
+      ? t('dataInput.contextMenu.clearCellDataCount', { count: cellCount })
+      : t('dataInput.contextMenu.clearCellData');
     
     // Copy/Paste 메뉴 추가
     menuItems.push(
-      { label: '복사', action: 'copy-cell', icon: 'content_copy' },
-      { label: '붙여넣기', action: 'paste-cell', icon: 'content_paste' },
+      { label: t('dataInput.contextMenu.copy'), action: 'copy-cell', icon: 'content_copy' },
+      { label: t('dataInput.contextMenu.paste'), action: 'paste-cell', icon: 'content_paste' },
       { type: 'separator' }
     );
 
@@ -135,18 +144,43 @@ function getMenuItemsForContext(
     // Copy/Paste menu for Rows
     if (colIndex === COL_IDX_SERIAL || individualRowCount > 0) {
         menuItems.push(
-          { label: '복사', action: 'copy-cell', icon: 'content_copy' },
-          { label: '붙여넣기', action: 'paste-cell', icon: 'content_paste' },
+          { label: t('dataInput.contextMenu.copy'), action: 'copy-cell', icon: 'content_copy' },
+          { label: t('dataInput.contextMenu.paste'), action: 'paste-cell', icon: 'content_paste' },
           { type: 'separator' }
         );
     }
 
     menuItems.push(
-      { label: `위에 행 삽입${isMultiRow ? ` (${effectiveRowCount}개)` : ''}`, action: 'add-row-above', icon: '↑' },
-      { label: `아래에 행 삽입${isMultiRow ? ` (${effectiveRowCount}개)` : ''}`, action: 'add-row-below', icon: '↓' },
+      { 
+        label: isMultiRow 
+          ? t('dataInput.contextMenu.addRowAboveCount', { count: effectiveRowCount }) 
+          : t('dataInput.contextMenu.addRowAbove'), 
+        action: 'add-row-above', 
+        icon: '↑' 
+      },
+      { 
+        label: isMultiRow 
+          ? t('dataInput.contextMenu.addRowBelowCount', { count: effectiveRowCount }) 
+          : t('dataInput.contextMenu.addRowBelow'), 
+        action: 'add-row-below', 
+        icon: '↓' 
+      },
       { type: 'separator' },
-      { label: `행 데이터 지우기${isMultiRow ? ` (${effectiveRowCount}개)` : ''}`, action: 'clear-rows-data', icon: '×' },
-      { label: `행 삭제${isMultiRow ? ` (${effectiveRowCount}개)` : ''}`, action: 'delete-rows', icon: '−', danger: true }
+      { 
+        label: isMultiRow 
+          ? t('dataInput.contextMenu.clearRowsDataCount', { count: effectiveRowCount }) 
+          : t('dataInput.contextMenu.clearRowsData'), 
+        action: 'clear-rows-data', 
+        icon: '×' 
+      },
+      { 
+        label: isMultiRow 
+          ? t('dataInput.contextMenu.deleteRowsCount', { count: effectiveRowCount }) 
+          : t('dataInput.contextMenu.deleteRows'), 
+        action: 'delete-rows', 
+        icon: '−', 
+        danger: true 
+      }
     );
   }
   
@@ -174,15 +208,35 @@ function getMenuItemsForContext(
 
     if (hasDeletableColumns) {
       menuItems.push(
-        { label: `왼쪽에 열 삽입${isMultiCol ? ` (${effectiveColCount}개)` : ''}`, action: 'add-col-left', icon: '←' },
-        { label: `오른쪽에 열 삽입${isMultiCol ? ` (${effectiveColCount}개)` : ''}`, action: 'add-col-right', icon: '→' },
+        { 
+          label: isMultiCol 
+            ? t('dataInput.contextMenu.addColLeftCount', { count: effectiveColCount }) 
+            : t('dataInput.contextMenu.addColLeft'), 
+          action: 'add-col-left', 
+          icon: '←' 
+        },
+        { 
+          label: isMultiCol 
+            ? t('dataInput.contextMenu.addColRightCount', { count: effectiveColCount }) 
+            : t('dataInput.contextMenu.addColRight'), 
+          action: 'add-col-right', 
+          icon: '→' 
+        },
         { type: 'separator' },
-        { label: `열 데이터 삭제${isMultiCol ? ` (${effectiveColCount}개)` : ''}`, action: 'clear-cols-data', icon: '×' }
+        { 
+          label: isMultiCol 
+            ? t('dataInput.contextMenu.clearColsDataCount', { count: effectiveColCount }) 
+            : t('dataInput.contextMenu.clearColsData'), 
+          action: 'clear-cols-data', 
+          icon: '×' 
+        }
       );
       
       if (areSelectedColumnsDeletable(selectionState, allColumnsMeta)) {
         menuItems.push({ 
-          label: `열 삭제${isMultiCol ? ` (${effectiveColCount}개)` : ''}`, 
+          label: isMultiCol 
+            ? t('dataInput.contextMenu.deleteColsCount', { count: effectiveColCount }) 
+            : t('dataInput.contextMenu.deleteCols'), 
           action: 'delete-cols', 
           icon: '−', 
           danger: true 
@@ -194,13 +248,19 @@ function getMenuItemsForContext(
       [COL_TYPE_IS_PATIENT, COL_TYPE_CONFIRMED_CASE, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE].includes(type)
     )) {
       menuItems.push(
-        { label: `열 데이터 삭제${isMultiCol ? ` (${effectiveColCount}개)` : ''}`, action: 'clear-cols-data', icon: '×' }
+        { 
+          label: isMultiCol 
+            ? t('dataInput.contextMenu.clearColsDataCount', { count: effectiveColCount }) 
+            : t('dataInput.contextMenu.clearColsData'), 
+          action: 'clear-cols-data', 
+          icon: '×' 
+        }
       );
     }
     // 3. 연번 헤더
     else if (Array.from(targetColumnTypes).includes(COL_TYPE_SERIAL)) {
       menuItems.push(
-        { label: '빈 행 삭제', action: 'delete-empty-rows', icon: '×' }
+        { label: t('dataInput.contextMenu.deleteEmptyRows'), action: 'delete-empty-rows', icon: '×' }
       );
     }
   }
@@ -209,16 +269,17 @@ function getMenuItemsForContext(
   if (rowIndex < 0) {
     // Copy/Paste menu for Header
     menuItems.push(
-      { label: '복사', action: 'copy-cell', icon: 'content_copy' },
-      { label: '붙여넣기', action: 'paste-cell', icon: 'content_paste' },
-      { type: 'separator' }
+      { label: t('dataInput.contextMenu.copy'), action: 'copy-cell', icon: 'content_copy' },
+      { label: t('dataInput.contextMenu.paste'), action: 'paste-cell', icon: 'content_paste' }
     );
+
+    const emptyCellText = t('dataInput.contextMenu.emptyCell');
 
     if (column && column.type === COL_TYPE_IS_PATIENT) {
       const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
       menuItems.push({ type: 'separator' });
       uniqueValuesWithCounts.forEach(({ value, count }: any) => {
-        const displayValue = value === '' ? '빈 셀' : value;
+        const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-patient-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
@@ -229,15 +290,11 @@ function getMenuItemsForContext(
       });
     }
     
-    // ... Repeat filtering logic for other column types ...
-    // To save space in tool output I will condense but since I am overwriting FILE, I MUST INCLUDE ALL LOGIC.
-    // I will copy relevant filtering blocks.
-    
     if (column && column.type === COL_TYPE_CONFIRMED_CASE) {
       const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
       menuItems.push({ type: 'separator' });
       uniqueValuesWithCounts.forEach(({ value, count }: any) => {
-        const displayValue = value === '' ? '빈 셀' : value;
+        const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-confirmed-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
@@ -252,7 +309,7 @@ function getMenuItemsForContext(
       const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
       menuItems.push({ type: 'separator' });
       uniqueValuesWithCounts.forEach(({ value, count }: any) => {
-        const displayValue = value === '' ? '빈 셀' : value;
+        const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-clinical-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
@@ -267,7 +324,7 @@ function getMenuItemsForContext(
       const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
       menuItems.push({ type: 'separator' });
       uniqueValuesWithCounts.forEach(({ value, count }: any) => {
-        const displayValue = value === '' ? '빈 셀' : value;
+        const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-diet-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
@@ -282,7 +339,7 @@ function getMenuItemsForContext(
       const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
       menuItems.push({ type: 'separator' });
       uniqueValuesWithCounts.forEach(({ value, count }: any) => {
-        const displayValue = value === '' ? '빈 셀' : value;
+        const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-basic-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
@@ -297,7 +354,7 @@ function getMenuItemsForContext(
       const uniqueDatesWithCounts = getUniqueDatesForColumn(colIndex, context as any);
       menuItems.push({ type: 'separator' });
       uniqueDatesWithCounts.forEach(({ date, count }: any) => {
-        const displayDate = date === '' ? '빈 셀' : date;
+        const displayDate = date === '' ? emptyCellText : date;
         const action = `filter-datetime-${date === '' ? 'empty' : date}`;
         menuItems.push({
           label: `${displayDate} (${count})`,
@@ -312,7 +369,7 @@ function getMenuItemsForContext(
     if (context.gridStore && context.gridStore.isFiltered) {
       menuItems.push(
         { type: 'separator' },
-        { label: '모든 필터 해제', action: 'clear-all-filters', icon: '×' }
+        { label: t('dataInput.contextMenu.clearAllFilters'), action: 'clear-all-filters', icon: '×' }
       );
     }
   }

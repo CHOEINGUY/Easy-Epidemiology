@@ -200,7 +200,7 @@ export const siteConfig: SiteConfig = {
         // 기술 지원 팀
         support: [
             { name: '양정호', role: '책임' },
-            { name: '최인규', role: '연구원', phone: '061-372-4175' }
+            { name: '최인규', role: '연구원', phone: '010-3323-7008' }
         ],
         // 이메일 문의 목록
         emails: [
@@ -208,20 +208,6 @@ export const siteConfig: SiteConfig = {
         ]
     }
 };
-
-// 설정 업데이트 함수 (관리자 패널에서 사용)
-export function updateSiteConfig(newConfig: Partial<SiteConfig>): void {
-    try {
-        // 로컬 스토리지에 저장
-        localStorage.setItem('siteConfig', JSON.stringify(newConfig));
-        // 페이지 새로고침으로 변경사항 적용
-        window.location.reload();
-    }
-    catch (error) {
-        console.error('설정 업데이트 실패:', error);
-        throw error;
-    }
-}
 
 // 설정 로드 함수
 export function loadSiteConfig(): SiteConfig {
@@ -242,17 +228,5 @@ export function loadSiteConfig(): SiteConfig {
     catch (error) {
         console.error('설정 로드 실패:', error);
         return { ...siteConfig };
-    }
-}
-
-// 설정 초기화 함수
-export function resetSiteConfig(): void {
-    try {
-        localStorage.removeItem('siteConfig');
-        window.location.reload();
-    }
-    catch (error) {
-        console.error('설정 초기화 실패:', error);
-        throw error;
     }
 }

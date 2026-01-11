@@ -22,7 +22,7 @@
           <tbody>
             <tr v-if="!filteredAnalysisResults || filteredAnalysisResults.length === 0">
               <td colspan="11" class="no-data-row">
-                {{ isOrFilterActive ? `오즈비 ${currentOrThreshold}.0 이상인 데이터가 없습니다.` : '분석할 데이터가 없거나 Vuex 스토어 연결을 확인하세요.' }}
+                {{ isOrFilterActive ? $t('caseControl.table.noDataFilter', { threshold: currentOrThreshold }) : $t('caseControl.table.noData') }}
               </td>
             </tr>
             <CaseControlTableRow

@@ -7,12 +7,14 @@
           <span class="material-icons text-slate-600 text-lg">school</span>
         </div>
         <div class="text-[14px] leading-relaxed text-slate-600 py-0.5">
-          <p class="font-bold text-slate-900 mb-0.5">포트폴리오 체험용 페이지입니다</p>
-          <p class="text-[13px] text-slate-500">별도의 정보 입력 없이 하단의 <strong class="text-slate-800 font-bold underline decoration-slate-300 underline-offset-2">로그인 버튼</strong>을 누르시면 자동으로 연결됩니다.</p>
+          <p class="font-bold text-slate-900 mb-0.5">{{ $t('auth.login.demoNoticeTitle') }}</p>
+          <p class="text-[13px] text-slate-500">
+            <span v-html="$t('auth.login.demoNoticeDesc', { strong: `<strong class='text-slate-800 font-bold underline decoration-slate-300 underline-offset-2'>${$t('auth.login.demoBtn')}</strong>` })"></span>
+          </p>
         </div>
       </div>
       <div class="mb-5 transition-all duration-300 ease-in-out group" :class="{ 'has-error': loginErrors.identifier }">
-        <label for="login-identifier" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight">이메일 또는 전화번호</label>
+        <label for="login-identifier" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight">{{ $t('auth.login.identifierLabel') }}</label>
         <div class="relative">
           <input
             id="login-identifier"
@@ -47,10 +49,10 @@
       <div class="mb-6">
         <BaseInput
           id="login-password"
-          label="비밀번호"
+          :label="$t('auth.login.passwordLabel')"
           v-model="loginData.password"
           type="password"
-          placeholder="비밀번호"
+          :placeholder="$t('auth.login.passwordLabel')"
           :disabled="isLoading"
           :error="loginErrors.password"
           rounded="lg"
@@ -77,7 +79,7 @@
         >
           <div class="flex items-center justify-center gap-2.5">
             <span class="material-icons text-xl group-hover:translate-x-1 transition-transform" v-if="!isLoading">login</span>
-            <span>체험용 자동 로그인</span>
+            <span>{{ $t('auth.login.autoLoginBtn') }}</span>
           </div>
         </BaseButton>
       </div>
@@ -87,6 +89,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseInput from '../../Common/BaseInput.vue';
 import BaseButton from '../../Common/BaseButton.vue';
 import { 
@@ -113,6 +116,7 @@ const emit = defineEmits<{
 }>();
 
 // Refs for DOM elements
+const { t } = useI18n();
 const loginIdentifierRef = ref<HTMLInputElement | null>(null);
 const loginPasswordRef = ref<any | null>(null); // BaseInput instance
 const loginSubmitRef = ref<any | null>(null);   // BaseButton instance
@@ -131,9 +135,9 @@ const loginDisplayValue = computed(() => loginUserInput.value + loginSuggestion.
 
 const placeholderText = computed(() => {
   switch (currentInputType.value) {
-    case 'phone': return '전화번호';
-    case 'email': return '이메일';
-    default: return '이메일 또는 전화번호';
+    case 'phone': return t('auth.login.phonePlaceholder');
+    case 'email': return t('auth.login.emailPlaceholder');
+    default: return t('auth.login.identifierLabel');
   }
 });
 

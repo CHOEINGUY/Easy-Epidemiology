@@ -5,8 +5,18 @@ export function useChartSettings() {
     const settingsStore = useSettingsStore();
 
     // 상수 정의
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { t } = require('@/i18n').default.global;
+
+    // 상수 정의
     const fontSizes: number[] = [12, 15, 18, 21, 24];
-    const fontSizeLabels: string[] = ['매우 작게', '작게', '보통', '크게', '매우 크게'];
+    const fontSizeLabels = computed(() => [
+        t('common.size.verySmall'),
+        t('common.size.small'),
+        t('common.size.medium'),
+        t('common.size.large'),
+        t('common.size.veryLarge')
+    ]);
     const chartWidths: number[] = [700, 900, 1100];
     const barColors: string[] = [
         '#5470c6', '#1E88E5', '#29ABE2', '#91cc75', '#fac858',

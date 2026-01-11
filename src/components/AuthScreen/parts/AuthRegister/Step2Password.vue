@@ -1,18 +1,18 @@
 <template>
   <div class="animate-in fade-in slide-in-from-right-3 duration-300">
     <StepIndicator :current-step="2" :total-steps="3" />
-    <h3 class="text-center text-xl font-bold text-slate-900 mb-7 tracking-tight">비밀번호 설정</h3>
+    <h3 class="text-center text-xl font-bold text-slate-900 mb-7 tracking-tight">{{ $t('auth.register.steps.password') }}</h3>
     
     <form @submit.prevent="handleSubmit" class="space-y-5">
       <!-- 비밀번호 -->
       <div class="group/field">
-        <label for="register-password" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">비밀번호</label>
+        <label for="register-password" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">{{ $t('auth.register.labels.password') }}</label>
         <div class="relative">
           <input
             id="register-password"
             v-model="formData.password"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="8자 이상의 안전한 비밀번호를 입력하세요"
+            :placeholder="$t('auth.register.placeholders.password')"
             required
             :disabled="isLoading"
             @blur="validateField('password')"
@@ -29,7 +29,7 @@
               class="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all duration-200 active:scale-90"
               @click="showPassword = !showPassword"
               tabindex="0"
-              title="비밀번호 보기/숨기기"
+              :title="$t('auth.register.labels.passwordVisibility')"
             >
               <span class="material-icons text-xl">
                 {{ showPassword ? 'visibility' : 'visibility_off' }}
@@ -50,13 +50,13 @@
       
       <!-- 비밀번호 확인 -->
       <div class="group/field">
-        <label for="register-confirm-password" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">비밀번호 확인</label>
+        <label for="register-confirm-password" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">{{ $t('auth.register.labels.confirmPassword') }}</label>
         <div class="relative">
           <input
             id="register-confirm-password"
             v-model="formData.confirmPassword"
             :type="showConfirmPassword ? 'text' : 'password'"
-            placeholder="비밀번호를 다시 입력하세요"
+            :placeholder="$t('auth.register.placeholders.confirmPassword')"
             required
             :disabled="isLoading"
             @blur="validateField('confirmPassword')"
@@ -73,7 +73,7 @@
               class="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all duration-200 active:scale-90"
               @click="showConfirmPassword = !showConfirmPassword"
               tabindex="0"
-              title="비밀번호 보기/숨기기"
+              :title="$t('auth.register.labels.passwordVisibility')"
             >
               <span class="material-icons text-xl">
                 {{ showConfirmPassword ? 'visibility' : 'visibility_off' }}
@@ -99,14 +99,14 @@
           @click="$emit('prev')"
           :disabled="isLoading"
         >
-          이전 단계
+          {{ $t('auth.register.buttons.prev') }}
         </button>
         <button 
           type="submit" 
           class="flex-[2] py-4 bg-gradient-to-br from-slate-900 to-slate-800 text-white font-bold rounded-2xl text-[15px] shadow-premium transition-all duration-300 hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-[0.98] disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2 group relative overflow-hidden"
           :disabled="isLoading || !formData.password || !formData.confirmPassword"
         >
-          <span class="relative z-10">다음 단계</span>
+          <span class="relative z-10">{{ $t('auth.register.buttons.next') }}</span>
           <span class="material-icons text-xl relative z-10 transition-transform duration-300 group-hover:translate-x-1">arrow_forward</span>
           <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
         </button>
@@ -117,6 +117,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import StepIndicator from './StepIndicator.vue';
 
 interface Props {
@@ -134,6 +135,8 @@ const emit = defineEmits<{
   (e: 'prev'): void;
   (e: 'update:data', value: any): void;
 }>();
+
+const { t } = useI18n();
 
 // Refs
 const passwordInputRef = ref<HTMLInputElement | null>(null);
@@ -170,12 +173,12 @@ onMounted(() => {
 // Methods
 function validateField(field: 'password' | 'confirmPassword') {
   if (field === 'password') {
-    if (!formData.value.password) errors.value.password = '비밀번호를 입력해주세요.';
-    else if (formData.value.password.length < 6) errors.value.password = '비밀번호는 최소 6자 이상이어야 합니다.';
+    if (!formData.value.password) errors.value.password = t('auth.register.errors.passwordRequired');
+    else if (formData.value.password.length < 6) errors.value.password = t('auth.register.errors.passwordTooShort');
     else errors.value.password = '';
   } else if (field === 'confirmPassword') {
-    if (!formData.value.confirmPassword) errors.value.confirmPassword = '비밀번호를 다시 입력해주세요.';
-    else if (formData.value.password !== formData.value.confirmPassword) errors.value.confirmPassword = '비밀번호가 일치하지 않습니다.';
+    if (!formData.value.confirmPassword) errors.value.confirmPassword = t('auth.register.errors.confirmPasswordRequired');
+    else if (formData.value.password !== formData.value.confirmPassword) errors.value.confirmPassword = t('auth.register.errors.passwordMismatch');
     else errors.value.confirmPassword = '';
   }
 }

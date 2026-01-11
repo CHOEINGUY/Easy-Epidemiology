@@ -1,7 +1,8 @@
 import { ref, computed, Ref, ComputedRef } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useEpidemicStore } from '../../../stores/epidemicStore';
 import { useSettingsStore } from '../../../stores/settingsStore';
-import reportTemplate from '../../../templates/reportTemplate';
+import { getReportTemplate } from '../../../templates/reportTemplate';
 import { createComponentLogger } from '../../../utils/logger';
 import { 
   loadTemplateSection0, 
@@ -16,6 +17,7 @@ const logger = createComponentLogger('ReportWriter');
 export function useReportData(): ReportData {
   const epidemicStore = useEpidemicStore();
   const settingsStore = useSettingsStore();
+  const { t, locale } = useI18n();
   
   // --- Local State ---
   const studyDesign: Ref<StudyDesign> = ref(null);
@@ -26,27 +28,41 @@ export function useReportData(): ReportData {
   const pendingStudyDesign: Ref<string> = ref('');
 
   // --- Helper Functions ---
-  function formatKoreanDate(dateObj: Date | null): string | null {
+  function getLocaleDays(): string[] {
+    return (t('reportWriter.generation.dates.days', { returnObjects: true }) as any) as string[];
+  }
+
+  function formatLocaleDate(dateObj: Date | null): string | null {
     if (!dateObj || isNaN(dateObj.getTime())) return null;
-    const days = ['일','월','화','수','목','금','토'];
+    const days = getLocaleDays();
     const yyyy = dateObj.getFullYear();
     const mm = String(dateObj.getMonth()+1).padStart(2,'0');
     const dd = String(dateObj.getDate()).padStart(2,'0');
     const day = days[dateObj.getDay()];
     const hh = String(dateObj.getHours()).padStart(2,'0');
-    return `${yyyy}년 ${mm}월 ${dd}일 (${day}요일) ${hh}시`;
+    
+    if (locale.value === 'ko') {
+      return `${yyyy}${t('reportWriter.generation.dates.year')} ${mm}${t('reportWriter.generation.dates.month')} ${dd}${t('reportWriter.generation.dates.day')} (${day}${t('reportWriter.generation.dates.period')}) ${hh}${t('reportWriter.generation.dates.hour')}`;
+    } else {
+      return `${yyyy}${t('reportWriter.generation.dates.year')}${mm}${t('reportWriter.generation.dates.month')}${dd}${t('reportWriter.generation.dates.day')} (${day}) ${hh}${t('reportWriter.generation.dates.hour')}`;
+    }
   }
 
-  function formatKoreanDateTime(dateObj: Date | null): string | null {
+  function formatLocaleDateTime(dateObj: Date | null): string | null {
     if (!dateObj || isNaN(dateObj.getTime())) return null;
-    const days = ['일','월','화','수','목','금','토'];
+    const days = getLocaleDays();
     const yyyy = dateObj.getFullYear();
     const mm = String(dateObj.getMonth()+1).padStart(2,'0');
     const dd = String(dateObj.getDate()).padStart(2,'0');
     const day = days[dateObj.getDay()];
     const hh = String(dateObj.getHours()).padStart(2,'0');
     const mi = String(dateObj.getMinutes()).padStart(2,'0');
-    return `${yyyy}년 ${mm}월 ${dd}일 (${day}요일) ${hh}시 ${mi}분`;
+    
+    if (locale.value === 'ko') {
+      return `${yyyy}${t('reportWriter.generation.dates.year')} ${mm}${t('reportWriter.generation.dates.month')} ${dd}${t('reportWriter.generation.dates.day')} (${day}${t('reportWriter.generation.dates.period')}) ${hh}${t('reportWriter.generation.dates.hour')} ${mi}${t('reportWriter.generation.dates.minute')}`;
+    } else {
+      return `${yyyy}${t('reportWriter.generation.dates.year')}${mm}${t('reportWriter.generation.dates.month')}${dd}${t('reportWriter.generation.dates.day')} (${day}) ${hh}${t('reportWriter.generation.dates.hour')}${mi}${t('reportWriter.generation.dates.minute')}`;
+    }
   }
 
   // --- Basic Data getters ---
@@ -74,16 +90,16 @@ export function useReportData(): ReportData {
     if (!raw) return null;
     if (typeof raw === 'string' && raw.includes('~')) {
       const [start, end] = raw.split('~').map(s => new Date(s.trim()));
-      return `${formatKoreanDate(start)} ~ ${formatKoreanDate(end)}`;
+      return `${formatLocaleDate(start)} ~ ${formatLocaleDate(end)}`;
     }
     const dt = new Date(raw);
-    return formatKoreanDate(dt);
+    return formatLocaleDate(dt);
   });
 
   const firstCaseDate: ComputedRef<string | null> = computed(() => {
     const dt = epidemicStore.getFirstCaseDate;
     if (!dt) return null;
-    return formatKoreanDate(new Date(dt));
+    return formatLocaleDate(new Date(dt));
   });
 
   const meanIncubation: ComputedRef<string | null> = computed(() => {
@@ -181,8 +197,10 @@ export function useReportData(): ReportData {
     });
     
     if (!hasValidData) {
-      const designText = newDesign === 'case-control' ? '환자-대조군' : '후향적 코호트';
-      analysisModalMessage.value = `${designText} 연구 분석이 완료되지 않았습니다.`;
+      const designText = newDesign === 'case-control' 
+        ? t('reportWriter.editor.studyDesign.caseControl') 
+        : t('reportWriter.editor.studyDesign.cohort');
+      analysisModalMessage.value = `${designText} ${t('reportWriter.modal.message')}`;
       pendingStudyDesign.value = newDesign || '';
       showAnalysisModal.value = true;
       return;
@@ -228,24 +246,32 @@ export function useReportData(): ReportData {
       return `${r.item || 'N/A'} (p = ${pValueText}, ${metric} = ${metricValue} (${lowerCI} - ${upperCI}))`;
     });
     
-    return `식품 섭취력에 따른 환례 연관성 분석 결과, ${parts.join(', ')}이 통계적으로 유의한 연관성을 보였다.`;
+    if (locale.value === 'ko') {
+      return t('reportWriter.generation.descriptions.foodIntakeResult', { parts: parts.join(', ') });
+    } else {
+      return t('reportWriter.generation.descriptions.foodIntakeResult', { parts: parts.join(', ') });
+    }
   }
 
   const foodIntakeAnalysis = computed(() => {
     if (!studyDesign.value) {
-      return '<div class="placeholder-table"><strong>식품 섭취력 분석</strong><br/><small>조사 디자인을 먼저 선택해주세요.</small></div>';
+      return `<div class="placeholder-table"><strong>${t('reportWriter.editor.items.foodAnalysis')}</strong><br/><small>${t('reportWriter.editor.tooltips.designRequired')}</small></div>`;
     }
     
     const results = analysisResultsAll.value;
     if (!results) {
-      const designText = studyDesign.value === 'case-control' ? '환자-대조군' : '후향적 코호트';
-      return `<div class="placeholder-table"><strong>식품 섭취력 분석</strong><br/><small>${designText} 연구 분석 결과가 없습니다.<br/>${designText === '환자-대조군' ? 'CaseControl' : 'CohortStudy'} 탭에서 통계 분석을 실행한 후 확인하세요.</small></div>`;
+      const designText = studyDesign.value === 'case-control' 
+        ? t('reportWriter.editor.studyDesign.caseControl') 
+        : t('reportWriter.editor.studyDesign.cohort');
+      return `<div class="placeholder-table"><strong>${t('reportWriter.editor.items.foodAnalysis')}</strong><br/><small>${designText} ${t('reportWriter.modal.message')}</small></div>`;
     }
     
     const designResults = getDesignResults();
     if(!designResults.length) {
-      const designText = studyDesign.value === 'case-control' ? '환자-대조군' : '후향적 코호트';
-      return `<div class="placeholder-table"><strong>식품 섭취력 분석</strong><br/><small>${designText} 연구 분석 결과가 없습니다.<br/>${designText === '환자-대조군' ? 'CaseControl' : 'CohortStudy'} 탭에서 통계 분석을 실행한 후 확인하세요.</small></div>`;
+      const designText = studyDesign.value === 'case-control' 
+        ? t('reportWriter.editor.studyDesign.caseControl') 
+        : t('reportWriter.editor.studyDesign.cohort');
+      return `<div class="placeholder-table"><strong>${t('reportWriter.editor.items.foodAnalysis')}</strong><br/><small>${designText} ${t('reportWriter.modal.message')}</small></div>`;
     }
 
     const hasValidData = designResults.some(r => {
@@ -257,8 +283,10 @@ export function useReportData(): ReportData {
     });
   
     if (!hasValidData) {
-      const designText = studyDesign.value === 'case-control' ? '환자-대조군' : '후향적 코호트';
-      return `<div class="placeholder-table"><strong>식품 섭취력 분석</strong><br/><small>${designText} 연구 분석 결과가 없습니다.<br/>${designText === '환자-대조군' ? 'CaseControl' : 'CohortStudy'} 탭에서 통계 분석을 실행한 후 확인하세요.</small></div>`;
+      const designText = studyDesign.value === 'case-control' 
+        ? t('reportWriter.editor.studyDesign.caseControl') 
+        : t('reportWriter.editor.studyDesign.cohort');
+      return `<div class="placeholder-table"><strong>${t('reportWriter.editor.items.foodAnalysis')}</strong><br/><small>${designText} ${t('reportWriter.modal.message')}</small></div>`;
     }
   
     return generateFoodIntakeText();
@@ -269,34 +297,47 @@ export function useReportData(): ReportData {
   const yatesSettings = computed(() => settingsStore.yatesCorrectionSettings || { caseControl: false, cohort: false });
 
   function getStatMethodText(method: string) {
-    switch (method) {
-    case 'chi-square': return '카이제곱검정을 통해';
-    case 'chi-fisher': return '카이제곱검정 및 피셔의 정확검정을 통해';
-    case 'yates': return 'Yates의 연속성 보정을 적용한 카이제곱검정을 통해';
-    case 'yates-fisher': return 'Yates의 연속성 보정을 적용한 카이제곱검정과 피셔의 정확검정을 통해';
-    default: return '';
+    if (locale.value === 'ko') {
+      switch (method) {
+      case 'chi-square': return t('reportWriter.generation.descriptions.statisticalMethod').split(' 및 ')[0]; // Simplified
+      case 'chi-fisher': return t('reportWriter.generation.descriptions.statisticalMethod');
+      case 'yates': return t('reportWriter.generation.descriptions.statisticalMethodYates');
+      case 'yates-fisher': return t('reportWriter.generation.descriptions.statisticalMethodYatesFisher');
+      default: return '';
+      }
+    } else {
+      switch (method) {
+      case 'chi-square': return 'through Chi-square test,';
+      case 'chi-fisher': return 'through Chi-square test and Fisher\'s exact test,';
+      case 'yates': return 'through Chi-square test with Yates\' correction,';
+      case 'yates-fisher': return 'through Chi-square test with Yates\' correction and Fisher\'s exact test,';
+      default: return '';
+      }
     }
   }
 
   function buildStatAnalysisText(): StatAnalysisText {
-    const base = '통계분석은 전남대학교 의과대학 예방의학교실 및 광주, 전남 감염병관리지원단에서 제공하는 역학조사 자료 전문 분석 프로그램(Easy-Epidemiology Web)을 이용하여 진행되었다.';
+    const base = t('reportWriter.generation.descriptions.statisticalBase');
+    
     if (!studyDesign.value) {
-      return { base, method: '조사 디자인을 선택한 후 통계 분석을 진행하세요.' };
+      return { base, method: t('reportWriter.editor.status.designRequired') };
     }
     const currentYatesSetting = studyDesign.value === 'case-control' ? yatesSettings.value.caseControl : yatesSettings.value.cohort;
     const statMethod = currentYatesSetting ? 'yates' : 'chi-square';
     
     const methodText = getStatMethodText(statMethod);
-    let secondSentence = '';
-    if (studyDesign.value === 'case-control') {
-      secondSentence = `교차비(OR) 및 95% 신뢰 구간을 계산하였으며, ${methodText} 노출요인과 질병 연관성의 통계적 유의성을 확인하였다.`;
-    } else {
-      secondSentence = `상대위험도(RR) 및 95% 신뢰 구간을 계산하였으며, ${methodText} 노출요인과 질병 연관성의 통계적 유의성을 확인하였다.`;
-    }
+    const metric = studyDesign.value === 'case-control' ? 'OR' : 'RR';
+    const metricFull = studyDesign.value === 'case-control' ? (locale.value === 'ko' ? '교차비(OR)' : 'Odds Ratio (OR)') : (locale.value === 'ko' ? '상대위험도(RR)' : 'Relative Risk (RR)');
+    
+    const secondSentence = t('reportWriter.generation.descriptions.statAnalysisResult', {
+      metric: metric,
+      methodText: methodText
+    });
+    
     let corrSentence = '';
     if (analysisOptions.value.haldaneCorrection) {
-      const metric = studyDesign.value === 'case-control' ? '오즈비' : '상대위험도';
-      corrSentence = ` 교차표의 특정 셀 빈도가 0인 경우, ${metric} 및 신뢰구간 계산 시 Haldane - Anscombe correction을 적용하였다.`;
+      const metricLabel = studyDesign.value === 'case-control' ? (locale.value === 'ko' ? '오즈비' : 'Odds Ratio') : (locale.value === 'ko' ? '상대위험도' : 'Relative Risk');
+      corrSentence = ' ' + t('reportWriter.generation.descriptions.haldaneCorrection', { metric: metricLabel });
     }
     return { base, method: `${secondSentence}${corrSentence}` };
   }
@@ -359,7 +400,7 @@ export function useReportData(): ReportData {
       }
     });
 
-    if (!durations.length) return '<div class="placeholder-table">잠복기/노출 데이터가 부족합니다.</div>';
+    if (!durations.length) return `<div class="placeholder-table">${t('reportWriter.generation.placeholders.none')}</div>`;
 
     durations.sort((a,b) => a-b);
     const minH = durations[0];
@@ -367,13 +408,39 @@ export function useReportData(): ReportData {
     const meanH = durations.reduce((a,b) => a+b,0)/durations.length;
     const medianH = durations.length%2===1 ? durations[(durations.length-1)/2] : (durations[durations.length/2 -1]+durations[durations.length/2])/2;
 
-    if (!isIndividual) {
-      const expTxt = exposureSingleDate ? formatKoreanDateTime(exposureSingleDate) : '--';
-      return `역학조사 결과, 감염원은 ${suspected}으로 추정되었으며, 노출 시점은 ${expTxt}으로 추정되었다. 이 시점을 기준으로 증상 발생까지의 평균 잠복기는 ${fmt(meanH)}시간으로, 최소 ${fmt(minH)}시간, 최대 ${fmt(maxH)}시간, 중앙값 ${fmt(medianH)}시간으로 나타났다.`;
+    const incubationStats = t('reportWriter.generation.descriptions.incubationFormat', {
+      min: `${fmt(minH)}h`,
+      max: `${fmt(maxH)}h`,
+      avg: `${fmt(meanH)}h`,
+      median: `${fmt(medianH)}h`
+    });
+
+    if (locale.value === 'ko') {
+      if (!isIndividual) {
+        const expTxt = exposureSingleDate ? formatLocaleDateTime(exposureSingleDate) : '--';
+        return t('reportWriter.generation.descriptions.incubationExposureSingle', {
+          suspected, expTxt, meanH: fmt(meanH), incubationStats: incubationStats.replace(/h/g, '시간')
+        });
+      } else {
+        const startTxt = exposureRangeStart ? formatLocaleDateTime(exposureRangeStart) : '--';
+        const endTxt = exposureRangeEnd ? formatLocaleDateTime(exposureRangeEnd) : '--';
+        return t('reportWriter.generation.descriptions.incubationExposureRange', {
+          suspected, startTxt, endTxt, meanH: fmt(meanH), incubationStats: incubationStats.replace(/h/g, '시간')
+        });
+      }
     } else {
-      const startTxt = exposureRangeStart ? formatKoreanDateTime(exposureRangeStart) : '--';
-      const endTxt = exposureRangeEnd ? formatKoreanDateTime(exposureRangeEnd) : '--';
-      return `역학조사 결과, 감염원은 ${suspected}으로 추정되었으며, 노출 시점은 ${startTxt}부터 ${endTxt}까지의 범위로 파악되었다. 이 기간 내 노출된 환례의 증상 발생까지의 평균 잠복기는 ${fmt(meanH)}시간이었으며, 최소 ${fmt(minH)}시간, 최대 ${fmt(maxH)}시간, 중앙값 ${fmt(medianH)}시간으로 나타났다.`;
+      if (!isIndividual) {
+        const expTxt = exposureSingleDate ? formatLocaleDateTime(exposureSingleDate) : '--';
+        return t('reportWriter.generation.descriptions.incubationExposureSingle', {
+          suspected, expTxt, meanH: fmt(meanH), incubationStats
+        });
+      } else {
+        const startTxt = exposureRangeStart ? formatLocaleDateTime(exposureRangeStart) : '--';
+        const endTxt = exposureRangeEnd ? formatLocaleDateTime(exposureRangeEnd) : '--';
+        return t('reportWriter.generation.descriptions.incubationExposureRange', {
+          suspected, startTxt, endTxt, meanH: fmt(meanH), incubationStats
+        });
+      }
     }
   }
 
@@ -384,14 +451,14 @@ export function useReportData(): ReportData {
     const onsets = rows.value.map((r: any) => r?.symptomOnset).filter(Boolean).map((ts: string) => new Date(ts));
     if (!onsets.length) return null;
     const earliest = new Date(Math.min(...onsets.map((d: Date) => d.getTime())));
-    return formatKoreanDateTime(earliest);
+    return formatLocaleDateTime(earliest);
   });
   
   const lastCaseDateTime: ComputedRef<string | null> = computed(() => {
     const onsets = rows.value.map((r: any) => r?.symptomOnset).filter(Boolean).map((ts: string) => new Date(ts));
     if (!onsets.length) return null;
     const latest = new Date(Math.max(...onsets.map((d: Date) => d.getTime())));
-    return formatKoreanDateTime(latest);
+    return formatLocaleDateTime(latest);
   });
 
   const symptomList: ComputedRef<string | null> = computed(() => {
@@ -403,12 +470,10 @@ export function useReportData(): ReportData {
     const earliestRow = rows.value[earliestIdx];
     if (!earliestRow?.clinicalSymptoms) return null;
     const clinicalHeaders = epidemicStore.headers?.clinical || [];
-    const clinicalSymptoms = earliestRow.clinicalSymptoms;
-    if (!Array.isArray(clinicalSymptoms)) return null;
-    const list = clinicalSymptoms
-      .map((val: any, idx: number) => String(val) === '1' ? (clinicalHeaders[idx] || `증상${idx+1}`) : null)
-      .filter(Boolean);
-    return list.join(', ');
+    const diagnosisLabel = t('common.symptom') || (locale.value === 'ko' ? '증상' : 'Symptom');
+    const firstCase = rows.value.find((r: any) => r.symptomOnset && new Date(r.symptomOnset).getTime() === Math.min(...rows.value.map((rr:any)=>rr.symptomOnset?new Date(rr.symptomOnset).getTime():Infinity)));
+    const diagnosis = firstCase?.clinical_diagnosis?.split(',').map((val: any, idx: number) => String(val) === '1' ? (clinicalHeaders[idx] || `${diagnosisLabel}${idx+1}`) : null).filter(Boolean).join(', ');
+    return diagnosis || null;
   });
 
   const getSymptomStats = (): SymptomStat[] | null => {
@@ -424,9 +489,9 @@ export function useReportData(): ReportData {
     return symptomStats.length > 0 ? symptomStats : null;
   };
 
-  const generateMainSymptomsTable = (): string => {
+  function generateMainSymptomsTable(): string {
     const symptomStats = getSymptomStats();
-    if (!symptomStats) return '<div class="placeholder-table">증상 데이터가 없습니다.</div>';
+    if (!symptomStats) return `<div class="placeholder-table">${t('reportWriter.preview.tooltips.none')}</div>`;
     return symptomStats.map(stat => 
       `<tr>
         <td>${stat.symptom}</td>
@@ -525,29 +590,44 @@ export function useReportData(): ReportData {
 
   async function downloadHwpxReport() {
     try {
-      logger.info('HWPX 파일 생성 시작...');
+      logger.info('Starting HWPX creation...');
       const section0Text = await loadTemplateSection0(studyDesign.value ?? undefined);
       const statAnalysisText = buildStatAnalysisText();
-      const designText = studyDesign.value === 'case-control' ? '환자-대조군 연구' : '후향적 코호트 연구';
-      const foodIntakeText = foodIntakeAnalysis.value || generateFoodIntakeText() || '식품 섭취력 분석 내용을 입력하세요.';
-      const incubationText = generateIncubationExposureText() || '미상';
+      const designText = studyDesign.value === 'case-control' 
+        ? t('reportWriter.editor.studyDesign.caseControl') 
+        : t('reportWriter.editor.studyDesign.cohort');
+      const foodIntakeText = foodIntakeAnalysis.value || generateFoodIntakeText() || t('reportWriter.editor.items.foodAnalysis');
+      const incubationText = generateIncubationExposureText() || t('reportWriter.generation.placeholders.unknown');
       const symptomStats = getSymptomStats();
+      const unknown = t('reportWriter.generation.placeholders.unknown');
+      
       const replacements: Record<string, string> = {
-        '%사례발병률%': caseAttackRate.value ? `${caseAttackRate.value}%` : '미상',
-        '%추정감염원%': suspectedSource.value || '미상',
-        '%평균잠복기%': meanIncubation.value ? `${meanIncubation.value}시간` : '미상',
-        '%환자발병률%': patientAttackRate.value ? `${patientAttackRate.value}%` : '미상',
-        '%%%추정위험노출일시%%%': exposureDate.value || '미상',
-        '%%%최초사례발생일시%%%': firstCaseDate.value || '미상',
+        '%사례발병률%': caseAttackRate.value ? `${caseAttackRate.value}%` : unknown,
+        '%추정감염원%': suspectedSource.value || unknown,
+        '%평균잠복기%': meanIncubation.value ? `${meanIncubation.value}${locale.value === 'ko' ? '시간' : 'h'}` : unknown,
+        '%환자발병률%': patientAttackRate.value ? `${patientAttackRate.value}%` : unknown,
+        '%%%추정위험노출일시%%%': exposureDate.value || unknown,
+        '%%%최초사례발생일시%%%': firstCaseDate.value || unknown,
         '%조사디자인%': designText,
         '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %식품섭취력분석% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': foodIntakeText,
         '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %잠복기및추정위험노출시기% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': incubationText,
-        '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %최초환자발생일시% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': `사례정의에 부합하는 최초 사례는 ${firstCaseDateTime.value || '미상'}경에 ${symptomList.value || '미상'} 증상이 발생하였다. 이후 ${lastCaseDateTime.value || '미상'}까지 총 ${patientCount.value || '미상'}명의 환례가 있었다.`,
+        '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %최초환자발생일시% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': t('reportWriter.generation.descriptions.firstCaseSummary', {
+          firstCaseDateTime: firstCaseDateTime.value || unknown,
+          symptomList: symptomList.value || unknown,
+          lastCaseDateTime: lastCaseDateTime.value || unknown,
+          patientCount: patientCount.value || unknown
+        }),
         '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %통계분석에사용한분석기법% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': statAnalysisText.method,
         '%TOTAL_COUNT%': String(patientCount.value || '0')
       };
       // 발병률결과 키 추가
-      replacements['% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %발병률결과% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %'] = `조사에 포함된 대상자 ${totalParticipants.value || '미상'}명 중 사례 수는 ${patientCount.value || '미상'}명으로 사례 발병률은 ${caseAttackRate.value ? `${caseAttackRate.value}%` : '미상'}이다. 이 중, 인체 검사 결과 검출된 확진환자 수는 ${confirmedCount.value || '미상'}명으로 확진환자 발병률은 ${confirmedAttackRate.value ? `${confirmedAttackRate.value}%` : '미상'}이다.`;
+      replacements['% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %발병률결과% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %'] = t('reportWriter.generation.descriptions.attackRateResult', {
+        total: totalParticipants.value || unknown,
+        patientCount: patientCount.value || unknown,
+        caseAttackRate: caseAttackRate.value ? `${caseAttackRate.value}%` : unknown,
+        confirmedCount: confirmedCount.value || unknown,
+        confirmedAttackRate: confirmedAttackRate.value ? `${confirmedAttackRate.value}%` : unknown
+      });
 
       if (studyDesign.value === 'case-control') {
         Object.assign(replacements, generateCaseControlTableData());
@@ -585,35 +665,61 @@ export function useReportData(): ReportData {
       }
       
       const hwpxBlob = await createHwpxFromTemplate(modifiedXmlText, chartImages, studyDesign.value ?? undefined);
-      const filename = `역학조사보고서_${new Date().toISOString().slice(0, 10)}.hwpx`;
+      const reportTitle = t('reportWriter.generation.filename');
+      const filename = `${reportTitle}_${new Date().toISOString().slice(0, 10)}.hwpx`;
       downloadHwpxFile(hwpxBlob, filename);
-      logger.info('HWPX 파일 생성 완료!');
+      logger.info('HWPX file creation complete!');
     } catch (error: any) {
-      logger.error('HWPX 파일 생성 오류:', error);
-      alert(`보고서 생성 중 오류가 발생했습니다: ${error.message}`);
+      logger.error('HWPX creation error:', error);
+      alert(`${t('reportWriter.preview.toast.error')}: ${error.message}`);
     }
   }
 
   function generateFoodIntakeTable(): string {
     const results = getDesignResults();
     if (!results || results.length === 0) {
-      const designText = studyDesign.value === 'case-control' ? '환자-대조군' : '후향적 코호트';
-      return `<div class="placeholder-table"><strong>식품 섭취력 분석 테이블</strong><br/><small>${designText} 연구 분석 결과가 없습니다.<br/>${designText === '환자-대조군' ? 'CaseControl' : 'CohortStudy'} 탭에서 통계 분석을 실행한 후 확인하세요.</small></div>`;
+      const designText = studyDesign.value === 'case-control' 
+        ? t('reportWriter.editor.studyDesign.caseControl') 
+        : t('reportWriter.editor.studyDesign.cohort');
+      return `<div class="placeholder-table"><strong>${t('reportWriter.editor.items.foodAnalysis')}</strong><br/><small>${designText} ${t('reportWriter.modal.message')}</small></div>`;
     }
     const hasValidData = results.some(r => {
       return (r.pValue !== null && r.pValue !== undefined) || (r.item && r.item !== 'N/A') ||
            (studyDesign.value === 'case-control' ? (r.oddsRatio && r.oddsRatio !== 'N/A') : (r.relativeRisk && r.relativeRisk !== 'N/A'));
     });
     if (!hasValidData) {
-      const designText = studyDesign.value === 'case-control' ? '환자-대조군' : '후향적 코호트';
-      return `<div class="placeholder-table"><strong>식품 섭취력 분석 테이블</strong><br/><small>${designText} 연구 분석 결과가 없습니다.<br/>${designText === '환자-대조군' ? 'CaseControl' : 'CohortStudy'} 탭에서 통계 분석을 실행한 후 확인하세요.</small></div>`;
+      const designText = studyDesign.value === 'case-control' 
+        ? t('reportWriter.editor.studyDesign.caseControl') 
+        : t('reportWriter.editor.studyDesign.cohort');
+      return `<div class="placeholder-table"><strong>${t('reportWriter.editor.items.foodAnalysis')}</strong><br/><small>${designText} ${t('reportWriter.modal.message')}</small></div>`;
     }
 
     const filtered = results;
     const isCase = studyDesign.value === 'case-control';
     let tableHtml = '';
     if(isCase){
-      tableHtml += '<table class="summary-table"><tr><th rowspan="2">요인(식단)</th><th colspan="3">환자군</th><th colspan="3">대조군</th><th rowspan="2">카이제곱<br/>P-value</th><th rowspan="2">오즈비<br/>(OR)</th><th colspan="2">95% 신뢰구간</th></tr><tr><th>섭취자</th><th>비섭취자</th><th>합계</th><th>섭취자</th><th>비섭취자</th><th>합계</th><th>하한</th><th>상한</th></tr>';
+      const headers = (t('reportWriter.generation.tables.caseControl.headers', { returnObjects: true }) as any) as string[];
+
+      tableHtml += `<table class="summary-table">
+        <tr>
+          <th rowspan="2">${headers[0]}</th>
+          <th colspan="3">${headers[1]}</th>
+          <th colspan="3">${headers[2]}</th>
+          <th rowspan="2">${headers[6]}<br/>P-value</th>
+          <th rowspan="2">${headers[7]}<br/>(OR)</th>
+          <th colspan="2">${headers[8]}</th>
+        </tr>
+        <tr>
+          <th>${headers[3]}</th>
+          <th>${headers[4]}</th>
+          <th>${headers[5]}</th>
+          <th>${headers[3]}</th>
+          <th>${headers[4]}</th>
+          <th>${headers[5]}</th>
+          <th>${headers[9]}</th>
+          <th>${headers[10]}</th>
+        </tr>`;
+
       filtered.forEach(r => {
         let pValueText = 'N/A';
         if (r.pValue !== null && r.pValue !== undefined) {
@@ -624,7 +730,28 @@ export function useReportData(): ReportData {
       });
       tableHtml += '</table>';
     } else {
-      tableHtml += '<table class="summary-table"><tr><th rowspan="2">요인(식단)</th><th colspan="3">섭취자(노출군)</th><th colspan="3">비섭취자(비노출군)</th><th rowspan="2">카이제곱<br/>P-value</th><th rowspan="2">상대위험비<br/>(RR)</th><th colspan="2">95% 신뢰구간</th></tr><tr><th>대상자수</th><th>환자수</th><th>발병률(%)</th><th>대상자수</th><th>환자수</th><th>발병률(%)</th><th>하한</th><th>상한</th></tr>';
+      const headers = (t('reportWriter.generation.tables.cohort.headers', { returnObjects: true }) as any) as string[];
+
+      tableHtml += `<table class="summary-table">
+        <tr>
+          <th rowspan="2">${headers[0]}</th>
+          <th colspan="3">${headers[1]}</th>
+          <th colspan="3">${headers[2]}</th>
+          <th rowspan="2">${headers[6]}<br/>P-value</th>
+          <th rowspan="2">${headers[7]}<br/>(RR)</th>
+          <th colspan="2">${headers[8]}</th>
+        </tr>
+        <tr>
+          <th>${headers[3]}</th>
+          <th>${headers[4]}</th>
+          <th>${headers[5]}</th>
+          <th>${headers[3]}</th>
+          <th>${headers[4]}</th>
+          <th>${headers[5]}</th>
+          <th>${headers[9]}</th>
+          <th>${headers[10]}</th>
+        </tr>`;
+
       filtered.forEach(r => {
         let pValueText = 'N/A';
         if (r.pValue !== null && r.pValue !== undefined) {
@@ -639,44 +766,47 @@ export function useReportData(): ReportData {
   }
 
   const renderedHtml = computed(() => {
-    let html = reportTemplate;
-    const designText = studyDesign.value === 'case-control' ? '환자-대조군 연구' : '후향적 코호트 연구';
+    let html = getReportTemplate(t);
+    const designText = studyDesign.value === 'case-control' 
+      ? t('reportWriter.editor.studyDesign.caseControl') 
+      : t('reportWriter.editor.studyDesign.cohort');
     const statAnalysisObj = buildStatAnalysisText();
+    const unknown = t('reportWriter.generation.placeholders.unknown');
     
     const wrapPlaceholder = (value: any) => {
-      if (value === '--') return value;
+      if (value === '--' || value === unknown) return value;
       return `<span class="placeholder-value">${value}</span>`;
     };
     
     const chartImagePath = getChartImagePath();
     const chartImageHtml = chartImagePath 
-      ? `<img src="${chartImagePath}" alt="유행곡선 차트" style="max-width: 100%; height: auto; margin: 20px 0; border: 1px solid #ddd;" />`
-      : '<div class="placeholder-chart"><strong>유행곡선 차트</strong><br/><small>EpidemicCurve 탭에서 "보고서 저장" 버튼을 클릭하여<br/>차트 이미지를 저장한 후 확인하세요.</small></div>';
-      
+      ? `<img src="${chartImagePath}" alt="${t('reportWriter.editor.items.epiCurve')}" style="max-width: 100%; height: auto; margin: 20px 0; border: 1px solid #ddd;" />`
+      : `<div class="placeholder-chart"><strong>${t('reportWriter.editor.items.epiCurve')}</strong><br/><small>${t('reportWriter.generation.charts.epiCurvePlaceholder')}</small></div>`;
+       
     const incubationChartImagePath = getIncubationChartImagePath();
     const incubationChartImageHtml = incubationChartImagePath 
-      ? `<img src="${incubationChartImagePath}" alt="잠복기 차트" style="max-width: 100%; height: auto; margin: 20px 0; border: 1px solid #ddd;" />`
-      : '<div class="placeholder-chart"><strong>잠복기 차트</strong><br/><small>EpidemicCurve 탭에서 잠복기 차트 "보고서 저장" 버튼을 클릭하여<br/>차트 이미지를 저장한 후 확인하세요.</small></div>';
+      ? `<img src="${incubationChartImagePath}" alt="${t('reportWriter.editor.items.incubationChart')}" style="max-width: 100%; height: auto; margin: 20px 0; border: 1px solid #ddd;" />`
+      : `<div class="placeholder-chart"><strong>${t('reportWriter.editor.items.incubationChart')}</strong><br/><small>${t('reportWriter.generation.charts.incubationPlaceholder')}</small></div>`;
     
     const foodIntakeAnalysisHtml = `${generateFoodIntakeTable()}<p>${generateFoodIntakeText()}</p>`;
 
     const replacements: Record<string, string> = {
-      caseAttackRate: wrapPlaceholder(caseAttackRate.value ? `${caseAttackRate.value}%` : '--'),
-      patientAttackRate: wrapPlaceholder(patientAttackRate.value ? `${patientAttackRate.value}%` : '--'),
-      exposureDate: wrapPlaceholder(exposureDate.value || '--'),
-      firstCaseDate: wrapPlaceholder(firstCaseDate.value || '--'),
-      meanIncubation: wrapPlaceholder(meanIncubation.value ? `${meanIncubation.value}시간` : '--'),
-      suspectedSource: wrapPlaceholder(suspectedSource.value || (parseSuspectedFoods().join(', ') || '--')),
+      caseAttackRate: wrapPlaceholder(caseAttackRate.value ? `${caseAttackRate.value}%` : unknown),
+      patientAttackRate: wrapPlaceholder(patientAttackRate.value ? `${patientAttackRate.value}%` : unknown),
+      exposureDate: wrapPlaceholder(exposureDate.value || unknown),
+      firstCaseDate: wrapPlaceholder(firstCaseDate.value || unknown),
+      meanIncubation: wrapPlaceholder(meanIncubation.value ? `${meanIncubation.value}${locale.value === 'ko' ? '시간' : 'h'}` : unknown),
+      suspectedSource: wrapPlaceholder(suspectedSource.value || (parseSuspectedFoods().join(', ') || unknown)),
       studyDesign: wrapPlaceholder(designText),
       statAnalysis: `${statAnalysisObj.base} <span class="placeholder-value">${statAnalysisObj.method}</span>`,
-      firstCaseDateTime: wrapPlaceholder(firstCaseDateTime.value || '--'),
-      lastCaseDateTime: wrapPlaceholder(lastCaseDateTime.value || '--'),
-      patientCount: wrapPlaceholder(patientCount.value || '--'),
-      totalParticipants: wrapPlaceholder(totalParticipants.value || '--'),
-      confirmedCount: wrapPlaceholder(confirmedCount.value || '--'),
-      confirmedAttackRate: wrapPlaceholder(confirmedAttackRate.value ? `${confirmedAttackRate.value}%` : '--'),
-      symptomList: wrapPlaceholder(symptomList.value || '--'),
-      caseAttackRateNumeric: wrapPlaceholder(caseAttackRate.value || '--'),
+      firstCaseDateTime: wrapPlaceholder(firstCaseDateTime.value || unknown),
+      lastCaseDateTime: wrapPlaceholder(lastCaseDateTime.value || unknown),
+      patientCount: wrapPlaceholder(patientCount.value || unknown),
+      totalParticipants: wrapPlaceholder(totalParticipants.value || unknown),
+      confirmedCount: wrapPlaceholder(confirmedCount.value || unknown),
+      confirmedAttackRate: wrapPlaceholder(confirmedAttackRate.value ? `${confirmedAttackRate.value}%` : unknown),
+      symptomList: wrapPlaceholder(symptomList.value || unknown),
+      caseAttackRateNumeric: wrapPlaceholder(caseAttackRate.value || unknown),
       epidemicChart: chartImageHtml,
       incubationChart: incubationChartImageHtml,
       mainSymptomsTable: generateMainSymptomsTable(),
@@ -684,9 +814,20 @@ export function useReportData(): ReportData {
       foodIntakeAnalysisHtml,
       incubationExposureText: wrapPlaceholder(incubationExposureText.value),
       foodIntakeTable: generateFoodIntakeTable(),
-      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %식품섭취력분석% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': foodIntakeAnalysis.value || generateFoodIntakeText() || '식품 섭취력 분석 내용을 입력하세요.',
-      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %최초환자발생일시% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': `사례정의에 부합하는 최초 사례는 ${firstCaseDateTime.value || '--'}경에 ${symptomList.value || '--'} 증상이 발생하였다. 이후 ${lastCaseDateTime.value || '--'}까지 총 ${patientCount.value || '--'}명의 환례가 있었다.`,
-      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %발병률결과% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': `조사에 포함된 대상자 ${totalParticipants.value || '--'}명 중 사례 수는 ${patientCount.value || '--'}명으로 사례 발병률은 ${caseAttackRate.value ? `${caseAttackRate.value}%` : '--'}이다. 이 중, 인체 검사 결과 검출된 확진환자 수는 ${confirmedCount.value || '--'}명으로 확진환자 발병률은 ${confirmedAttackRate.value ? `${confirmedAttackRate.value}%` : '--'}이다.`
+      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %식품섭취력분석% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': foodIntakeAnalysis.value || generateFoodIntakeText() || t('reportWriter.editor.items.foodAnalysis'),
+      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %최초환자발생일시% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': t('reportWriter.generation.descriptions.firstCaseSummary', {
+        firstCaseDateTime: firstCaseDateTime.value || unknown,
+        symptomList: symptomList.value || unknown,
+        lastCaseDateTime: lastCaseDateTime.value || unknown,
+        patientCount: patientCount.value || unknown
+      }),
+      '% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %발병률결과% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %': t('reportWriter.generation.descriptions.attackRateResult', {
+        total: totalParticipants.value || unknown,
+        patientCount: patientCount.value || unknown,
+        caseAttackRate: caseAttackRate.value ? `${caseAttackRate.value}%` : unknown,
+        confirmedCount: confirmedCount.value || unknown,
+        confirmedAttackRate: confirmedAttackRate.value ? `${confirmedAttackRate.value}%` : unknown
+      })
     };
     Object.entries(replacements).forEach(([key, val]) => {
       html = html.replace(new RegExp(`%${key}%`, 'g'), String(val ?? ''));

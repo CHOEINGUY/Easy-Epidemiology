@@ -1,18 +1,18 @@
 <template>
   <div class="animate-in fade-in slide-in-from-right-3 duration-300">
     <StepIndicator :current-step="1" :total-steps="3" />
-    <h3 class="text-center text-xl font-bold text-slate-900 mb-7 tracking-tight">기본 정보 입력</h3>
+    <h3 class="text-center text-xl font-bold text-slate-900 mb-7 tracking-tight">{{ $t('auth.register.steps.basicInfo') }}</h3>
     
     <form @submit.prevent="handleSubmit" class="space-y-5">
       <!-- 이름 -->
       <div class="group/field">
-        <label for="register-name" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">이름</label>
+        <label for="register-name" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">{{ $t('auth.register.labels.name') }}</label>
         <div class="relative">
           <input
             id="register-name"
             v-model="formData.name"
             type="text"
-            placeholder="실명을 입력하세요"
+            :placeholder="$t('auth.register.placeholders.name')"
             required
             :disabled="isLoading"
             maxlength="50"
@@ -38,13 +38,13 @@
       
       <!-- 이메일 -->
       <div class="group/field">
-        <label for="register-email" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">이메일 주소</label>
+        <label for="register-email" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">{{ $t('auth.register.labels.email') }}</label>
         <div class="relative">
           <input
             id="register-email"
             :value="displayValue"
             type="text"
-            placeholder="이메일 주소를 입력하세요"
+            :placeholder="$t('auth.register.placeholders.email')"
             required
             :disabled="isLoading"
             @input="handleEmailInput"
@@ -72,13 +72,13 @@
       
       <!-- 전화번호 -->
       <div class="group/field">
-        <label for="register-phone" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">전화번호</label>
+        <label for="register-phone" class="block text-[13px] font-bold text-slate-700 mb-2 tracking-tight px-0.5">{{ $t('auth.register.labels.phone') }}</label>
         <div class="relative">
           <input
             id="register-phone"
             v-model="formData.phone"
             type="tel"
-            placeholder="전화번호를 입력하세요"
+            :placeholder="$t('auth.register.placeholders.phone')"
             required
             :disabled="isLoading"
             @input="handlePhoneInput"
@@ -104,7 +104,7 @@
       </div>
       
       <div class="text-center py-2">
-        <small class="text-slate-500 text-xs font-medium bg-slate-100/50 px-3 py-1.5 rounded-full">이메일 또는 전화번호로 로그인할 수 있습니다.</small>
+        <small class="text-slate-500 text-xs font-medium bg-slate-100/50 px-3 py-1.5 rounded-full">{{ $t('auth.register.info.loginNotice') }}</small>
       </div>
       
       <div v-if="localError" class="bg-red-50 text-red-600 p-4 rounded-xl text-[13px] font-bold border border-red-100 flex items-center gap-2.5 shadow-sm shadow-red-500/5" role="alert">
@@ -119,9 +119,9 @@
           :disabled="isLoading || !formData.name || !formData.email || !formData.phone"
         >
           <span v-if="isLoading" class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-          <span v-if="isLoading">확인 중...</span>
+          <span v-if="isLoading">{{ $t('auth.register.buttons.checking') }}</span>
           <template v-else>
-            <span class="relative z-10">다음 단계</span>
+            <span class="relative z-10">{{ $t('auth.register.buttons.next') }}</span>
             <span class="material-icons text-xl relative z-10 transition-transform duration-300 group-hover:translate-x-1">arrow_forward</span>
             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
           </template>
@@ -133,6 +133,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import StepIndicator from './StepIndicator.vue';
 import { 
   isValidEmail, 
@@ -155,6 +156,8 @@ const emit = defineEmits<{
   (e: 'next', data: any): void;
   (e: 'update:data', value: any): void;
 }>();
+
+const { t } = useI18n();
 
 // Refs
 const nameInputRef = ref<HTMLInputElement | null>(null);
@@ -188,16 +191,16 @@ onMounted(() => {
 // Methods
 function validateField(field: 'name' | 'email' | 'phone') {
   if (field === 'name') {
-    if (!formData.value.name) errors.value.name = '이름을 입력해주세요.';
-    else if (formData.value.name.length < 2) errors.value.name = '이름은 2자 이상 입력해주세요.';
+    if (!formData.value.name) errors.value.name = t('auth.register.errors.nameRequired');
+    else if (formData.value.name.length < 2) errors.value.name = t('auth.register.errors.nameTooShort');
     else errors.value.name = '';
   } else if (field === 'email') {
-    if (!formData.value.email) errors.value.email = '이메일 주소를 입력해주세요.';
-    else if (!isValidEmail(formData.value.email)) errors.value.email = '올바른 이메일 형식이 아닙니다.';
+    if (!formData.value.email) errors.value.email = t('auth.register.errors.emailRequired');
+    else if (!isValidEmail(formData.value.email)) errors.value.email = t('auth.register.errors.invalidEmail');
     else errors.value.email = '';
   } else if (field === 'phone') {
-    if (!formData.value.phone) errors.value.phone = '전화번호를 입력해주세요.';
-    else if (!isValidPhone(formData.value.phone)) errors.value.phone = '올바른 전화번호 형식이 아닙니다.';
+    if (!formData.value.phone) errors.value.phone = t('auth.register.errors.phoneRequired');
+    else if (!isValidPhone(formData.value.phone)) errors.value.phone = t('auth.register.errors.invalidPhone');
     else errors.value.phone = '';
   }
 }

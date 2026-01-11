@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="flex items-center gap-2 text-lg font-medium text-slate-800">
         <span class="w-1.5 h-1.5 rounded-full bg-slate-800"></span>
-        <span>의심원 노출시간 설정</span>
+        <span>{{ $t('epidemicCurve.exposure.title') }}</span>
       </div>
 
       <!-- Input Area -->
@@ -14,7 +14,7 @@
             <div 
               class="flex items-center border border-slate-300 rounded-lg bg-white cursor-pointer hover:border-blue-400 transition-colors"
               @click="$emit('showExposureDateTimePicker', $event)"
-              @mouseenter="showTooltip('exposureTime', '기준 의심원 노출일을 설정합니다.')"
+              @mouseenter="showTooltip('exposureTime', $t('epidemicCurve.exposure.tooltip'))"
               @mouseleave="hideTooltip"
             >
               <input
@@ -23,11 +23,11 @@
                 :value="formattedExposureDateTime"
                 readonly
                 class="flex-1 border-none py-2.5 px-3 text-sm outline-none bg-transparent cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed text-slate-700"
-                placeholder="의심원 노출시간을 설정하세요 (YYYY-MM-DD HH:MM)"
+                :placeholder="$t('epidemicCurve.exposure.placeholder')"
               />
               <span class="px-3 text-slate-500 material-icons text-[20px]">event</span>
             </div>
-            
+
             <!-- Tooltip -->
             <div v-if="activeTooltip === 'exposureTime'" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-3 py-2 rounded shadow-lg text-xs whitespace-nowrap z-50">
               {{ tooltipText }}

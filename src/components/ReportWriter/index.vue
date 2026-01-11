@@ -12,12 +12,12 @@
     <!-- 분석 필요 모달 -->
     <BaseModal 
       v-model="reportData.showAnalysisModal.value"
-      title="분석이 필요합니다"
+      :title="$t('reportWriter.modal.title')"
       size="sm"
     >
       <div class="text-gray-500 leading-relaxed">
         <p class="mb-3">{{ reportData.analysisModalMessage.value }}</p>
-        <p class="mb-3">해당 탭에서 통계 분석을 실행한 후 보고서를 작성할 수 있습니다.</p>
+        <p class="mb-3">{{ $t('reportWriter.modal.message') }}</p>
       </div>
       
       <template #footer>
@@ -26,7 +26,7 @@
             variant="primary"
             @click="reportData.closeAnalysisModal"
           >
-            확인
+            {{ $t('reportWriter.modal.confirm') }}
           </BaseButton>
         </div>
       </template>

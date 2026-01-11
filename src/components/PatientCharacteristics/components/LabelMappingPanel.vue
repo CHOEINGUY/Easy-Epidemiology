@@ -2,7 +2,7 @@
   <div class="p-5 border-t border-slate-100 bg-slate-50/50 h-auto">
     <div class="flex items-center text-slate-700 font-semibold mb-4">
       <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2"></span>
-      라벨 매핑
+      {{ $t('patientChars.labelMapping.title') }}
     </div>
     
     <div v-if="categories.length > 0" class="flex flex-col gap-3">
@@ -12,13 +12,13 @@
           type="text" 
           :value="modelValue[category] || ''" 
           @change="handleChange(category, ($event.target as HTMLInputElement).value)"
-          placeholder="차트에 표시될 새 라벨" 
+          :placeholder="$t('patientChars.labelMapping.placeholder')" 
           class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-slate-400 placeholder:italic placeholder:text-xs" 
         />
       </div>
     </div>
     <div v-else class="text-sm text-slate-400 italic py-2">
-      매핑할 카테고리가 없습니다.
+      {{ $t('patientChars.labelMapping.noCategories') }}
     </div>
   </div>
 </template>

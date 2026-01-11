@@ -16,7 +16,7 @@
         significant:
           result.pValue !== null && result.pValue < 0.05,
       }"
-      :title="result.adj_chi === null && result.pValue !== null ? 'Fisher의 정확검정 (기대빈도 < 5)' : (useYatesCorrection ? 'Yates 보정 카이제곱 검정 (기대빈도 ≥ 5)' : '일반 카이제곱 검정 (기대빈도 ≥ 5)')"
+      :title="result.adj_chi === null && result.pValue !== null ? $t('caseControl.table.tooltips.fisher') : (useYatesCorrection ? $t('caseControl.table.tooltips.yates') : $t('caseControl.table.tooltips.chiSquare'))"
     >
       <span v-if="result.pValue !== null">
         {{ (result.pValue < 0.001 ? "<0.001" : result.pValue.toFixed(3)) }}<sup v-if="result.adj_chi === null" class="test-method fisher">*</sup>

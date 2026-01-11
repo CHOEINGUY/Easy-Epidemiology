@@ -2,8 +2,8 @@
   <section class="py-24 bg-slate-50">
     <div class="max-w-[1200px] mx-auto px-6">
       <div class="text-center mb-16">
-        <h2 class="text-3xl md:text-[2rem] font-extrabold text-slate-900 mb-2 tracking-tight keep-all">분석 프로세스</h2>
-        <p class="text-slate-500 text-lg md:text-[1.1rem] keep-all">데이터 입력부터 보고서 작성까지, 원스톱 워크플로우</p>
+        <h2 class="text-3xl md:text-[2rem] font-extrabold text-slate-900 mb-2 tracking-tight keep-all">{{ $t('home.quickGuide.title') }}</h2>
+        <p class="text-slate-500 text-lg md:text-[1.1rem] keep-all">{{ $t('home.quickGuide.subtitle') }}</p>
       </div>
       
       <div class="flex flex-col md:flex-row justify-between items-start gap-12 md:gap-6">
@@ -25,7 +25,7 @@
           <!-- Content -->
           <div class="max-w-[200px]">
             <h4 class="text-base font-bold text-slate-900 mb-2">{{ step.title }}</h4>
-            <p class="text-sm text-slate-500 leading-relaxed">{{ step.description }}</p>
+            <p class="text-sm text-slate-500 leading-relaxed keep-all">{{ step.description }}</p>
           </div>
         </div>
       </div>

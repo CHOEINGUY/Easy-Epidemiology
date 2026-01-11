@@ -3,7 +3,7 @@
     <!-- Header with Sticky -->
     <div class="flex justify-between items-center p-5 pb-2 flex-shrink-0 sticky top-0 bg-white z-10">
       <div class="flex flex-col gap-1">
-        <h2 class="m-0 text-lg font-bold">미리보기</h2>
+        <h2 class="m-0 text-lg font-bold">{{ $t('reportWriter.preview.title') }}</h2>
         <div class="flex gap-2">
           <button 
             v-for="section in sections" 
@@ -23,7 +23,7 @@
           @mouseenter="showDownloadTooltip = true"
           @mouseleave="showDownloadTooltip = false"
         >
-          {{ !reportData.studyDesign.value ? '조사 디자인 선택 필요' : '보고서 다운로드' }}
+          {{ !reportData.studyDesign.value ? $t('reportWriter.preview.designRequired') : $t('reportWriter.preview.download') }}
           <div ref="downloadTooltipRef"></div>
         </BaseButton>
       </div>
@@ -44,13 +44,13 @@
            class="fixed bg-black border border-gray-700 rounded-lg p-3 shadow-xl text-[13px] leading-relaxed max-w-[300px] z-[10000]" 
            :style="downloadTooltipStyle">
         <div v-if="!reportData.studyDesign.value" class="text-white flex items-start gap-1.5">
-          조사 디자인을 먼저 선택해주세요.
+          {{ $t('reportWriter.preview.tooltips.designRequired') }}
         </div>
         <div v-else-if="reportData.hasTooManyFoodItems.value" class="text-white flex items-start gap-1.5">
-          요인(식단)이 {{ reportData.foodItemCount.value }}개로 34개를 초과합니다. 표4 요인별 표분석결과에 데이터가 들어가지 않습니다.
+          {{ $t('reportWriter.preview.tooltips.foodLimit', { count: reportData.foodItemCount.value }) }}
         </div>
         <div v-else class="text-white text-center">
-          요인(식단) {{ reportData.foodItemCount.value }}개가 포함됩니다.
+          {{ $t('reportWriter.preview.tooltips.foodCount', { count: reportData.foodItemCount.value }) }}
         </div>
       </div>
     </Teleport>
@@ -59,9 +59,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ReportData } from '../../../types/report';
 import { showToast } from '../../DataInputVirtualScroll/logic/toast';
 import BaseButton from '../../Common/BaseButton.vue';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   reportData: ReportData
@@ -82,12 +85,12 @@ const downloadTooltipStyle = computed(() => {
   };
 });
 
-const sections = [
-  { id: 'section-overview', label: 'Ⅰ. 발생개요' },
-  { id: 'section-team', label: 'Ⅱ. 조사반' },
-  { id: 'section-results', label: 'Ⅳ. 결과' },
-  { id: 'section-incubation', label: 'Ⅴ. 잠복기' }
-];
+const sections = computed(() => [
+  { id: 'section-overview', label: t('reportWriter.preview.sections.overview') },
+  { id: 'section-team', label: t('reportWriter.preview.sections.team') },
+  { id: 'section-results', label: t('reportWriter.preview.sections.results') },
+  { id: 'section-incubation', label: t('reportWriter.preview.sections.incubation') }
+]);
 
 const scrollToSection = (id: string) => {
   const element = document.getElementById(id);
@@ -100,11 +103,11 @@ const handleDownload = async () => {
   if (!props.reportData.studyDesign.value) return;
   
   try {
-    showToast('보고서 다운로드를 시작합니다.', 'info');
+    showToast(t('reportWriter.preview.toast.start'), 'info');
     await props.reportData.downloadHwpxReport();
-    showToast('보고서 파일이 생성되었습니다.', 'success');
+    showToast(t('reportWriter.preview.toast.success'), 'success');
   } catch (error) {
-    showToast('보고서 다운로드 중 오류가 발생했습니다.', 'error');
+    showToast(t('reportWriter.preview.toast.error'), 'error');
     console.error(error);
   }
 };

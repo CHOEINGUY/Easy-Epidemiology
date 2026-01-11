@@ -3,6 +3,7 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import { createPinia } from 'pinia';
 import router from './router/index'; // Vue Router
+import i18n from './i18n'; // i18n configuration
 import './assets/styles/tailwind.css'; // Tailwind CSS
 
 
@@ -15,6 +16,7 @@ const app = createApp(App);
 const pinia = createPinia();
 app.use(pinia); // Pinia 연결
 app.use(router); // Vue Router 연결
+app.use(i18n); // i18n 연결
 
 // Logger 초기화
 const logger = createComponentLogger('Main');

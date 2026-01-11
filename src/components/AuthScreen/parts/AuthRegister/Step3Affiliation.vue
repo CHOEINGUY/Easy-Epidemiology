@@ -1,12 +1,12 @@
 <template>
   <div class="animate-in fade-in slide-in-from-right-3 duration-300">
     <StepIndicator :current-step="3" :total-steps="3" />
-    <h3 class="text-center text-xl font-bold text-slate-900 mb-7 tracking-tight">소속 정보 입력</h3>
+    <h3 class="text-center text-xl font-bold text-slate-900 mb-7 tracking-tight">{{ $t('auth.register.steps.affiliation') }}</h3>
     
     <form @submit.prevent="handleSubmit" class="space-y-5">
       <!-- 소속 유형 -->
       <div class="group">
-        <label for="register-affiliation-type" class="block text-[13px] font-semibold text-slate-700 mb-2 tracking-tight">소속 유형</label>
+        <label for="register-affiliation-type" class="block text-[13px] font-semibold text-slate-700 mb-2 tracking-tight">{{ $t('auth.register.labels.affiliationType') }}</label>
         <div class="relative">
           <select
             id="register-affiliation-type"
@@ -21,14 +21,14 @@
               (formData.affiliationType && !errors.affiliationType ? 'border-emerald-500 bg-emerald-50 focus:ring-emerald-500/10' : 'border-slate-200 focus:border-slate-900 focus:bg-white focus:ring-slate-900/5')
             ]"
           >
-            <option value="">소속 유형을 선택하세요</option>
-            <option value="hospital">병원</option>
-            <option value="clinic">의원</option>
-            <option value="public_health">보건소</option>
-            <option value="university">대학교</option>
-            <option value="research">연구기관</option>
-            <option value="government">정부기관</option>
-            <option value="other">기타</option>
+            <option value="">{{ $t('auth.register.placeholders.affiliationType') }}</option>
+            <option value="hospital">{{ $t('auth.register.affiliationTypes.hospital') }}</option>
+            <option value="clinic">{{ $t('auth.register.affiliationTypes.clinic') }}</option>
+            <option value="public_health">{{ $t('auth.register.affiliationTypes.public_health') }}</option>
+            <option value="university">{{ $t('auth.register.affiliationTypes.university') }}</option>
+            <option value="research">{{ $t('auth.register.affiliationTypes.research') }}</option>
+            <option value="government">{{ $t('auth.register.affiliationTypes.government') }}</option>
+            <option value="other">{{ $t('auth.register.affiliationTypes.other') }}</option>
           </select>
           <span v-if="errors.affiliationType" class="absolute right-11 top-1/2 -translate-y-1/2 text-red-500 flex items-center z-10">
             <span class="material-icons text-xl">error</span>
@@ -42,13 +42,13 @@
       
       <!-- 소속명 -->
       <div class="group">
-        <label for="register-affiliation" class="block text-[13px] font-semibold text-slate-700 mb-2 tracking-tight">소속명</label>
+        <label for="register-affiliation" class="block text-[13px] font-semibold text-slate-700 mb-2 tracking-tight">{{ $t('auth.register.labels.affiliation') }}</label>
         <div class="relative">
           <input
             id="register-affiliation"
             v-model="formData.affiliation"
             type="text"
-            placeholder="소속 기관명을 입력하세요"
+            :placeholder="$t('auth.register.placeholders.affiliation')"
             required
             :disabled="isLoading"
             @blur="validateField('affiliation')"
@@ -81,7 +81,7 @@
           @click="$emit('prev')"
           :disabled="isLoading"
         >
-          이전 단계
+          {{ $t('auth.register.buttons.prev') }}
         </button>
         <button 
           type="submit" 
@@ -89,10 +89,10 @@
           :disabled="isLoading || !formData.affiliationType || !formData.affiliation"
         >
           <span v-if="isLoading" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-          <span v-if="isLoading">회원가입 중...</span>
+          <span v-if="isLoading">{{ $t('auth.register.buttons.completing') }}</span>
           <template v-else>
             <span class="material-icons text-lg">check</span>
-            <span>회원가입 완료</span>
+            <span>{{ $t('auth.register.buttons.complete') }}</span>
           </template>
         </button>
       </div>
@@ -102,6 +102,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import StepIndicator from './StepIndicator.vue';
 
 interface Props {
@@ -121,6 +122,8 @@ const emit = defineEmits<{
   (e: 'prev'): void;
   (e: 'update:data', value: any): void;
 }>();
+
+const { t } = useI18n();
 
 // Refs
 const affiliationTypeInputRef = ref<HTMLSelectElement | null>(null);
@@ -154,10 +157,10 @@ onMounted(() => {
 // Methods
 function validateField(field: 'affiliationType' | 'affiliation') {
   if (field === 'affiliationType') {
-    if (!formData.value.affiliationType) errors.value.affiliationType = '소속 유형을 선택해주세요.';
+    if (!formData.value.affiliationType) errors.value.affiliationType = t('auth.register.errors.affiliationTypeRequired');
     else errors.value.affiliationType = '';
   } else if (field === 'affiliation') {
-    if (!formData.value.affiliation) errors.value.affiliation = '소속을 입력해주세요.';
+    if (!formData.value.affiliation) errors.value.affiliation = t('auth.register.errors.affiliationRequired');
     else errors.value.affiliation = '';
   }
 }

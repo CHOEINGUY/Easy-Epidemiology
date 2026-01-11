@@ -2,10 +2,10 @@
   <div class="flex-none w-[320px] bg-white rounded-[10px] shadow-md p-5 overflow-y-auto flex flex-col gap-6">
     <div class="flex flex-col gap-2 w-full mb-2">
       <div class="flex justify-between items-end px-1">
-        <h2 class="m-0 text-lg font-bold text-gray-800">보고서 항목</h2>
+        <h2 class="m-0 text-lg font-bold text-gray-800">{{ $t('reportWriter.editor.title') }}</h2>
         <div class="flex items-baseline gap-1.5">
           <span class="text-xl font-bold text-slate-700 font-numeric">{{ Math.round(completionRate) }}%</span>
-          <span class="text-[11px] font-medium text-slate-400">완료</span>
+          <span class="text-[11px] font-medium text-slate-400">{{ $t('reportWriter.editor.completed') }}</span>
         </div>
       </div>
       
@@ -25,7 +25,7 @@
         <div class="flex justify-between items-center w-full mb-2">
           <span class="flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors">
             <span class="material-icons text-lg text-slate-400">assignment</span>
-            조사 디자인
+            {{ $t('reportWriter.editor.studyDesign.label') }}
           </span>
           <div 
             v-if="!reportData.studyDesign.value" 
@@ -34,10 +34,10 @@
             @mouseleave="showDesignNoticeTooltip = false"
           >
             <span class="material-icons text-sm">error_outline</span>
-            선택 필요
+            {{ $t('reportWriter.editor.studyDesign.required') }}
             <div ref="designNoticeTooltipRef"></div>
           </div>
-          <span v-else class="text-xs font-bold text-blue-600">선택됨</span>
+          <span v-else class="text-xs font-bold text-blue-600">{{ $t('reportWriter.editor.studyDesign.selected') }}</span>
         </div>
         <div class="flex gap-2 w-full">
           <button
@@ -50,7 +50,7 @@
             ]"
             @click="reportData.handleStudyDesignChange('case-control')"
           >
-            <span class="text-xs">환자-대조군</span>
+            <span class="text-xs">{{ $t('reportWriter.editor.studyDesign.caseControl') }}</span>
           </button>
           <button
             :class="[
@@ -62,7 +62,7 @@
             ]"
             @click="reportData.handleStudyDesignChange('cohort')"
           >
-            <span class="text-xs">후향적 코호트</span>
+            <span class="text-xs">{{ $t('reportWriter.editor.studyDesign.cohort') }}</span>
           </button>
         </div>
       </li>
@@ -103,8 +103,7 @@
             class="fixed bg-black border border-gray-700 rounded-lg p-3 shadow-xl text-[13px] leading-relaxed max-w-xs text-white flex items-start gap-1.5 z-[10000]" 
             :style="foodAnalysisTooltipStyle">
          <div>
-           <div class="mb-0.5">요인(식단)이 {{ reportData.foodItemCount.value }}개로 34개를 초과합니다.</div>
-           <div>표4 요인별 표분석결과에 데이터가 들어가지 않습니다.</div>
+           {{ $t('reportWriter.editor.tooltips.foodLimit', { count: reportData.foodItemCount.value }) }}
          </div>
        </div>
 
@@ -112,7 +111,7 @@
             class="fixed bg-black border border-gray-700 rounded-lg p-3 shadow-xl text-[13px] leading-relaxed max-w-xs text-white flex items-start gap-1.5 z-[10000]"
             :style="designNoticeTooltipStyle">
          <div>
-           <div>조사 디자인을 먼저 선택해주세요.</div>
+           <div>{{ $t('reportWriter.editor.tooltips.designRequired') }}</div>
          </div>
        </div>
     </Teleport>
@@ -121,7 +120,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ReportData } from '../../../types/report';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   reportData: ReportData
@@ -162,22 +164,22 @@ const designNoticeTooltipStyle = computed(() => {
 });
 
 const statusItems = computed(() => [
-  { label: '사례 발병률', icon: 'stacked_bar_chart', status: props.reportData.caseAttackRate.value ? 'complete' : 'pending', statusText: props.reportData.caseAttackRate.value ? '입력됨' : '대기' },
-  { label: '환자 발병률', icon: 'bar_chart', status: props.reportData.patientAttackRate.value ? 'complete' : 'pending', statusText: props.reportData.patientAttackRate.value ? '입력됨' : '대기' },
-  { label: '추정 노출일시', icon: 'event', status: props.reportData.exposureDate.value ? 'complete' : 'pending', statusText: props.reportData.exposureDate.value ? '입력됨' : '대기' },
-  { label: '최초사례 발생', icon: 'medical_services', status: props.reportData.firstCaseDate.value ? 'complete' : 'pending', statusText: props.reportData.firstCaseDate.value ? '입력됨' : '대기' },
-  { label: '평균 잠복기', icon: 'timer', status: props.reportData.meanIncubation.value ? 'complete' : 'pending', statusText: props.reportData.meanIncubation.value ? '입력됨' : '대기' },
-  { label: '추정 감염원', icon: 'science', status: props.reportData.suspectedSource.value ? 'complete' : 'pending', statusText: props.reportData.suspectedSource.value ? '입력됨' : '대기' },
+  { label: t('reportWriter.editor.items.caseAttackRate'), icon: 'stacked_bar_chart', status: props.reportData.caseAttackRate.value ? 'complete' : 'pending', statusText: props.reportData.caseAttackRate.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') },
+  { label: t('reportWriter.editor.items.patientAttackRate'), icon: 'bar_chart', status: props.reportData.patientAttackRate.value ? 'complete' : 'pending', statusText: props.reportData.patientAttackRate.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') },
+  { label: t('reportWriter.editor.items.exposureDate'), icon: 'event', status: props.reportData.exposureDate.value ? 'complete' : 'pending', statusText: props.reportData.exposureDate.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') },
+  { label: t('reportWriter.editor.items.firstCaseDate'), icon: 'medical_services', status: props.reportData.firstCaseDate.value ? 'complete' : 'pending', statusText: props.reportData.firstCaseDate.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') },
+  { label: t('reportWriter.editor.items.meanIncubation'), icon: 'timer', status: props.reportData.meanIncubation.value ? 'complete' : 'pending', statusText: props.reportData.meanIncubation.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') },
+  { label: t('reportWriter.editor.items.suspectedSource'), icon: 'science', status: props.reportData.suspectedSource.value ? 'complete' : 'pending', statusText: props.reportData.suspectedSource.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') },
   { 
-    label: '식품 섭취력 분석', 
+    label: t('reportWriter.editor.items.foodAnalysis'), 
     icon: 'restaurant', 
     status: !props.reportData.studyDesign.value ? 'analysis-required' : (props.reportData.foodIntakeAnalysis.value ? (props.reportData.hasTooManyFoodItems.value ? 'warning' : 'complete') : 'pending'),
-    statusText: !props.reportData.studyDesign.value ? '디자인 선택필요' : (props.reportData.foodIntakeAnalysis.value ? '입력됨' : '대기'),
+    statusText: !props.reportData.studyDesign.value ? t('reportWriter.editor.status.designRequired') : (props.reportData.foodIntakeAnalysis.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending')),
     warning: props.reportData.hasTooManyFoodItems.value && props.reportData.foodIntakeAnalysis.value
   },
-  { label: '유행곡선 차트', icon: 'show_chart', status: props.reportData.hasEpidemicChart.value ? 'complete' : 'pending', statusText: props.reportData.hasEpidemicChart.value ? '입력됨' : '대기' },
-  { label: '잠복기 차트', icon: 'timeline', status: props.reportData.hasIncubationChart.value ? 'complete' : 'pending', statusText: props.reportData.hasIncubationChart.value ? '입력됨' : '대기' },
-  { label: '주요증상 표', icon: 'table_chart', status: props.reportData.hasMainSymptomsTable.value ? 'complete' : 'pending', statusText: props.reportData.hasMainSymptomsTable.value ? '입력됨' : '대기' }
+  { label: t('reportWriter.editor.items.epiCurve'), icon: 'show_chart', status: props.reportData.hasEpidemicChart.value ? 'complete' : 'pending', statusText: props.reportData.hasEpidemicChart.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') },
+  { label: t('reportWriter.editor.items.incubationChart'), icon: 'timeline', status: props.reportData.hasIncubationChart.value ? 'complete' : 'pending', statusText: props.reportData.hasIncubationChart.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') },
+  { label: t('reportWriter.editor.items.symptomsTable'), icon: 'table_chart', status: props.reportData.hasMainSymptomsTable.value ? 'complete' : 'pending', statusText: props.reportData.hasMainSymptomsTable.value ? t('reportWriter.editor.status.entered') : t('reportWriter.editor.status.pending') }
 ]);
 
 const completedCount = computed(() => {

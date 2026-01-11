@@ -3,9 +3,9 @@
     <span 
       :class="['add-rows-button', { disabled: isFiltered }]" 
       @click="emitAdd"
-      :title="isFiltered ? '필터 적용 중에는 행을 추가할 수 없습니다' : '하단에 행 추가'"
+      :title="isFiltered ? t('dataInput.bottomActions.filterTooltip') : t('dataInput.bottomActions.atBottom') + ' ' + t('dataInput.bottomActions.addRows')"
     >
-      하단에
+      {{ t('dataInput.bottomActions.atBottom') }}
     </span>
     <input
       v-model.number="rowsToAdd"
@@ -13,26 +13,29 @@
       min="1"
       class="rows-count-input"
       :disabled="isFiltered"
-      aria-label="추가할 행 수"
+      :aria-label="t('dataInput.bottomActions.addRows')"
       tabindex="-1"
       @focus="emit('clear-selection')"
       @keydown.enter.prevent="emitAdd"
     />
-    <span class="add-rows-label">개의 행 추가</span>
+    <span class="add-rows-label">{{ t('dataInput.bottomActions.addRows') }}</span>
     <button
       class="delete-empty-rows-button"
-      aria-label="빈 행 삭제"
+      :aria-label="t('dataInput.bottomActions.deleteEmpty')"
       tabindex="-1"
       @click="emitDeleteEmpty"
     >
       <span class="material-icons-outlined delete-empty-rows-button-icon">delete_outline</span>
-      빈 행 삭제
+      {{ t('dataInput.bottomActions.deleteEmpty') }}
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface Props {
   isFiltered?: boolean;

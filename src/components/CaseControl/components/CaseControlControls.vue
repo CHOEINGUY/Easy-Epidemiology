@@ -2,7 +2,7 @@
   <div class="w-full flex justify-between items-center px-5 py-4 border-b border-slate-100">
     <div class="flex gap-5">
       <div class="flex items-center gap-2.5">
-        <label class="font-semibold text-slate-700 text-sm">폰트 크기:</label>
+        <label class="font-semibold text-slate-700 text-sm">{{ $t('caseControl.controls.fontSize') }}:</label>
         <div class="relative inline-block">
           <button 
             class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-600 text-sm hover:bg-slate-100 hover:border-slate-300 transition-colors min-w-[60px]" 
@@ -32,13 +32,18 @@
       </div>
     </div>
     <div class="text-sm font-medium text-slate-500">
-      <p class="m-0">총 {{ rowsCount }}명의 데이터 분석</p>
+    <div class="text-sm font-medium text-slate-500">
+      <p class="m-0">{{ $t('caseControl.controls.totalCount', { count: rowsCount }) }}</p>
+    </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   rowsCount: number;
@@ -54,7 +59,10 @@ const fontSizeLabels = ['작게', '보통', '크게'];
 
 const fontSizeButtonText = computed(() => {
   const index = fontSizes.indexOf(props.fontSize);
-  return index !== -1 ? fontSizeLabels[index] : '보통';
+  if (index === 0) return t('caseControl.controls.small');
+  if (index === 1) return t('caseControl.controls.medium');
+  if (index === 2) return t('caseControl.controls.large');
+  return t('caseControl.controls.medium');
 });
 
 // 툴팁 상태 관리
@@ -74,8 +82,8 @@ const hideTooltip = () => {
 const handleFontSizeMouseEnter = () => {
   const currentIndex = fontSizes.indexOf(props.fontSize);
   const nextIndex = (currentIndex + 1) % fontSizes.length;
-  const nextFontSize = fontSizeLabels[nextIndex];
-  showTooltip('fontSize', `폰트 크기를 ${nextFontSize}로 변경합니다`);
+  const nextFontSize = fontSizeButtonText.value; // Using computed label
+  showTooltip('fontSize', t('caseControl.controls.fontSizeTooltip', { size: nextFontSize }));
 };
 
 const handleFontSizeMouseLeave = () => {

@@ -11,7 +11,7 @@
           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
       ]"
     >
-      {{ header === "" ? "(없음)" : header }}
+      {{ header === "" ? $t('common.none') : header }}
     </button>
   </div>
 </template>

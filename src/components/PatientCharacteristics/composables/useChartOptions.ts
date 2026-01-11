@@ -20,6 +20,7 @@ export interface ChartOptions {
   selectedBarColor: string;
   currentHighlight: 'none' | 'max' | 'min' | 'both';
   getMappedLabel: (label: string) => string;
+  t: (key: string) => string;
 }
 
 export function generateGradientColors(baseColor: string): GradientColors {
@@ -66,7 +67,8 @@ export function generateTotalChartOptions(
     barWidthPercent, 
     selectedBarColor, 
     currentHighlight, 
-    getMappedLabel 
+    getMappedLabel,
+    t
   } = options;
 
   if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
@@ -110,7 +112,7 @@ export function generateTotalChartOptions(
       fontFamily: 'Noto Sans KR, sans-serif'
     },
     title: { 
-      text: `전체 대상자 ${header || '(알 수 없음)'} 분포`, 
+      text: t('patientChars.chartControl.totalDistributionTitle')?.replace('{header}', header || t('patientChars.frequencyTable.none')) || `전체 대상자 ${header || '(알 수 없음)'} 분포`, 
       left: 'center', 
       textStyle: { 
         fontSize: chartFontSize, 
@@ -153,7 +155,7 @@ export function generateTotalChartOptions(
     },
     legend: { 
       data: [{
-        name: dataType === 'percentage' ? '대상자 비율' : '대상자 수',
+        name: dataType === 'percentage' ? (t('patientChars.frequencyTable.participantsRatio') || '대상자 비율') : (t('patientChars.frequencyTable.participantsCount') || '대상자 수'),
         icon: 'rect',
         itemStyle: {
           color: selectedBarColor
@@ -186,7 +188,7 @@ export function generateTotalChartOptions(
       }
     },
     series: [{
-      name: dataType === 'percentage' ? '대상자 비율' : '대상자 수', 
+      name: dataType === 'percentage' ? (t('patientChars.frequencyTable.participantsRatio') || '대상자 비율') : (t('patientChars.frequencyTable.participantsCount') || '대상자 수'), 
       type: 'bar', 
       data: chartData,
       itemStyle: { 
@@ -243,7 +245,8 @@ export function generatePatientChartOptions(
     barWidthPercent, 
     selectedBarColor, 
     currentHighlight, 
-    getMappedLabel 
+    getMappedLabel,
+    t
   } = options;
 
   if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
@@ -305,7 +308,7 @@ export function generatePatientChartOptions(
       fontFamily: 'Noto Sans KR, sans-serif'
     },
     title: { 
-      text: `환자 ${header || '(알 수 없음)'} 분포`, 
+      text: t('patientChars.chartControl.patientDistributionTitle')?.replace('{header}', header || t('patientChars.frequencyTable.none')) || `환자 ${header || '(알 수 없음)'} 분포`, 
       left: 'center', 
       textStyle: { 
         fontSize: chartFontSize, 
@@ -348,7 +351,7 @@ export function generatePatientChartOptions(
     },
     legend: { 
       data: [{
-        name: dataType === 'percentage' ? '환자 비율' : '환자 수',
+        name: dataType === 'percentage' ? (t('patientChars.frequencyTable.patientsRatio') || '환자 비율') : (t('patientChars.frequencyTable.patientsCount') || '환자 수'),
         icon: 'rect',
         itemStyle: {
           color: selectedBarColor
@@ -381,7 +384,7 @@ export function generatePatientChartOptions(
       }
     },
     series: [{
-      name: dataType === 'percentage' ? '환자 비율' : '환자 수', 
+      name: dataType === 'percentage' ? (t('patientChars.frequencyTable.patientsRatio') || '환자 비율') : (t('patientChars.frequencyTable.patientsCount') || '환자 수'), 
       type: 'bar', 
       data: chartData,
       itemStyle: { 

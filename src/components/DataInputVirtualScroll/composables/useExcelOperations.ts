@@ -22,7 +22,8 @@ export function useExcelOperations(
   flags: {
       hasIndividualExposure?: boolean | Ref<boolean>,
       hasConfirmedCase?: boolean | Ref<boolean>
-  } = {}
+  } = {},
+  t: (key: string, params?: any) => string = (k) => k
 ) {
   const epidemicStore = useEpidemicStore();
   const gridStore = useGridStore();
@@ -86,12 +87,12 @@ export function useExcelOperations(
       }
 
       if (isMounted.value) {
-        showToast('엑셀 파일이 성공적으로 업로드되었습니다.', 'success');
+        showToast(t('dataInput.toast.excel.uploadSuccess'), 'success');
       }
     } catch (error: any) {
       if (!isMounted.value) return;
       logger.error('[Excel] 업로드 중 오류:', error);
-      showToast(`엑셀 업로드 실패: ${error.message}`, 'error');
+      showToast(`${t('dataInput.toast.error')}: ${error.message}`, 'error');
     } finally {
       if (isMounted.value) {
         isUploadingExcel.value = false;
@@ -121,10 +122,10 @@ export function useExcelOperations(
         hasConfirmedCase, 
         fileName
       );
-      showToast('엑셀 다운로드가 완료되었습니다.', 'success');
+      showToast(t('dataInput.toast.excel.exportSuccess'), 'success');
     } catch (error: any) {
       logger.error('[Excel] 내보내기 중 오류:', error);
-      showToast(`내보내기 실패: ${error.message}`, 'error');
+      showToast(`${t('dataInput.toast.error')}: ${error.message}`, 'error');
     } finally {
       endOperation('excel_export');
     }
@@ -135,10 +136,10 @@ export function useExcelOperations(
 
     try {
       downloadTemplate(type as 'basic' | 'individual' | undefined);
-      showToast('템플릿 다운로드가 완료되었습니다.', 'success');
+      showToast(t('dataInput.toast.excel.templateSuccess'), 'success');
     } catch (error) {
       logger.error('[Excel] 템플릿 다운로드 중 오류:', error);
-      showToast('템플릿 다운로드 실패', 'error');
+      showToast(t('dataInput.toast.excel.templateError'), 'error');
     } finally {
       endOperation('download_template');
     }
@@ -148,7 +149,7 @@ export function useExcelOperations(
     if (!tryStartOperation('copy_data')) return;
 
     try {
-      const confirmed = await showConfirmToast('전체 데이터를 클립보드에 복사하시겠습니까? (데이터 양에 따라 시간이 걸릴 수 있습니다)');
+      const confirmed = await showConfirmToast(t('dataInput.toast.excel.copyConfirm'));
       if (!confirmed) {
         endOperation('copy_data');
         return;
@@ -191,10 +192,10 @@ export function useExcelOperations(
       if (!isMounted.value) return;
 
       await (navigator as any).clipboard.writeText(clipboardText);
-      showToast('전체 데이터가 클립보드에 복사되었습니다.', 'success');
+      showToast(t('dataInput.toast.excel.copySuccess'), 'success');
     } catch (error) {
       logger.error('[Excel] 복사 중 오류:', error);
-      showToast('데이터 복사 실패', 'error');
+      showToast(t('dataInput.toast.excel.copyError'), 'error');
     } finally {
       endOperation('copy_data');
     }

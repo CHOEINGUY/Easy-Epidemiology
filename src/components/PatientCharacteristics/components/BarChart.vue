@@ -3,13 +3,13 @@
     <div class="relative w-full flex justify-end gap-2 mb-2">
       <SharedIconButton
         icon="copy"
-        label="차트 복사"
+        :label="$t('patientChars.chart.copy')"
         :showSuccess="isChartCopied"
         @click="handleCopyChart"
       />
       <SharedIconButton
         icon="download"
-        label="차트 저장"
+        :label="$t('patientChars.chart.save')"
         @click="handleExportChart"
       />
     </div>
@@ -20,6 +20,7 @@
 <script setup lang="ts">
 // BarChart.vue - 차트 표시 컴포넌트
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import * as echarts from 'echarts';
 import { debounce } from 'lodash-es';
 import { useClipboardOperations } from '../composables/useClipboardOperations';
@@ -60,6 +61,7 @@ const emit = defineEmits<{
   (e: 'chartUpdated'): void;
 }>();
 
+const { t } = useI18n();
 const chartContainer = ref<HTMLElement | null>(null);
 const chartInstance = ref<any | null>(null);
 
@@ -84,7 +86,7 @@ const updateCharts = () => {
     return;
   }
   
-  const header = props.headers.basic[props.selectedVariableIndex] || '(없음)';
+  const header = props.headers.basic[props.selectedVariableIndex] || t('common.none');
   const data = props.frequencyData[props.selectedVariableIndex];
   
   if (!data || Object.keys(data).length === 0) {
@@ -97,7 +99,8 @@ const updateCharts = () => {
     barWidthPercent: props.barWidthPercent,
     selectedBarColor: props.selectedBarColor,
     currentHighlight: props.currentHighlight,
-    getMappedLabel
+    getMappedLabel,
+    t
   };
 
   const options = props.selectedChartType === 'total'

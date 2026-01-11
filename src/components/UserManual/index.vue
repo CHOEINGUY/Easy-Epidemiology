@@ -12,8 +12,8 @@
       <div class="max-w-5xl mx-auto p-8 lg:p-12" :class="isLoggedIn ? 'pb-32' : 'pb-20'">
         <!-- Header -->
         <div class="mb-12">
-          <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-4">사용자 매뉴얼</h1>
-          <p class="text-lg text-slate-500">Easy-Epidemiology Web v2.0</p>
+          <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-4">{{ $t('manual.title') }}</h1>
+          <p class="text-lg text-slate-500">{{ $t('manual.subtitle') }}</p>
         </div>
 
         <!-- Sections -->
@@ -27,7 +27,7 @@
 
         <!-- Footer -->
         <div class="border-t border-slate-200 pt-12 mt-20 text-center text-slate-400 text-sm">
-          &copy; 2025 Easy-Epidemiology Web. All rights reserved.
+          {{ $t('manual.footer') }}
         </div>
       </div>
 

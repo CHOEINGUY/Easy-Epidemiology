@@ -32,11 +32,13 @@ interface OperationGuardReturn {
  * @param {GuardOptions} options - 설정 옵션
  * @returns {OperationGuardReturn} 작업 가드 메서드들
  */
-export function useOperationGuard(options: GuardOptions = {}): OperationGuardReturn {
+export function useOperationGuard(options: GuardOptions = {}, t?: (key: string) => string): OperationGuardReturn {
   const {
     showBlockedMessage = true,
-    blockedMessage = '다른 작업이 진행 중입니다. 잠시 기다려주세요.'
+    blockedMessage = ''
   } = options;
+
+  const finalBlockedMessage = blockedMessage || (t ? t('common.operationBlocked') : '또 다른 작업이 진행 중입니다.');
 
   /**
    * 작업이 차단되었는지 확인
@@ -53,7 +55,7 @@ export function useOperationGuard(options: GuardOptions = {}): OperationGuardRet
     const success = globalOperationManager.startOperation(operationName, operationOptions);
     
     if (!success && showBlockedMessage) {
-      showToast(blockedMessage, 'warning');
+      showToast(finalBlockedMessage, 'warning');
     }
     
     return success;

@@ -11,12 +11,12 @@
     <header class="sticky top-0 z-[100] bg-slate-900/80 backdrop-blur-2xl border-b border-white/[0.08] shadow-2xl shadow-slate-900/20 transition-all duration-500">
       <div class="max-w-[1500px] mx-auto px-6 md:px-10 py-5 flex justify-between items-center">
         <div class="flex flex-col">
-          <h1 class="text-xl md:text-2xl font-black text-white tracking-tight">관리자 대시보드</h1>
-          <span class="text-[10px] text-primary-400 font-bold uppercase tracking-[0.3em] -mt-0.5">Premium System Admin</span>
+          <h1 class="text-xl md:text-2xl font-black text-white tracking-tight">{{ $t('admin.dashboard.title') }}</h1>
+          <span class="text-[10px] text-primary-400 font-bold uppercase tracking-[0.3em] -mt-0.5">{{ $t('admin.dashboard.subtitle') }}</span>
         </div>
         <button @click="logout" class="flex items-center gap-3 px-6 py-2.5 bg-white/5 border border-white/10 text-white text-sm font-bold rounded-2xl transition-all duration-300 hover:bg-red-500 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/30 active:scale-95 group relative overflow-hidden">
           <span class="material-icons text-xl transition-transform group-hover:translate-x-1 relative z-10">logout</span>
-          <span class="relative z-10">로그아웃</span>
+          <span class="relative z-10">{{ $t('common.logout') }}</span>
         </button>
       </div>
     </header>
@@ -36,7 +36,7 @@
             :class="activeTab === 'pending' ? 'bg-white text-primary-600 shadow-lg shadow-slate-200/50 ring-1 ring-black/5 scale-[1.02]' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'"
           >
             <span class="material-icons transition-transform duration-500" :class="activeTab === 'pending' ? 'scale-110' : 'group-hover/tab:scale-110'">hourglass_empty</span>
-            <span class="uppercase tracking-widest leading-none">승인 대기 요청</span>
+            <span class="uppercase tracking-widest leading-none">{{ $t('admin.tabs.pending') }}</span>
             <span class="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-lg text-[11px] font-black transition-colors" :class="activeTab === 'pending' ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' : 'bg-slate-200 text-slate-500'">{{ pendingUsers.length }}</span>
           </button>
           
@@ -46,17 +46,8 @@
             :class="activeTab === 'users' ? 'bg-white text-primary-600 shadow-lg shadow-slate-200/50 ring-1 ring-black/5 scale-[1.02]' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'"
           >
             <span class="material-icons transition-transform duration-500" :class="activeTab === 'users' ? 'scale-110' : 'group-hover/tab:scale-110'">group</span>
-            <span class="uppercase tracking-widest leading-none">전체 사용자</span>
+            <span class="uppercase tracking-widest leading-none">{{ $t('admin.tabs.allUsers') }}</span>
             <span class="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-lg text-[11px] font-black transition-colors" :class="activeTab === 'users' ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' : 'bg-slate-200 text-slate-500'">{{ allUsers.length }}</span>
-          </button>
-          
-          <button 
-            @click="activeTab = 'settings'" 
-            class="flex items-center gap-3 px-8 py-3.5 rounded-2xl text-[13px] font-black transition-all duration-500 relative overflow-hidden group/tab"
-            :class="activeTab === 'settings' ? 'bg-white text-primary-600 shadow-lg shadow-slate-200/50 ring-1 ring-black/5 scale-[1.02]' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'"
-          >
-            <span class="material-icons transition-transform duration-500" :class="activeTab === 'settings' ? 'scale-110' : 'group-hover/tab:scale-110'">tune</span>
-            <span class="uppercase tracking-widest leading-none">사이트 설정</span>
           </button>
         </div>
 
@@ -69,7 +60,6 @@
       <!-- Main Toolbar & Filters Container -->
       <transition enter-active-class="duration-500 ease-out" enter-from-class="opacity-0 -translate-y-4" enter-to-class="opacity-100 translate-y-0">
         <AdminToolbar
-          v-if="activeTab !== 'settings'"
           :filters="filters"
           @update:filters="filters = $event"
           v-model:searchQuery="searchQuery"
@@ -86,18 +76,8 @@
       <div class="pb-20">
         <transition mode="out-in" enter-active-class="duration-500 cubic-bezier(0.34, 1.56, 0.64, 1)" enter-from-class="opacity-0 translate-y-8 scale-[0.98]" enter-to-class="opacity-100 translate-y-0 scale-100" leave-active-class="duration-300 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 -translate-y-8 scale-[0.98]">
           <div :key="activeTab">
-            <!-- Site Settings -->
-            <SiteSettings
-              v-if="activeTab === 'settings'"
-              :config="siteConfig"
-              @update:config="siteConfig = $event"
-              @save="saveSettings"
-              @reset="resetSettings"
-            />
-
             <!-- User Management Table -->
             <UserTable
-              v-else
               :users="activeTab === 'pending' ? filteredPendingUsers : filteredAllUsers"
               :mode="activeTab"
               :selectedUsers="selectedUsers"
@@ -133,7 +113,7 @@
           <div class="absolute inset-0 bg-white/20 opacity-0 group-hover/toast:opacity-30 transition-opacity"></div>
         </div>
         <div class="flex flex-col flex-1 gap-1">
-          <span class="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 text-white">{{ messageType === 'success' ? '시스템 알림' : '시스템 경고' }}</span>
+          <span class="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 text-white">{{ messageType === 'success' ? $t('admin.messages.systemNotice') : $t('admin.messages.systemWarning') }}</span>
           <span class="text-[15px] font-bold text-white tracking-tight leading-snug">{{ message }}</span>
         </div>
         <button class="w-10 h-10 flex items-center justify-center bg-white/5 text-white/40 rounded-full hover:bg-white/20 hover:text-white transition-all">
@@ -146,18 +126,18 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { adminApi } from '../../services/authApi';
 import type { User } from '@/types/auth'; // Ensure this path is correct
 
 // @ts-ignore
-import { loadSiteConfig, updateSiteConfig, resetSiteConfig, siteConfig as defaultConfig } from '../../config/siteConfig';
+import { loadSiteConfig } from '../../config/siteConfig';
 import { useAuthStore } from '../../stores/authStore';
 import { getAffiliationTypeLabel } from './utils';
 import { USER_ROLES } from '../../constants';
 
 import AdminStats from './AdminStats.vue';
 import AdminToolbar from './AdminToolbar.vue';
-import SiteSettings from './SiteSettings.vue';
 import UserTable from './UserTable.vue';
 
 // ...
@@ -166,6 +146,7 @@ import UserTable from './UserTable.vue';
 interface AdminUser extends User {
 }
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const activeTab = ref('pending');
 const pendingUsers: Ref<AdminUser[]> = ref([]);
@@ -175,7 +156,6 @@ const message = ref('');
 const messageType = ref<'info' | 'success' | 'error'>('info');
 const selectedUsers: Ref<string[]> = ref([]);
 const searchQuery = ref('');
-const siteConfig = ref(loadSiteConfig());
 const filters = ref({
   affiliationType: '',
   affiliation: '',
@@ -307,19 +287,19 @@ async function loadAllUsers() {
 async function refreshData() {
   if (activeTab.value === 'pending') {
     await loadPendingUsers();
-    showMessage('승인 대기 사용자 목록이 새로고침되었습니다.', 'success');
+    showMessage(t('admin.messages.pendingRefreshed'), 'success');
   } else {
     await loadAllUsers();
-    showMessage('전체 사용자 목록이 새로고침되었습니다.', 'success');
+    showMessage(t('admin.messages.allRefreshed'), 'success');
   }
 }
 
 function filterToday() {
   filters.value.todayOnly = !filters.value.todayOnly;
   if (filters.value.todayOnly) {
-    showMessage('오늘 가입한 사용자만 표시됩니다.', 'info');
+    showMessage(t('admin.messages.todayOnly'), 'info');
   } else {
-    showMessage('모든 사용자가 표시됩니다.', 'info');
+    showMessage(t('admin.messages.showAll'), 'info');
   }
 }
 
@@ -330,7 +310,7 @@ function clearSearch() {
 async function approveUser(userId: string) {
   try {
     await adminApi.approveUser(userId);
-    showMessage('사용자가 승인되었습니다.', 'success');
+    showMessage(t('admin.messages.approved'), 'success');
     await loadPendingUsers();
     await loadAllUsers();
   } catch (error: unknown) {
@@ -339,12 +319,12 @@ async function approveUser(userId: string) {
 }
 
 async function rejectUser(userId: string) {
-  if (!confirm('정말로 이 사용자의 등록을 거부하시겠습니까?')) {
+  if (!confirm(t('admin.messages.confirmReject'))) {
     return;
   }
   try {
     await adminApi.rejectUser(userId);
-    showMessage('사용자 등록이 거부되었습니다.', 'success');
+    showMessage(t('admin.messages.rejected'), 'success');
     await loadPendingUsers();
     await loadAllUsers();
   } catch (error: unknown) {
@@ -353,12 +333,12 @@ async function rejectUser(userId: string) {
 }
 
 async function deleteUser(userId: string) {
-  if (!confirm('정말로 이 사용자를 삭제하시겠습니까?')) {
+  if (!confirm(t('admin.messages.confirmDelete'))) {
     return;
   }
   try {
     await adminApi.deleteUser(userId);
-    showMessage('사용자가 삭제되었습니다.', 'success');
+    showMessage(t('admin.messages.deleted'), 'success');
     await loadAllUsers();
   } catch (error: unknown) {
     showMessage((error as Error).message, 'error');
@@ -368,7 +348,7 @@ async function deleteUser(userId: string) {
 async function changeUserRole(user: { id: string; role: string }) {
   try {
     await adminApi.updateUserRole(user.id, user.role);
-    showMessage('사용자 권한이 변경되었습니다.', 'success');
+    showMessage(t('admin.messages.roleChanged'), 'success');
   } catch (error: unknown) {
     showMessage((error as Error).message, 'error');
     await loadAllUsers();
@@ -377,11 +357,11 @@ async function changeUserRole(user: { id: string; role: string }) {
 
 async function bulkApprove() {
   if (selectedCount.value === 0) return;
-  if (!confirm(`선택된 ${selectedCount.value}명의 사용자를 승인하시겠습니까?`)) return;
+  if (!confirm(t('admin.messages.confirmBulkApprove', { count: selectedCount.value }))) return;
 
   try {
     await adminApi.bulkApproveUsers(selectedUsers.value);
-    showMessage(`${selectedCount.value}명의 사용자가 승인되었습니다.`, 'success');
+    showMessage(t('admin.messages.bulkApproved', { count: selectedCount.value }), 'success');
     await loadPendingUsers();
     await loadAllUsers();
     selectedUsers.value = [];
@@ -393,33 +373,12 @@ async function bulkApprove() {
 const emit = defineEmits(['logout']);
 
 function logout() {
-  if (confirm('정말로 로그아웃하시겠습니까?')) {
+  if (confirm(t('admin.messages.confirmLogout'))) {
     authStore.logout().then(() => {
       emit('logout');
     }).catch(() => {
       emit('logout');
     });
-  }
-}
-
-function saveSettings() {
-  try {
-    updateSiteConfig(siteConfig.value);
-    showMessage('설정이 성공적으로 저장되었습니다.', 'success');
-  } catch (error: unknown) {
-    showMessage(`설정 저장에 실패했습니다: ${(error as Error).message}`, 'error');
-  }
-}
-
-function resetSettings() {
-  if (confirm('정말로 기본값으로 복원하시겠습니까? 현재 설정이 모두 사라집니다.')) {
-    try {
-      resetSiteConfig();
-      siteConfig.value = JSON.parse(JSON.stringify(defaultConfig));
-      showMessage('설정이 기본값으로 복원되었습니다.', 'success');
-    } catch (error: unknown) {
-      showMessage(`설정 복원에 실패했습니다: ${(error as Error).message}`, 'error');
-    }
   }
 }
 

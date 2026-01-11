@@ -4,12 +4,12 @@
       <span class="cell-id">{{ cellAddress }}</span>
       <span class="dropdown-arrow">▾</span>
       <span class="pipe-separator"></span>
-      <span class="value-label">Value</span>
+      <span class="value-label">{{ $t('dataInput.functionBar.valueLabel') }}</span>
       <input
         type="text"
         v-model="inputValue"
         class="current-cell-input"
-        aria-label="현재 셀 값"
+        :aria-label="$t('dataInput.functionBar.currentCellValue')"
         tabindex="-1"
         @input="onInput"
         @keydown.enter.prevent="onEnterKeyDown"
@@ -19,10 +19,10 @@
         <button 
           class="undo-redo-button" 
           :disabled="!canUndo"
-          aria-label="실행 취소"
+          :aria-label="$t('dataInput.functionBar.undo')"
           tabindex="-1"
           @click="onUndo"
-          @mouseenter="showTooltip('undo', '실행 취소 (Ctrl+Z)', $event)"
+          @mouseenter="showTooltip('undo', `${$t('dataInput.functionBar.undo')} (Ctrl+Z)`, $event)"
           @mouseleave="hideTooltip"
         >
           <span class="material-icons-outlined">
@@ -32,10 +32,10 @@
         <button 
           class="undo-redo-button" 
           :disabled="!canRedo"
-          aria-label="다시 실행"
+          :aria-label="$t('dataInput.functionBar.redo')"
           tabindex="-1"
           @click="onRedo"
-          @mouseenter="showTooltip('redo', '다시 실행 (Ctrl+Y)', $event)"
+          @mouseenter="showTooltip('redo', `${$t('dataInput.functionBar.redo')} (Ctrl+Y)`, $event)"
           @mouseleave="hideTooltip"
         >
           <span class="material-icons-outlined">
@@ -52,17 +52,17 @@
             <button 
               class="function-button filter-button" 
               :class="{ active: isFiltered }"
-              aria-label="필터 관리"
+              :aria-label="$t('dataInput.functionBar.filter')"
               tabindex="-1"
               @click="onFilterButtonClick"
-              @mouseenter="showTooltip('filter', `필터 적용됨 (${filteredRowCount}/${originalRowCount} 행 표시)`, $event)"
+              @mouseenter="showTooltip('filter', $t('dataInput.functionBar.filterTooltip', { filtered: filteredRowCount, total: originalRowCount }), $event)"
               @mouseleave="hideTooltip"
             >
               <span class="material-icons-outlined function-button-icon">
                 filter_list
               </span>
-              <span class="button-label">필터</span>
-              <span class="filter-badge">적용됨</span>
+              <span class="button-label">{{ $t('dataInput.functionBar.filter') }}</span>
+              <span class="filter-badge">{{ $t('dataInput.functionBar.filterApplied') }}</span>
             </button>
           </div>
         </div>
@@ -73,31 +73,31 @@
         <div class="control-button-wrapper">
           <button
             :class="['function-button', { active: isConfirmedCaseColumnVisible }]"
-            aria-label="확진자 여부 토글"
+            :aria-label="$t('dataInput.functionBar.confirmedCase')"
             tabindex="-1"
             @click="onToggleConfirmedCaseColumn"
-            @mouseenter="showTooltip('toggleConfirmedCase', '확진자 여부 열을 표시하거나 숨깁니다', $event)"
+            @mouseenter="showTooltip('toggleConfirmedCase', $t('dataInput.functionBar.toggleConfirmedTooltip'), $event)"
             @mouseleave="hideTooltip"
           >
             <span class="material-icons-outlined function-button-icon">
               verified_user
             </span>
-            <span class="button-label">확진여부</span>
+            <span class="button-label">{{ $t('dataInput.functionBar.confirmedCase') }}</span>
           </button>
         </div>
         <div class="control-button-wrapper" style="margin-left: 2px;">
           <button
             :class="['function-button', { active: isIndividualExposureColumnVisible }]"
-            aria-label="개별 노출시간 토글"
+            :aria-label="$t('dataInput.functionBar.exposure')"
             tabindex="-1"
             @click="onToggleExposureColumn"
-            @mouseenter="showTooltip('toggleExposure', '개별 노출시간 열을 표시하거나 숨깁니다', $event)"
+            @mouseenter="showTooltip('toggleExposure', $t('dataInput.functionBar.toggleExposureTooltip'), $event)"
             @mouseleave="hideTooltip"
           >
             <span class="material-icons-outlined function-button-icon">
               access_time
             </span>
-            <span class="button-label">개별 노출시간</span>
+            <span class="button-label">{{ $t('dataInput.functionBar.exposure') }}</span>
           </button>
         </div>
       </div>
@@ -109,7 +109,7 @@
       <div class="button-group data-io">
         <div class="control-button-wrapper">
           <!-- Excel Upload Button -->
-          <div @mouseenter="showTooltip('excelUpload', 'Excel 파일에서 데이터를 가져와 현재 시트를 대체합니다', $event)" @mouseleave="hideTooltip">
+          <div @mouseenter="showTooltip('excelUpload', $t('dataInput.functionBar.excelUploadTooltip'), $event)" @mouseleave="hideTooltip">
           <ExcelUploadButton
             :is-uploading="isUploadingExcel"
             :upload-progress="uploadProgress"
@@ -125,32 +125,32 @@
         >
           <button 
             class="function-button" 
-            aria-label="양식 다운로드"
+            :aria-label="$t('dataInput.functionBar.downloadTemplate')"
             tabindex="-1"
           >
             <span class="material-icons-outlined function-button-icon">
               description
             </span>
-            <span class="button-label">양식 다운로드</span>
+            <span class="button-label">{{ $t('dataInput.functionBar.downloadTemplate') }}</span>
           </button>
           <div v-if="showTemplateMenu" class="template-menu" @mouseenter="showTemplateMenuHover" @mouseleave="hideTemplateMenuHover" @click.stop>
-            <button class="template-menu-button" tabindex="-1" @click="onSelectTemplate('basic')">기본 양식</button>
-            <button class="template-menu-button" tabindex="-1" @click="onSelectTemplate('individual')">개별 노출시간 양식</button>
+            <button class="template-menu-button" tabindex="-1" @click="onSelectTemplate('basic')">{{ $t('dataInput.functionBar.basicTemplate') }}</button>
+            <button class="template-menu-button" tabindex="-1" @click="onSelectTemplate('individual')">{{ $t('dataInput.functionBar.individualTemplate') }}</button>
           </div>
         </div>
         <div class="control-button-wrapper">
           <button 
             class="function-button" 
-            aria-label="데이터 내보내기"
+            :aria-label="$t('dataInput.functionBar.exportData')"
             tabindex="-1"
             @click="onExportData"
-            @mouseenter="showTooltip('exportData', '현재 입력된 모든 데이터를 Excel 파일로 다운로드합니다', $event)"
+            @mouseenter="showTooltip('exportData', $t('dataInput.functionBar.exportTooltip'), $event)"
             @mouseleave="hideTooltip"
           >
             <span class="material-icons-outlined function-button-icon">
               file_download
             </span>
-            <span class="button-label">데이터 내보내기</span>
+            <span class="button-label">{{ $t('dataInput.functionBar.exportData') }}</span>
           </button>
         </div>
       </div>
@@ -163,46 +163,46 @@
         <div class="control-button-wrapper">
           <button 
             class="function-button" 
-            aria-label="전체 데이터 복사"
+            :aria-label="$t('dataInput.functionBar.copyAll')"
             tabindex="-1"
             @click="onCopyEntireData"
-            @mouseenter="showTooltip('copyData', '모든 데이터를 클립보드에 복사합니다', $event)"
+            @mouseenter="showTooltip('copyData', $t('dataInput.functionBar.copyTooltip'), $event)"
             @mouseleave="hideTooltip"
           >
             <span class="material-icons-outlined function-button-icon">
               content_copy
             </span>
-            <span class="button-label">전체 복사</span>
+            <span class="button-label">{{ $t('dataInput.functionBar.copyAll') }}</span>
           </button>
         </div>
         <div class="control-button-wrapper">
           <button 
             class="function-button" 
-            aria-label="빈 열 삭제"
+            :aria-label="$t('dataInput.functionBar.deleteEmptyCols')"
             tabindex="-1"
             @click="onDeleteEmptyCols"
-            @mouseenter="showTooltip('deleteEmptyCols', '데이터가 없는 빈 열들을 모두 삭제합니다', $event)"
+            @mouseenter="showTooltip('deleteEmptyCols', $t('dataInput.functionBar.deleteEmptyTooltip'), $event)"
             @mouseleave="hideTooltip"
           >
             <span class="material-icons-outlined function-button-icon">
               delete_outline
             </span>
-            <span class="button-label">빈 열 삭제</span>
+            <span class="button-label">{{ $t('dataInput.functionBar.deleteEmptyCols') }}</span>
           </button>
         </div>
         <div class="control-button-wrapper">
           <button 
             class="function-button" 
-            aria-label="전체 초기화"
+            :aria-label="$t('dataInput.functionBar.resetSheet')"
             tabindex="-1"
             @click="onResetSheet"
-            @mouseenter="showTooltip('resetSheet', '모든 데이터와 설정을 초기화하여 빈 시트로 되돌립니다', $event)"
+            @mouseenter="showTooltip('resetSheet', $t('dataInput.functionBar.resetTooltip'), $event)"
             @mouseleave="hideTooltip"
           >
             <span class="material-icons-outlined function-button-icon">
               refresh
             </span>
-            <span class="button-label">전체 초기화</span>
+            <span class="button-label">{{ $t('dataInput.functionBar.resetSheet') }}</span>
           </button>
         </div>
       </div>
@@ -224,6 +224,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import ExcelUploadButton from '../parts/ExcelUploadButton.vue';
 
@@ -267,6 +268,7 @@ const emit = defineEmits<{
   (e: 'clear-all-filters'): void;
 }>();
 
+const { t } = useI18n();
 const settingsStore = useSettingsStore();
 const inputValue = ref<string | number>(props.cellValue);
 const showTemplateMenu = ref(false);

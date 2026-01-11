@@ -6,7 +6,7 @@
 
     <div class="flex flex-col p-6 max-w-[1600px] mx-auto w-full">
       <div class="mb-6">
-        <SummaryBar title="유행곡선 및 잠복기 분석" />
+        <SummaryBar :title="$t('epidemicCurve.title')" />
       </div>
 
       <div class="flex flex-col gap-8">
@@ -16,7 +16,7 @@
             <div class="p-4 border-b border-slate-100 bg-slate-50/50">
               <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <span class="w-1.5 h-6 bg-blue-500 rounded-full"></span>
-                증상 발현 분석
+                {{ $t('epidemicCurve.symptomAnalysis') }}
               </h3>
             </div>
             <div class="p-4">
@@ -76,7 +76,7 @@
             <div class="p-4 border-b border-slate-100 bg-slate-50/50">
               <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
-                잠복기 분석
+                {{ $t('epidemicCurve.incubationAnalysis') }}
               </h3>
             </div>
             <div class="p-4">
@@ -155,6 +155,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, nextTick } from 'vue';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useI18n } from 'vue-i18n'; // Added import
 // import { useUndoRedo } from '../../hooks/useUndoRedo'; // storeBridge dependency removed
 
 // 컴포넌트 가져오기
@@ -180,9 +181,12 @@ import { generateEpiCurveChartOptions } from './composables/useEpiCurveChartOpti
 import { generateIncubationChartOptions } from './composables/useIncubationChartOptions';
 
 const settingsStore = useSettingsStore();
+const { t } = useI18n(); // Initialize i18n
 
 const {
   isIndividualExposureColumnVisible,
+// ... (lines 185-286 remain same, skipping for brevity in replacement block if possible, but safer to target specific blocks)
+// Use smaller chunks next time if possible. Here I will target the options computation block.
   isConfirmedCaseColumnVisible,
   exposureDateTime,
   selectedSymptomInterval,
@@ -295,7 +299,8 @@ const epiCurveChartOptions = computed(() => {
     epiBarColor: epiBarColor.value,
     suspectedFood: suspectedFood.value,
     isConfirmedCaseColumnVisible: isConfirmedCaseColumnVisible.value,
-    showConfirmedCaseLine: showConfirmedCaseLine.value
+    showConfirmedCaseLine: showConfirmedCaseLine.value,
+    t // Pass t function
   });
 });
 
@@ -305,7 +310,8 @@ const incubationChartOptions = computed(() => {
     incubationChartDisplayMode: incubationChartDisplayMode.value,
     incubationChartFontSize: incubationChartFontSize.value,
     incubationBarColor: incubationBarColor.value,
-    suspectedFood: suspectedFood.value
+    suspectedFood: suspectedFood.value,
+    t // Pass t function
   });
 });
 

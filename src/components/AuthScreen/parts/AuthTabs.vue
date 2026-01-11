@@ -7,7 +7,7 @@
         @click="$emit('update:showRegister', false)"
       >
         <span class="material-icons text-lg">login</span>
-        로그인
+        {{ $t('auth.btnLogin') }}
       </button>
       <button 
         class="flex-1 relative z-10 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300" 
@@ -15,7 +15,7 @@
         @click="$emit('update:showRegister', true)"
       >
         <span class="material-icons text-lg">person_add</span>
-        회원가입
+        {{ $t('auth.btnRegister') }}
       </button>
       
       <!-- Active Indicator -->

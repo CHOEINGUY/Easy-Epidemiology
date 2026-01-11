@@ -32,6 +32,7 @@ export interface ValidationManagerOptions {
   onProgress?: (progress: number) => void;
   showToast?: (message: string, type: 'success' | 'warning' | 'error' | 'info') => void;
   useAsyncProcessor?: boolean; 
+  t?: any;
 }
 
 type EpidemicStore = ReturnType<typeof useEpidemicStore>;
@@ -43,6 +44,7 @@ export class ValidationManager {
   private useWorker: boolean;
   private onProgress: ((progress: number) => void) | null;
   private showToast: ((message: string, type: any) => void) | null;
+  private t: any;
   private debug: boolean;
   private _destroyed: boolean;
 
@@ -67,7 +69,8 @@ export class ValidationManager {
       useWorker = false,
       onProgress = null,
       debug = false,
-      showToast = null
+      showToast = null,
+      t = null
     } = options;
 
     this.DEBOUNCE_DELAY = debounceDelay;
@@ -75,6 +78,7 @@ export class ValidationManager {
     this.useWorker = useWorker;
     this.onProgress = onProgress || null;
     this.showToast = showToast || null;
+    this.t = t || null;
     this.debug = debug;
     this._destroyed = false;
 
@@ -368,7 +372,7 @@ export class ValidationManager {
   validateConfirmedCaseColumn(confirmedCaseData: any[], colIndex: number, onProgress?: (p: number) => void) { this.dataOps.validateConfirmedCaseColumn(confirmedCaseData, colIndex, onProgress); }
   _clearErrorsInPasteArea(startRow: number, startCol: number, rowCount: number, colCount: number) { this.dataOps.clearErrorsInPasteArea(startRow, startCol, rowCount, colCount); }
   _validateCellImmediate(rowIndex: number, colIndex: number, value: any, columnType: string, columnMeta: GridHeader) { return this.dataOps.validateCellImmediate(rowIndex, colIndex, value, columnType, columnMeta); }
-  _showPasteValidationSummary(errors: any[], totalCells: number) { this.dataOps.showPasteValidationSummary(errors, totalCells); }
+  _showPasteValidationSummary(errors: any[], totalCells: number) { this.dataOps.showPasteValidationSummary(errors, totalCells, this.t); }
 
   remapValidationErrorsByColumnIdentity(oldColumnsMeta: GridHeader[], newColumnsMeta: GridHeader[], deletedColIndices: number[] = []) { this.structuralMapper.remapValidationErrorsByColumnIdentity(oldColumnsMeta, newColumnsMeta, deletedColIndices); }
   remapValidationErrorsByColumnOrder(oldColumnsMeta: GridHeader[], newColumnsMeta: GridHeader[]) { this.structuralMapper.remapValidationErrorsByColumnOrder(oldColumnsMeta, newColumnsMeta); }

@@ -50,10 +50,10 @@
                 <button
                   v-if="group.addable"
                   @click.stop="$emit('add-column', group.type)"
-                  @mouseenter="showTooltip('add', '열을 추가합니다', $event)"
+                  @mouseenter="showTooltip('add', $t('dataInput.tooltips.addColumn'), $event)"
                   @mouseleave="hideTooltip"
                   class="inline-flex items-center justify-center w-[22px] h-[22px] min-w-[22px] bg-white/90 border border-slate-300 rounded text-[13px] font-semibold text-slate-500 cursor-pointer transition-all duration-200 select-none p-0 leading-none shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-blue-50 hover:border-blue-600 hover:text-blue-600 hover:scale-105 hover:shadow-md active:bg-blue-100 active:scale-95 active:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1"
-                  aria-label="`${group.text} 열 추가`"
+                  :aria-label="`${group.text} ${$t('dataInput.tooltips.addColumn')}`"
                 >
                   +
                 </button>
@@ -61,10 +61,10 @@
                   v-if="group.deletable"
                   @click.stop="$emit('delete-column', group.type)"
                   :disabled="group.columnCount <= 1"
-                  @mouseenter="showTooltip('delete', group.columnCount <= 1 ? '최소 1개 열이 필요합니다' : '열을 삭제합니다', $event)"
+                  @mouseenter="showTooltip('delete', group.columnCount <= 1 ? $t('dataInput.tooltips.minColumn') : $t('dataInput.tooltips.deleteColumn'), $event)"
                   @mouseleave="hideTooltip"
                   class="inline-flex items-center justify-center w-[22px] h-[22px] min-w-[22px] bg-white/90 border border-slate-300 rounded text-[13px] font-semibold text-slate-500 cursor-pointer transition-all duration-200 select-none p-0 leading-none shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-red-50 hover:border-red-600 hover:text-red-600 hover:scale-105 hover:shadow-md active:bg-red-100 active:scale-95 active:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1"
-                  aria-label="`${group.text} 열 삭제`"
+                  :aria-label="`${group.text} ${$t('dataInput.tooltips.deleteColumn')}`"
                 >
                   -
                 </button>
@@ -88,6 +88,7 @@
               @mousedown="$emit('cell-mousedown', -1, column.colIndex, $event)"
               @mousemove="$emit('cell-mousemove', -1, column.colIndex, $event)"
               @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, column.colIndex)"
+              :title="column.tooltip"
             >
               <span class="header-text">{{ column.headerText }}</span>
 
@@ -119,7 +120,9 @@
 import { ref, reactive, computed } from 'vue';
 import { useUiStore } from '../../../stores/uiStore';
 import { safeGetGlobalProperty } from '../../../utils/globalAccessWrapper';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 const uiStore = useUiStore();
 
 interface Props {

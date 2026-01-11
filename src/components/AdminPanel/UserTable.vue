@@ -6,8 +6,8 @@
         <div class="absolute inset-0 bg-primary-500/20 blur-2xl rounded-full scale-150 animate-pulse"></div>
         <div class="relative w-16 h-16 border-4 border-slate-100 border-t-primary-500 rounded-full animate-spin"></div>
       </div>
-      <h3 class="text-xl font-black text-slate-800 mb-2 tracking-tight">데이터 동기화 중...</h3>
-      <p class="text-sm font-medium text-slate-400">잠시만 기다려 주세요.</p>
+      <h3 class="text-xl font-black text-slate-800 mb-2 tracking-tight">{{ $t('admin.loading.title') }}</h3>
+      <p class="text-sm font-medium text-slate-400">{{ $t('admin.loading.subtitle') }}</p>
     </div>
     
     <!-- Empty State -->
@@ -16,8 +16,9 @@
         <div class="absolute inset-0 bg-current transition-opacity duration-300 opacity-0 group-hover:opacity-5 rounded-inherit"></div>
         <span class="material-icons text-7xl transition-transform duration-500 group-hover:scale-110">{{ mode === USER_STATUS.PENDING ? 'verified_user' : 'person_off' }}</span>
       </div>
-      <h3 class="text-2xl font-black text-slate-800 mb-3 tracking-tight">{{ mode === USER_STATUS.PENDING ? '모든 요청이 처리되었습니다' : '사용자를 찾을 수 없습니다' }}</h3>
-      <p class="text-[15px] font-medium text-slate-500 max-w-xs mx-auto leading-relaxed">{{ mode === USER_STATUS.PENDING ? '새로운 가입 요청이 발생하면 이곳에 표시됩니다.' : '시스템에 등록된 사용자가 없습니다.' }}</p>
+
+      <h3 class="text-2xl font-black text-slate-800 mb-3 tracking-tight">{{ mode === USER_STATUS.PENDING ? $t('admin.emptyState.title') : $t('admin.userNotFound.title') }}</h3>
+      <p class="text-[15px] font-medium text-slate-500 max-w-xs mx-auto leading-relaxed">{{ mode === USER_STATUS.PENDING ? $t('admin.emptyState.description') : $t('admin.userNotFound.description') }}</p>
     </div>
 
     <!-- Table -->
@@ -38,16 +39,16 @@
               </div>
             </th>
             <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50 group cursor-default transition-colors hover:text-primary-500">
-              <span class="flex items-center gap-2">성명 <span class="material-icons text-[14px] opacity-0 group-hover:opacity-100 transition-opacity text-primary-400">sort</span></span>
+              <span class="flex items-center gap-2">{{ $t('admin.table.name') }} <span class="material-icons text-[14px] opacity-0 group-hover:opacity-100 transition-opacity text-primary-400">sort</span></span>
             </th>
-            <th class="px-4 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">구분</th>
-            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">소속</th>
-            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">이메일</th>
-            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">연락처</th>
-            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">상태</th>
-            <th v-if="mode === 'users'" class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">권한</th>
-            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">가입일</th>
-            <th class="px-6 py-4 text-center text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50 rounded-r-2xl">관리</th>
+            <th class="px-4 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">{{ $t('admin.toolbar.filter.affiliationType') }}</th>
+            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">{{ $t('admin.toolbar.filter.affiliation') }}</th>
+            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">{{ $t('admin.table.email') }}</th>
+            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">{{ $t('common.contact') }}</th>
+            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">{{ $t('admin.table.status') }}</th>
+            <th v-if="mode === 'users'" class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">{{ $t('admin.table.role') }}</th>
+            <th class="px-6 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50">{{ $t('auth.register.step1.joinDate') }}</th>
+            <th class="px-6 py-4 text-center text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] bg-slate-50/90 backdrop-blur-md border-b border-slate-200/50 rounded-r-2xl">{{ $t('admin.table.actions') }}</th>
           </tr>
         </thead>
         <tbody class="space-y-2">
@@ -76,8 +77,8 @@
                 </div>
                 <div>
                   <div v-if="user.name" class="font-bold text-slate-800 tracking-tight group-hover:text-primary-600 transition-colors text-[15px]">{{ user.name }}</div>
-                  <div v-else class="text-sm italic text-slate-400">이름 없음</div>
-                  <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 bg-slate-100 px-1.5 py-0.5 rounded inline-block">ID: {{ user.id.substring(0, 8) }}</div>
+                  <div v-else class="text-sm italic text-slate-400">{{ $t('admin.table.noName') }}</div>
+                  <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 bg-slate-100 px-1.5 py-0.5 rounded inline-block">{{ $t('admin.table.id') }}: {{ user.id.substring(0, 8) }}</div>
                 </div>
               </div>
             </td>
@@ -108,9 +109,9 @@
                   @change="emit('change-role', user)"
                   class="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-black rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-400 transition-all cursor-pointer shadow-sm hover:border-slate-300 hover:bg-white"
                 >
-                  <option :value="USER_ROLES.ADMIN">시스템 관리자</option>
-                  <option :value="USER_ROLES.SUPPORT">기술 지원 팀</option>
-                  <option :value="USER_ROLES.USER">일반 사용자</option>
+                  <option :value="USER_ROLES.ADMIN">{{ $t('admin.role.admin') }}</option>
+                  <option :value="USER_ROLES.SUPPORT">{{ $t('admin.role.support') }}</option>
+                  <option :value="USER_ROLES.USER">{{ $t('admin.role.user') }}</option>
                 </select>
                 <span class="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-sm group-hover/select:text-primary-500 transition-colors">expand_more</span>
               </div>
@@ -135,7 +136,7 @@
                   v-if="user.id !== currentUser?.id && user.role !== USER_ROLES.ADMIN"
                   @click="emit('delete', user.id)" 
                   class="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 border border-slate-100 rounded-xl transition-all duration-300 hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 hover:-translate-y-1 active:scale-95 shadow-sm group/btn" 
-                  title="삭제"
+                  :title="$t('admin.actions.delete')"
                 >
                   <span class="material-icons text-[20px] transition-transform group-hover/btn:rotate-12">delete_outline</span>
                 </button>
@@ -156,6 +157,8 @@ import {
   getStatusLabel
 } from './utils';
 import { AFFILIATION_TYPES, USER_ROLES, USER_ROLE_LABELS, USER_STATUS } from '../../constants';
+// @ts-ignore
+import { useI18n } from 'vue-i18n';
 
 // Local interface definition to bypass import resolution issues
 interface User {
@@ -193,6 +196,8 @@ const props = withDefaults(defineProps<Props>(), {
   currentUser: null,
   loading: false
 });
+
+const { t } = useI18n();
 
 // Emits symbol definition
 const emit = defineEmits<{
@@ -286,7 +291,7 @@ function getStatusDotClass(status: string) {
 }
 
 function getUserRoleLabel(role: string) {
-  return (USER_ROLE_LABELS as Record<string, string>)[role] || '알 수 없음';
+  return (USER_ROLE_LABELS as Record<string, string>)[role] || t('admin.status.pending');
 }
 
 function onUserCheckbox(userId: string, event: Event) {

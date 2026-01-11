@@ -67,12 +67,12 @@
       <div v-else class="p-10 text-center text-slate-500 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/40 shadow-glass">
         <DataGuideMessage
           icon="analytics"
-          title="분석할 변수를 선택해주세요"
-          description="위의 변수 선택 버튼 중 하나를 클릭하여 차트로 분석할 특성을 선택하세요."
+          :title="$t('patientChars.guide.title')"
+          :description="$t('patientChars.guide.description')"
           :steps="[
-            { number: '1', text: '분석하고 싶은 변수 버튼을 클릭하세요' },
-            { number: '2', text: '선택한 변수의 분포 차트가 자동으로 생성됩니다' },
-            { number: '3', text: '차트 설정을 조정하여 원하는 형태로 표시하세요' }
+            { number: '1', text: $t('patientChars.guide.step1') },
+            { number: '2', text: $t('patientChars.guide.step2') },
+            { number: '3', text: $t('patientChars.guide.step3') }
           ]"
         />
       </div>
@@ -98,6 +98,7 @@ import BarChart from './components/BarChart.vue';
 // Composable 임포트
 import { usePatientStats, type FrequencyData } from './composables/usePatientStats';
 import { useClipboardOperations } from './composables/useClipboardOperations';
+import { useI18n } from 'vue-i18n';
 
 // BarChart 컴포넌트 타입
 interface BarChartInstance {
@@ -118,6 +119,7 @@ const {
 } = usePatientStats();
 
 const { isTableCopied, copyTableToClipboard } = useClipboardOperations();
+const { t } = useI18n();
 
 // UI 상태
 const selectedVariableIndex = ref<number | null>(null);

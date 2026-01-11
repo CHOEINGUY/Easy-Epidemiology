@@ -16,6 +16,7 @@ export interface GridHeader {
   offsetLeft?: number; // Calculated offset for scrolling
   isCustom?: boolean; // Custom column flag
   hidden?: boolean;
+  tooltip?: string; // Header tooltip text
   meta?: Record<string, any>; // Meta data for specific column logic
 }
 

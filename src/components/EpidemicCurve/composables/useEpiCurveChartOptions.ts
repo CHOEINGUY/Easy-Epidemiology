@@ -20,6 +20,7 @@ interface EpiCurveChartOptionsParams {
     suspectedFood: string;
     isConfirmedCaseColumnVisible: boolean;
     showConfirmedCaseLine: boolean;
+    t: (key: string) => string;
 }
 
 /**
@@ -118,7 +119,8 @@ export function generateEpiCurveChartOptions({
     epiBarColor, 
     suspectedFood, 
     isConfirmedCaseColumnVisible, 
-    showConfirmedCaseLine 
+    showConfirmedCaseLine,
+    t
 }: EpiCurveChartOptionsParams): any {
     const data = symptomOnsetTableData;
     if (!Array.isArray(data) || data.length === 0) {
@@ -185,7 +187,7 @@ export function generateEpiCurveChartOptions({
     const options: any = {
         textStyle: { fontFamily: 'Noto Sans KR, sans-serif' },
         title: {
-            text: '시간별 발생자 수',
+            text: t('epidemicCurve.charts.epidemicCurve'),
             left: 'center',
             textStyle: { fontSize: (epiChartFontSize || 15) + 4, fontWeight: 'bold' },
             top: 15
@@ -200,10 +202,10 @@ export function generateEpiCurveChartOptions({
                 const item = processedData[dataIndex];
                 const confirmedCaseCount = confirmedCaseSeriesData[dataIndex] || 0;
                 let tooltipContent = chartDisplayMode === 'datetime'
-                    ? `<strong>${item.formattedTime}</strong><br/>환자 수: <strong>${item.value}</strong> 명`
-                    : `<strong>${item.formattedDate}</strong><br/>${item.formattedTime} : <strong>${item.value}</strong> 명`;
+                    ? `<strong>${item.formattedTime}</strong><br/>${t('epidemicCurve.symptomTable.count')}: <strong>${item.value}</strong> `
+                    : `<strong>${item.formattedDate}</strong><br/>${item.formattedTime} : <strong>${item.value}</strong> `;
                 if (isConfirmedCaseColumnVisible && showConfirmedCaseLine && confirmedCaseCount > 0) {
-                    tooltipContent += `<br/>확진자 수: <strong style="color: #e74c3c;">${confirmedCaseCount}</strong> 명`;
+                    tooltipContent += `<br/>${t('dataInput.headers.confirmed')}: <strong style="color: #e74c3c;">${confirmedCaseCount}</strong> `;
                 }
                 return tooltipContent;
             }
@@ -274,7 +276,7 @@ export function generateEpiCurveChartOptions({
             ],
         yAxis: {
             type: 'value' as const,
-            name: '환자 수 (명)',
+            name: t('epidemicCurve.symptomTable.count') + ' (' + (t('epidemicCurve.controls.countUnit') || 'N') + ')',
             nameTextStyle: { padding: [0, 0, 0, 60], fontSize: epiChartFontSize || 15 },
             axisLabel: { fontSize: epiChartFontSize || 15 },
             splitLine: { show: true, lineStyle: { type: 'dashed' } },
@@ -283,14 +285,14 @@ export function generateEpiCurveChartOptions({
         },
         legend: {
             show: isConfirmedCaseColumnVisible && showConfirmedCaseLine && confirmedCaseSeriesData.length > 0,
-            data: ['환자 수', '확진자 수'],
+            data: [t('epidemicCurve.symptomTable.count'), t('dataInput.headers.confirmed')],
             top: 50,
             right: 20,
             textStyle: { fontSize: epiChartFontSize || 15 }
         },
         series: [
             {
-                name: '환자 수',
+                name: t('epidemicCurve.symptomTable.count'),
                 type: 'bar',
                 xAxisIndex: 0,
                 data: seriesData,
@@ -317,7 +319,7 @@ export function generateEpiCurveChartOptions({
                 }
             },
             ...(isConfirmedCaseColumnVisible && showConfirmedCaseLine && confirmedCaseSeriesData.length > 0 ? [{
-                    name: '확진자 수',
+                    name: t('dataInput.headers.confirmed'),
                     type: 'line' as const,
                     xAxisIndex: 0,
                     data: confirmedCaseSeriesData,
@@ -351,7 +353,7 @@ export function generateEpiCurveChartOptions({
                 left: '5%',
                 bottom: '5%',
                 style: {
-                    text: `추정 감염원 : ${suspectedFood}`,
+                    text: `${t('epidemicCurve.suspectedFood.title')} : ${suspectedFood}`,
                     fontSize: epiChartFontSize || 15,
                     fill: '#333',
                     fontWeight: 'normal'

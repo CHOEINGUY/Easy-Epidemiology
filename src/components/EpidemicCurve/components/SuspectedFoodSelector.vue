@@ -3,7 +3,7 @@
     <div class="flex flex-col gap-3">
       <div class="flex items-center gap-2 text-lg font-medium text-slate-800">
         <span class="w-1.5 h-1.5 rounded-full bg-slate-800"></span>
-        <span>추정 감염원 선택</span>
+        <span>{{ $t('epidemicCurve.suspectedFood.title') }}</span>
         <div class="relative inline-block">
           <span 
             v-if="analysisStatus" 
@@ -36,7 +36,7 @@
                   v-model="suspectedFood"
                   type="text"
                   class="flex-1 border-none py-2.5 px-3 text-sm outline-none bg-transparent cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed"
-                  placeholder="추정 감염원을 선택하거나 직접 입력하세요"
+                  :placeholder="$t('epidemicCurve.suspectedFood.placeholder')"
                   @input="onSuspectedFoodChange"
                   :disabled="!hasAnalysisResults"
                 />
@@ -45,7 +45,7 @@
             
             <div v-if="isDropdownOpen" class="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-[1000] max-h-[300px] overflow-y-auto">
               <div class="px-3 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500">
-                <span>추정 감염원 선택 (다중 선택 가능)</span>
+                <span>{{ $t('epidemicCurve.suspectedFood.multiSelectTitle') }}</span>
               </div>
               <div 
                 v-for="food in (backgroundAnalysisFoods.length > 0 ? backgroundAnalysisFoods : sortedFoodItems)" 
@@ -79,8 +79,8 @@
               </div>
 
               <div class="flex gap-2 p-2.5 bg-slate-50 border-t border-slate-100 sticky bottom-0">
-                <BaseButton @click="applySelectedFoods" variant="primary" size="xs" class="px-4 py-1.5 rounded-lg">닫기</BaseButton>
-                <BaseButton @click="closeDropdown" variant="secondary" size="xs" class="px-4 py-1.5 rounded-lg border-slate-300">취소</BaseButton>
+                <BaseButton @click="applySelectedFoods" variant="primary" size="xs" class="px-4 py-1.5 rounded-lg">{{ $t('common.close') }}</BaseButton>
+                <BaseButton @click="closeDropdown" variant="secondary" size="xs" class="px-4 py-1.5 rounded-lg border-slate-300">{{ $t('common.cancel') }}</BaseButton>
               </div>
             </div>
           </div>

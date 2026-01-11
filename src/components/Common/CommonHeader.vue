@@ -1,6 +1,6 @@
 <template>
   <h1 class="m-0 text-2xl font-light font-['Noto_Sans_KR'] text-slate-800">
-    Easy-Epidemiology Web v2.0
+    {{ $t('common.appName') }}
   </h1>
 </template>
 

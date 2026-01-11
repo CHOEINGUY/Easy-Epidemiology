@@ -2,14 +2,14 @@
   <div v-if="isVisible" class="validation-progress">
     <div class="progress-container">
       <div class="progress-header">
-        <span class="progress-title">데이터 검증 중...</span>
+        <span class="progress-title">{{ $t('dataInput.validation.validating') }}</span>
         <span class="progress-percentage">{{ Math.round(progress) }}%</span>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" :style="{ width: progress + '%' }"></div>
       </div>
       <div class="progress-details">
-        <span v-if="errorCount > 0" class="error-count">오류: {{ errorCount }}개</span>
+        <span v-if="errorCount > 0" class="error-count">{{ $t('dataInput.validation.errorCount', { count: errorCount }) }}</span>
       </div>
     </div>
   </div>

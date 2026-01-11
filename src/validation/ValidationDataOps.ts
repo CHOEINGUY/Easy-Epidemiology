@@ -149,7 +149,7 @@ export class ValidationDataOps {
     return result;
   }
 
-  showPasteValidationSummary(errors: any[], totalCells: number) {
+  showPasteValidationSummary(errors: any[], totalCells: number, t?: any) {
     const errorCount = errors.length;
     const errorRate = ((errorCount / totalCells) * 100).toFixed(1);
     
@@ -173,7 +173,9 @@ export class ValidationDataOps {
     console.groupEnd();
 
     if (this.showToast) {
-      const message = `붙여넣기 완료: ${totalCells}개 셀 중 ${errorCount}개 오류 발견 (${errorRate}%)`;
+      const message = t 
+        ? t('dataInput.toast.pasteSummary', { total: totalCells, error: errorCount, rate: errorRate })
+        : `붙여넣기 완료: ${totalCells}개 셀 중 ${errorCount}개 오류 발견 (${errorRate}%)`;
       const type = errorCount > 0 ? 'warning' : 'success';
       try {
         this.showToast(message, type);

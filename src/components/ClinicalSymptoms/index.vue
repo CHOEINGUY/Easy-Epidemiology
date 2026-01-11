@@ -6,7 +6,7 @@
 
     <div class="flex flex-col p-6 max-w-[1600px] mx-auto w-full">
       <div class="mb-6">
-        <SummaryBar title="임상증상" />
+        <SummaryBar :title="$t('clinicalSymptoms.title')" />
       </div>
       <div class="flex gap-6 items-start flex-wrap lg:flex-nowrap">
         <div class="flex-1 min-w-[500px] bg-white rounded-2xl shadow-premium border border-slate-100 overflow-hidden flex flex-col h-fit lg:max-w-[550px]">
@@ -64,11 +64,14 @@ import { useSymptomStats } from './composables/useSymptomStats';
 import { useChartControls } from './composables/useChartControls';
 import { useChartOptions } from './composables/useChartOptions';
 import { useClipboardOperations } from './composables/useClipboardOperations';
+import { useI18n } from 'vue-i18n';
 
 // Type for chart component ref
 interface SymptomBarChartInstance {
   chartContainerRef: HTMLElement | null;
 }
+
+const { t } = useI18n();
 
 // Chart Controls
 const {
@@ -86,7 +89,7 @@ const {
   barDirection,
   currentHighlight,
   currentSort
-} = useChartControls();
+} = useChartControls(t);
 
 // Symptom Stats
 const {
@@ -103,7 +106,8 @@ const { chartOptions } = useChartOptions({
   chartFontSize,
   selectedBarColor,
   currentHighlight,
-  barWidthPercent
+  barWidthPercent,
+  t
 });
 
 // Chart instance

@@ -63,6 +63,7 @@ export interface GridContext {
   isEditing: boolean;
   startEditing: VirtualSelectionSystem['startEditing'];
   stopEditing: VirtualSelectionSystem['stopEditing'];
+  t: (key: string, params?: any) => string;
 }
 
 export interface GridContextMenuContext extends GridContext {

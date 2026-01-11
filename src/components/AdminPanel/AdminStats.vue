@@ -7,7 +7,7 @@
 
       <!-- Total Users -->
       <StatCard
-        title="전체 사용자"
+        :title="$t('admin.stats.totalUsers')"
         :count="stats.total"
         icon="people"
         color="blue"
@@ -17,7 +17,7 @@
 
       <!-- Pending Users -->
       <StatCard
-        title="승인 대기"
+        :title="$t('admin.stats.pendingUsers')"
         :count="stats.pending"
         icon="pending_actions"
         color="amber"
@@ -27,7 +27,7 @@
 
       <!-- Approved Users -->
       <StatCard
-        title="최종 승인"
+        :title="$t('admin.stats.approvedUsers')"
         :count="stats.approved"
         icon="verified_user"
         color="emerald"
@@ -37,7 +37,7 @@
 
       <!-- Admin Users -->
       <StatCard
-        title="시스템 관리자"
+        :title="$t('admin.stats.adminUsers')"
         :count="stats.admin"
         icon="admin_panel_settings"
         color="primary"
@@ -48,6 +48,8 @@
 
 <script setup lang="ts">
 import StatCard from './StatCard.vue';
+// @ts-ignore
+import { useI18n } from 'vue-i18n';
 
 interface Stats {
   total: number;
@@ -56,7 +58,7 @@ interface Stats {
   admin: number;
 }
 
-withDefaults(defineProps<{ stats: Stats }>(), {
+const props = withDefaults(defineProps<{ stats: Stats }>(), {
   stats: () => ({ total: 0, pending: 0, approved: 0, admin: 0 })
 });
 </script>

@@ -31,6 +31,7 @@ export function useGridInteraction(
   closeDateTimePicker: () => void,
   onDateTimeCancel: () => void,
   storageManager: EnhancedStorageManager,
+  t: (key: string, params?: any) => string,
   overlayController?: OverlayController
 ) {
   const gridStore = useGridStore();
@@ -98,6 +99,7 @@ export function useGridInteraction(
       isEditing: selectionSystem.state.isEditing,
       startEditing: selectionSystem.startEditing.bind(selectionSystem),
       stopEditing: selectionSystem.stopEditing.bind(selectionSystem),
+      t,
       overlayController
     };
   }

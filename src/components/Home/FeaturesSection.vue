@@ -2,8 +2,8 @@
   <section class="py-32 bg-slate-50">
     <div class="max-w-container mx-auto px-6">
       <div class="text-center max-w-[600px] mx-auto mb-20">
-        <h2 class="text-[2.5rem] font-extrabold text-slate-900 mb-4 tracking-tight keep-all">강력한 분석 도구</h2>
-        <p class="text-body-lg text-slate-500 leading-relaxed keep-all">역학조사의 모든 단계를 위한 전문적인 솔루션</p>
+        <h2 class="text-[2.5rem] font-extrabold text-slate-900 mb-4 tracking-tight keep-all">{{ $t('home.features.mainTitle') }}</h2>
+        <p class="text-body-lg text-slate-500 leading-relaxed keep-all">{{ $t('home.features.subTitle') }}</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-[280px] gap-6">

@@ -1,22 +1,24 @@
 <template>
   <thead>
     <tr>
-      <th rowspan="2" class="header-item">요인(식단)</th>
-      <th colspan="3" class="header-group-case">환자군</th>
-      <th colspan="3" class="header-group-control">대조군</th>
-      <th rowspan="2" class="header-stat">카이제곱<br />P-value</th>
-      <th rowspan="2" class="header-stat">오즈비<br />(Odds Ratio)</th>
-      <th colspan="2" class="header-stat">95% 신뢰구간</th>
+
+      <th rowspan="2" class="header-item">{{ $t('caseControl.table.headers.factor') }}</th>
+      <th colspan="3" class="header-group-case">{{ $t('caseControl.table.headers.caseGroup') }}</th>
+      <th colspan="3" class="header-group-control">{{ $t('caseControl.table.headers.controlGroup') }}</th>
+      <th rowspan="2" class="header-stat whitespace-pre-line">{{ $t('caseControl.table.headers.pvalue') }}</th>
+      <th rowspan="2" class="header-stat whitespace-pre-line">{{ $t('caseControl.table.headers.oddsRatio') }}</th>
+      <th colspan="2" class="header-stat">{{ $t('caseControl.table.headers.ci') }}</th>
     </tr>
     <tr>
-      <th class="header-sub">섭취자</th>
-      <th class="header-sub">비섭취자</th>
-      <th class="header-sub">합계</th>
-      <th class="header-sub">섭취자</th>
-      <th class="header-sub">비섭취자</th>
-      <th class="header-sub">합계</th>
-      <th class="header-sub">하한</th>
-      <th class="header-sub">상한</th>
+
+      <th class="header-sub">{{ $t('caseControl.table.headers.exposed') }}</th>
+      <th class="header-sub">{{ $t('caseControl.table.headers.unexposed') }}</th>
+      <th class="header-sub">{{ $t('caseControl.table.headers.total') }}</th>
+      <th class="header-sub">{{ $t('caseControl.table.headers.exposed') }}</th>
+      <th class="header-sub">{{ $t('caseControl.table.headers.unexposed') }}</th>
+      <th class="header-sub">{{ $t('caseControl.table.headers.total') }}</th>
+      <th class="header-sub">{{ $t('caseControl.table.headers.lower') }}</th>
+      <th class="header-sub">{{ $t('caseControl.table.headers.upper') }}</th>
     </tr>
   </thead>
 </template>

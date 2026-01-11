@@ -31,6 +31,8 @@ export interface UseSuspectedFoodReturn {
 
 export function useSuspectedFood(): UseSuspectedFoodReturn {
   const settingsStore = useSettingsStore();
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { t } = require('@/i18n').default.global;
 
   // 상태
   const suspectedFood = ref<string>(settingsStore.selectedSuspectedFoods || '');
@@ -102,12 +104,12 @@ export function useSuspectedFood(): UseSuspectedFoodReturn {
 
     if (hasData) {
       if (caseControlCount > 0) {
-        return { type: 'success', message: `환자대조군 분석 완료 (${caseControlCount}개 항목)` };
+        return { type: 'success', message: t('epidemicCurve.suspectedFood.status.caseControlSuccess', { count: caseControlCount }) };
       } else {
-        return { type: 'success', message: `코호트 분석 완료 (${cohortCount}개 항목)` };
+        return { type: 'success', message: t('epidemicCurve.suspectedFood.status.cohortSuccess', { count: cohortCount }) };
       }
     } else {
-      return { type: 'warning', message: '분석 대기 중 (환자대조군/코호트 탭 확인 필요)' };
+      return { type: 'warning', message: t('epidemicCurve.suspectedFood.status.pending') };
     }
   });
 
@@ -115,17 +117,17 @@ export function useSuspectedFood(): UseSuspectedFoodReturn {
   const getAnalysisStatusTooltip = (status: AnalysisStatus): string => {
     switch (status.type) {
     case 'success':
-      return '통계 분석이 완료되었습니다. 추정 감염원을 선택할 수 있습니다.';
+      return t('epidemicCurve.suspectedFood.tooltip.success');
     case 'warning':
-      if (status.message.includes('분석 대기 중')) {
-        return '환자대조군 연구 또는 코호트 연구 탭에서 먼저 통계 분석을 수행해주세요.';
+      if (status.message.includes(t('epidemicCurve.suspectedFood.status.pending'))) {
+        return t('epidemicCurve.suspectedFood.tooltip.pending');
       } else {
-        return '분석 데이터가 없습니다. 환자대조군 연구 또는 코호트 연구 탭에서 분석을 수행해주세요.';
+        return t('epidemicCurve.suspectedFood.tooltip.noData');
       }
     case 'error':
-      return '분석 데이터가 없습니다. 데이터를 입력하고 분석을 수행해주세요.';
+      return t('epidemicCurve.suspectedFood.tooltip.error');
     default:
-      return '분석 상태를 확인 중입니다.';
+      return t('epidemicCurve.suspectedFood.tooltip.checking');
     }
   };
 

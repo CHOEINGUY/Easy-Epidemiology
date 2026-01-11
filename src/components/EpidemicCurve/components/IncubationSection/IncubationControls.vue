@@ -1,9 +1,10 @@
 <template>
   <EpidemicChartControls
-    intervalLabel="계급 간격(시간) :"
+    :intervalLabel="$t('epidemicCurve.incubationControls.intervalLabel')"
     intervalId="incubation-interval"
-    intervalTooltipText="잠복기 계산 간격을 변경합니다"
+    :intervalTooltipText="$t('epidemicCurve.incubationControls.intervalTooltip')"
     :selectedInterval="selectedInterval"
+    :intervalOptions="intervalOptions"
     @update:selectedInterval="$emit('update:selectedInterval', $event)"
     
     :chartFontSize="chartFontSize"
@@ -18,10 +19,7 @@
     :displayMode="displayMode"
     @update:displayMode="$emit('update:displayMode', $event)"
     
-    :displayModeOptions="[
-      { value: 'hour', label: '시간 단위', tooltip: '시간 단위로 표시합니다' },
-      { value: 'hhmm', label: '시:분 단위', tooltip: '상세 시간을 표시합니다' }
-    ]"
+    :displayModeOptions="displayModeOptions"
     
     :fontSizes="fontSizes"
     :fontSizeLabels="fontSizeLabels"
@@ -35,7 +33,11 @@
 
 <script setup lang="ts">
 import EpidemicChartControls from '../EpidemicChartControls.vue';
+import { useI18n } from 'vue-i18n';
+import { computed } from 'vue';
 import { useTooltip } from '../../composables/useTooltip';
+
+const { t } = useI18n();
 
 withDefaults(defineProps<{
   selectedInterval: number;
@@ -69,4 +71,17 @@ defineEmits<{
 }>();
 
 const { activeTooltip, tooltipText, showTooltip, hideTooltip } = useTooltip();
+
+const intervalOptions = computed(() => [
+  { value: 3, label: `3${t('dataInput.datetime.hour')}` },
+  { value: 6, label: `6${t('dataInput.datetime.hour')}` },
+  { value: 12, label: `12${t('dataInput.datetime.hour')}` },
+  { value: 24, label: `24${t('dataInput.datetime.hour')}` },
+  { value: 48, label: `48${t('dataInput.datetime.hour')}` }
+]);
+
+const displayModeOptions = computed(() => [
+  { value: 'hour', label: t('epidemicCurve.displayMode.incubationHour'), tooltip: t('epidemicCurve.displayMode.incubationHourTooltip') },
+  { value: 'hhmm', label: t('epidemicCurve.displayMode.incubationHHMM'), tooltip: t('epidemicCurve.displayMode.incubationHHMMTooltip') }
+]);
 </script>

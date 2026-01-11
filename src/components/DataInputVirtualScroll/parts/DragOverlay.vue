@@ -3,7 +3,7 @@
     <div v-if="visible" class="drag-overlay">
       <div class="overlay-content">
         <span class="material-icons-outlined icon">cloud_upload</span>
-        <p class="text">여기에 Excel 파일을 놓으세요</p>
+        <p class="text">{{ $t('dataInput.overlay.dropExcel') }}</p>
         <p v-if="progress > 0 && progress < 100" class="progress">{{ progress }}%</p>
       </div>
     </div>

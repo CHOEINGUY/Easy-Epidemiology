@@ -1,14 +1,15 @@
 <template>
   <thead>
     <tr>
-      <th rowspan="2" class="header-item">요인(식단)</th>
-      <th colspan="3" class="header-group-case">환자군</th>
-      <th rowspan="2" class="header-stat">발병률(%)</th>
+
+      <th rowspan="2" class="header-item">{{ $t('caseSeries.table.headers.factor') }}</th>
+      <th colspan="3" class="header-group-case">{{ $t('caseSeries.table.headers.caseGroup') }}</th>
+      <th rowspan="2" class="header-stat">{{ $t('caseSeries.table.headers.incidence') }}</th>
     </tr>
     <tr>
-      <th class="header-sub">섭취자</th>
-      <th class="header-sub">비섭취자</th>
-      <th class="header-sub">합계</th>
+      <th class="header-sub">{{ $t('caseSeries.table.headers.exposed') }}</th>
+      <th class="header-sub">{{ $t('caseSeries.table.headers.unexposed') }}</th>
+      <th class="header-sub">{{ $t('caseSeries.table.headers.total') }}</th>
     </tr>
   </thead>
 </template>

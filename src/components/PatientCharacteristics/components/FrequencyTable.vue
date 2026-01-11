@@ -2,11 +2,11 @@
   <div class="flex flex-col w-full h-full">
     <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100">
       <span class="flex items-center text-slate-800 font-semibold text-base">
-        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2"></span>{{ headerName === "" ? "(없음)" : headerName }}
+        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2"></span>{{ headerName === "" ? $t('patientChars.frequencyTable.none') : headerName }}
       </span>
       <SharedIconButton
         icon="copy"
-        label="테이블 복사"
+        :label="$t('patientChars.frequencyTable.copyTable')"
         :showSuccess="isTableCopied"
         @click="handleCopyTable"
       />
@@ -15,11 +15,11 @@
       <table class="w-full text-sm text-center border-collapse frequency-table">
         <thead class="bg-slate-50 sticky top-0 z-10">
           <tr>
-            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">구분</th>
-            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">대상자수</th>
-            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">대상자비율</th>
-            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">환자수</th>
-            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">환자비율</th>
+            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">{{ $t('patientChars.frequencyTable.category') }}</th>
+            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">{{ $t('patientChars.frequencyTable.participantsCount') }}</th>
+            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">{{ $t('patientChars.frequencyTable.participantsRatio') }}</th>
+            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">{{ $t('patientChars.frequencyTable.patientsCount') }}</th>
+            <th class="py-3 px-4 font-semibold text-slate-600 border-b border-slate-200">{{ $t('patientChars.frequencyTable.patientsRatio') }}</th>
           </tr>
         </thead>
         <tbody>
