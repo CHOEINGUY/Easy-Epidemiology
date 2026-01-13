@@ -1,15 +1,23 @@
 const { defineConfig } = require('@vue/cli-service');
 
+// file:// 프로토콜 지원을 위해 noauth 모드에서는 상대경로 사용
+// process.argv에서 --mode 파라미터 직접 파싱
+const modeIndex = process.argv.indexOf('--mode');
+const mode = modeIndex !== -1 ? process.argv[modeIndex + 1] : process.env.NODE_ENV;
+const isOfflineMode = mode === 'noauth' || mode === 'offline';
+console.log(`[vue.config.js] mode: ${mode}, isOfflineMode: ${isOfflineMode}, publicPath: ${isOfflineMode ? './' : '/'}`);
+
+
 module.exports = defineConfig({
   transpileDependencies: true,
   
-  // 프로덕션 배포를 위한 설정
-  publicPath: '/',
+  // noauth/offline 모드에서는 상대경로 (file:// 지원), 프로덕션에서는 절대경로
+  publicPath: isOfflineMode ? './' : '/',
   
   // 빌드 최적화 설정
   productionSourceMap: false,
 
-  // 오프라인 실행을 위한 추가 설정
+  // noauth 모드 및 오프라인 실행을 위한 추가 설정
   configureWebpack: {
     entry: {
       app: './src/main.ts'

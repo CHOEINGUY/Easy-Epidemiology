@@ -33,7 +33,7 @@ export function processExcelFile(
   const isFileProtocol = window.location.protocol === 'file:';
   if (isFileProtocol) {
     // file:/// 환경에서는 requestIdleCallback 기반 비동기 처리 사용
-    console.log('[ExcelProcessor] Using async processor for file:/// environment');
+
     return processExcelFileAsync(file, onProgress) as Promise<ExcelProcessResult>;
   }
 
@@ -46,7 +46,7 @@ export function processExcelFile(
         const worker = createWorkerSafely(new URL('../workers/excelWorker.ts', import.meta.url));
         if (!worker) {
           // 워커 생성 실패 시 비동기 처리로 폴백
-          console.log('[ExcelProcessor] Worker creation failed, using async processor');
+
           return processExcelFileAsync(file, onProgress)
             .then(resolve as any)
             .catch(reject);

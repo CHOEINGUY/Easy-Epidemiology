@@ -97,7 +97,7 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
       start: { rowIndex, colIndex },
       end: { rowIndex, colIndex }
     };
-    console.log(`[VirtualSelection] Cell selected: ${rowIndex}, ${colIndex}`);
+
   }
 
   /**
@@ -109,7 +109,7 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
     state.selectionAnchor = { rowIndex, colIndex: 0 };
     state.selectedRange.start = { rowIndex, colIndex: 0 };
     state.selectedRange.end = { rowIndex, colIndex: lastCol };
-    console.log(`[VirtualSelection] Row selected: ${rowIndex}`);
+
   }
 
   /**
@@ -171,7 +171,7 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
     }
     state.isDragging = false;
     state.dragContext = null;
-    console.log('[VirtualSelection] Drag ended. First cell selected.');
+
   }
 
   /**
@@ -208,7 +208,7 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
     state.selectedRange.end = { rowIndex: endRow, colIndex: endCol };
     state.selectedCell = { rowIndex: startRow, colIndex: startCol };
     state.selectionAnchor = { rowIndex: startRow, colIndex: startCol };
-    console.log(`[VirtualSelection] Range selected: ${startRow},${startCol} to ${endRow},${endCol}`);
+
   }
 
   function startEditing(
@@ -243,7 +243,7 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
     }
     state.isEditing = true;
     state.editingCell = { rowIndex, colIndex };
-    console.log(`[VirtualSelection] Start editing: ${rowIndex}, ${colIndex}`);
+
   }
 
   function stopEditing(shouldSaveChanges: boolean = true, cellInputState: CellInputState | null = null): void {
@@ -262,7 +262,7 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
     state.isEditing = false;
     state.editingCell = { rowIndex: null, colIndex: null };
     state.originalCellValue = null;
-    console.log(`[VirtualSelection] Stop editing. Save changes: ${shouldSaveChanges}`);
+
 
     try {
       let selector: string | null = null;
@@ -278,7 +278,7 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
           cellElem.blur();
           if (!shouldSaveChanges && originalValue !== null) {
             cellElem.textContent = String(originalValue ?? '');
-            console.log(`[VirtualSelection] 원래 값으로 복원: ${originalValue}`);
+
           }
         }
       }

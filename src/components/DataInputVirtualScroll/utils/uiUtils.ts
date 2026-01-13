@@ -79,8 +79,7 @@ export function calculatePickerPosition(cellRect: DOMRect): { top: number; left:
         }
     }
 
-    console.log(`[PickerPosition] Cell: ${cellRect.left}, ${cellRect.top}, ${cellRect.width}x${cellRect.height}`);
-    console.log(`[PickerPosition] Calculated: ${left}, ${top}`);
+
 
     return { top, left };
 }

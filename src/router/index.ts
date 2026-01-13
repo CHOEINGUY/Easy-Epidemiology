@@ -1,5 +1,5 @@
-import { createRouter, createWebHistory, RouteRecordRaw, NavigationGuardNext, RouteLocationNormalized } from 'vue-router';
-import { isAuthRequired } from '../utils/environmentUtils';
+import { createRouter, createWebHistory, createWebHashHistory, RouteRecordRaw, NavigationGuardNext, RouteLocationNormalized } from 'vue-router';
+import { isAuthRequired, isFileProtocol } from '../utils/environmentUtils';
 import { showToast } from '../components/DataInputVirtualScroll/logic/toast';
 
 const routes: Array<RouteRecordRaw> = [
@@ -90,7 +90,7 @@ const routes: Array<RouteRecordRaw> = [
 ];
 
 const router = createRouter({
-    history: createWebHistory(),
+    history: (!isAuthRequired() || isFileProtocol()) ? createWebHashHistory() : createWebHistory(),
     routes
 });
 

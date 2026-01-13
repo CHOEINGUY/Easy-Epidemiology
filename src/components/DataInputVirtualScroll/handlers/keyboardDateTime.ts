@@ -17,7 +17,7 @@ export async function handleDateTimeTypeToEdit(event: KeyboardEvent, context: Gr
     const column = allColumnsMeta.find((c) => c.colIndex === colIndex);
     if (!column || !column.isEditable) return;
 
-    console.log(`[DateTimeTypeToEdit] 날짜/시간 컬럼 타이핑 시작: ${rowIndex}, ${colIndex}, 입력: ${event.key}`);
+
 
     const row = rowIndex >= 0 ? rows.value[rowIndex] : null;
     startEditing(rowIndex, colIndex, getCellValue, row, gridStore as any, allColumnsMeta);
@@ -59,7 +59,7 @@ export async function handleDateTimeTypeToEdit(event: KeyboardEvent, context: Gr
             columnMeta: column
         };
         
-        console.log('[DateTimePicker] Position set to:', pickerPosition);
+
     } else {
         console.warn('[DateTimePicker] dateTimePickerState not found in context');
         await handleInlineEdit(rowIndex, colIndex, event as unknown as MouseEvent, context);
@@ -250,7 +250,7 @@ export function setupDateTimeInputHandling(cellElement: HTMLElement, initialKey:
                 context.storageManager.executeSave(editData);
                 context.storageManager.scheduleSave(editData);
 
-                console.log(`[DateTimeInput] Auto-saved value: ${formattedValue} for cell: ${rowIndex}, ${colIndex}`);
+
                 
                 if (context.validationManager) {
                     context.validationManager.validateCell(rowIndex, colIndex, formattedValue, columnMeta.type, true);

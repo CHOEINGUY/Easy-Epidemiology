@@ -75,12 +75,7 @@ export function handleContextMenu(
   const menuItems = getMenuItemsForContext(originalRowIndex, colIndex, selectionSystem.state, allColumnsMeta, context);
   const targetInfo = { rowIndex: originalRowIndex, colIndex };
 
-  console.log('[ContextMenu] 메뉴 아이템 생성:', {
-    originalRowIndex,
-    colIndex,
-    menuItems: menuItems.map((item: any) => ({ label: item.label, action: item.action })),
-    targetInfo
-  });
+
 
   if (menuItems.length > 0) {
     showContextMenu(event.clientX, event.clientY, menuItems, targetInfo);

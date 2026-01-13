@@ -401,7 +401,7 @@ const selectFocusedDate = () => {
 
 // 외부 Watchers
 watch(() => [props.year, props.month, props.day], ([newY, newM, newD]) => {
-  console.log('[CalendarPicker Debug] Props update:', { newY, newM, newD }, 'dayType:', typeof newD);
+
   if (newY && newM && newD) {
     focusedDate.year = newY;
     focusedDate.month = newM;

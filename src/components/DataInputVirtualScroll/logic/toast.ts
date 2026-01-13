@@ -65,7 +65,7 @@ export function removeToast(id: number): void {
 export function showConfirmToast(message: string): Promise<boolean> {
     return new Promise((resolve) => {
         const id = ++toastIdCounter;
-        console.log('showConfirmToast called', id); // Debug: Force HMR
+
         const toast: ToastItem = {
             id,
             message,

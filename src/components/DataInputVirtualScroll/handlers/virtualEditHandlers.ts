@@ -33,7 +33,7 @@ export async function handleVirtualCellDoubleClick(
     const columnMeta = allColumnsMeta.find((col) => col.colIndex === colIndex);
     if (!columnMeta || !columnMeta.isEditable) return;
 
-    console.log(`[DoubleClick] Starting edit for cell: ${originalRowIndex}, ${colIndex}`);
+
 
     selectionSystem.selectCell(originalRowIndex, colIndex);
 
@@ -61,7 +61,7 @@ export async function handleDateTimePickerEdit(
         return;
     }
 
-    console.log(`[DateTimePicker] Starting date picker edit for cell: ${rowIndex}, ${colIndex}`);
+
     const columnMeta = allColumnsMeta.find((col) => col.colIndex === colIndex);
     if (!columnMeta) return;
 
@@ -165,7 +165,7 @@ export async function handleInlineEdit(
     const cellElement = target.closest('td, th') as HTMLElement;
 
     if (cellElement) {
-        console.log('[DoubleClick] Setting up DOM for editing (fallback mode)');
+
         cellElement.contentEditable = 'true';
         cellElement.focus();
 
@@ -173,7 +173,7 @@ export async function handleInlineEdit(
         if (!columnMeta) return;
 
         const handleEditComplete = () => {
-            console.log(`[DoubleClick] Edit complete event triggered for cell: ${rowIndex}, ${colIndex}`);
+
             cellElement.removeEventListener('blur', handleEditComplete);
             cellElement.removeEventListener('focusout', handleEditComplete);
             cellElement.removeEventListener('input', handleInput);
@@ -192,7 +192,7 @@ export async function handleInlineEdit(
                 storageManager.executeSave(editData);
                 storageManager.scheduleSave(editData);
                 
-                console.log(`[DoubleClick] Saved value: ${tempValue} for cell: ${rowIndex}, ${colIndex}`);
+
 
                 try {
                     if (context.validationManager) {
@@ -211,7 +211,7 @@ export async function handleInlineEdit(
             const target = e.target as HTMLElement;
             const newValue = target.textContent || '';
             gridStore.updateTempValue(newValue);
-            console.log(`[DoubleClick] Input event: ${newValue} for cell: ${rowIndex}, ${colIndex}`);
+
         };
 
         const handleKeyDown = async (e: KeyboardEvent) => {

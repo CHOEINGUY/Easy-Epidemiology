@@ -18,7 +18,7 @@ const logger = createComponentLogger('ReportWriter');
 export function useReportData(): ReportData {
   const epidemicStore = useEpidemicStore();
   const settingsStore = useSettingsStore();
-  const { t, locale } = useI18n();
+  const { t, tm, locale } = useI18n();
   
   // --- Local State ---
   const studyDesign: Ref<StudyDesign> = ref(null);
@@ -30,7 +30,15 @@ export function useReportData(): ReportData {
 
   // --- Helper Functions ---
   function getLocaleDays(): string[] {
-    return (t('reportWriter.generation.dates.days', { returnObjects: true }) as any) as string[];
+    const daysRaw: any = tm('reportWriter.generation.dates.days');
+    if (Array.isArray(daysRaw) && daysRaw.length === 7) return daysRaw as string[];
+    
+    const daysFromTRaw: any = t('reportWriter.generation.dates.days', { returnObjects: true });
+    if (Array.isArray(daysFromTRaw) && daysFromTRaw.length === 7) return daysFromTRaw as string[];
+
+    return locale.value === 'ko' 
+      ? ['일', '월', '화', '수', '목', '금', '토']
+      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   }
 
   function formatLocaleDate(dateObj: Date | null): string | null {
@@ -43,7 +51,7 @@ export function useReportData(): ReportData {
     const hh = String(dateObj.getHours()).padStart(2,'0');
     
     if (locale.value === 'ko') {
-      return `${yyyy}${t('reportWriter.generation.dates.year')} ${mm}${t('reportWriter.generation.dates.month')} ${dd}${t('reportWriter.generation.dates.day')} (${day}${t('reportWriter.generation.dates.period')}) ${hh}${t('reportWriter.generation.dates.hour')}`;
+      return `${yyyy}${t('reportWriter.generation.dates.year')} ${mm}${t('reportWriter.generation.dates.month')} ${dd}${t('reportWriter.generation.dates.day')} (${day}) ${hh}${t('reportWriter.generation.dates.hour')}`;
     } else {
       return `${yyyy}${t('reportWriter.generation.dates.year')}${mm}${t('reportWriter.generation.dates.month')}${dd}${t('reportWriter.generation.dates.day')} (${day}) ${hh}${t('reportWriter.generation.dates.hour')}`;
     }
@@ -60,7 +68,7 @@ export function useReportData(): ReportData {
     const mi = String(dateObj.getMinutes()).padStart(2,'0');
     
     if (locale.value === 'ko') {
-      return `${yyyy}${t('reportWriter.generation.dates.year')} ${mm}${t('reportWriter.generation.dates.month')} ${dd}${t('reportWriter.generation.dates.day')} (${day}${t('reportWriter.generation.dates.period')}) ${hh}${t('reportWriter.generation.dates.hour')} ${mi}${t('reportWriter.generation.dates.minute')}`;
+      return `${yyyy}${t('reportWriter.generation.dates.year')} ${mm}${t('reportWriter.generation.dates.month')} ${dd}${t('reportWriter.generation.dates.day')} (${day}) ${hh}${t('reportWriter.generation.dates.hour')} ${mi}${t('reportWriter.generation.dates.minute')}`;
     } else {
       return `${yyyy}${t('reportWriter.generation.dates.year')}${mm}${t('reportWriter.generation.dates.month')}${dd}${t('reportWriter.generation.dates.day')} (${day}) ${hh}${t('reportWriter.generation.dates.hour')}${mi}${t('reportWriter.generation.dates.minute')}`;
     }
@@ -91,16 +99,16 @@ export function useReportData(): ReportData {
     if (!raw) return null;
     if (typeof raw === 'string' && raw.includes('~')) {
       const [start, end] = raw.split('~').map(s => new Date(s.trim()));
-      return `${formatLocaleDate(start)} ~ ${formatLocaleDate(end)}`;
+      return `${formatLocaleDateTime(start)} ~ ${formatLocaleDateTime(end)}`;
     }
     const dt = new Date(raw);
-    return formatLocaleDate(dt);
+    return formatLocaleDateTime(dt);
   });
 
   const firstCaseDate: ComputedRef<string | null> = computed(() => {
     const dt = epidemicStore.getFirstCaseDate;
     if (!dt) return null;
-    return formatLocaleDate(new Date(dt));
+    return formatLocaleDateTime(new Date(dt));
   });
 
   const meanIncubation: ComputedRef<string | null> = computed(() => {

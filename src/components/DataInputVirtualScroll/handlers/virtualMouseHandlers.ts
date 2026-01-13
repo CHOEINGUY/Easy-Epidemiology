@@ -65,7 +65,7 @@ export function handleVirtualCellMouseDown(
     if (isEditing &&
         editingCell.rowIndex === originalRowIndex &&
         editingCell.colIndex === colIndex) {
-        console.log('[CellClick] Click inside editing cell - blocking selection, allowing cursor move');
+
         event.stopPropagation();
         event.stopImmediatePropagation();
         return;

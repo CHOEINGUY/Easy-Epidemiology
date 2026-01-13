@@ -320,7 +320,7 @@ const handleOutsideClick = (event: MouseEvent) => {
     
     // 데이트피커 외부 클릭이면 닫기
     if (!isInsidePicker) {
-      console.log('외부 클릭으로 데이트피커 닫기');
+
       cancel();
     }
   }
