@@ -26,7 +26,7 @@ pnpm-debug.log*
 /dist_electron
 
 # 배포 전 정리 스크립트
-cleanup-for-production.js
+
 
 # 개발/테스트 전용 파일들 (배포 시 제거됨)
 tests/
