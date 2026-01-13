@@ -194,28 +194,7 @@ const logoutModalTimer = ref<number | null>(null);
 const remainingSeconds = ref(1.5);
 
 // --- Auto-scroll Logic ---
-const scrollContainer = ref<HTMLElement | null>(null);
-const tabRefs = ref<Record<string, HTMLElement | null>>({});
-
-const setTabRef = (el: any, name: string) => {
-  if (el) tabRefs.value[name] = el;
-};
-
-watch(
-  currentRouteName,
-  async (newVal) => {
-    await nextTick();
-    const el = tabRefs.value[newVal as string];
-    if (el) {
-      el.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-    }
-  },
-  { immediate: true }
-);
+// (Moved below)
 
 // Constants
 // Constants
@@ -246,6 +225,30 @@ const showTabs = computed(() => {
     (!requiresAuth.value || isAuthenticated.value)
   );
 });
+
+// --- Auto-scroll Logic (Moved here) ---
+const scrollContainer = ref<HTMLElement | null>(null);
+const tabRefs = ref<Record<string, HTMLElement | null>>({});
+
+const setTabRef = (el: any, name: string) => {
+  if (el) tabRefs.value[name] = el;
+};
+
+watch(
+  currentRouteName,
+  async (newVal) => {
+    await nextTick();
+    const el = tabRefs.value[newVal as string];
+    if (el) {
+      el.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  },
+  { immediate: true }
+);
 
 const tabs = computed(() => {
   const tArr = [...baseTabs.value];
