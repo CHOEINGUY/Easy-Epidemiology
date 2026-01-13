@@ -21,7 +21,7 @@
         class="fixed bottom-0 z-20 w-full h-[48px] bg-white/90 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.03)] px-3 flex items-center justify-between transition-all duration-300"
       >
         <div
-          class="flex-1 min-w-0 flex items-center h-full gap-1.5 overflow-x-auto no-scrollbar pr-4"
+          class="flex-1 min-w-0 flex items-center h-full gap-1.5 overflow-x-auto no-scrollbar mask-gradient-r relative z-0 mr-4"
         >
           <div
             v-for="tab in tabs"
@@ -46,7 +46,7 @@
 
         <!-- Language Switcher -->
         <div
-          class="flex-shrink-0 flex items-center pl-2 ml-2 border-l border-slate-200 h-[24px] gap-2"
+          class="flex-shrink-0 flex items-center pl-2 ml-2 border-l border-slate-200 h-[24px] gap-2 relative z-10 bg-white/0"
         >
           <LanguageSwitcher :direction="'up'" />
 
