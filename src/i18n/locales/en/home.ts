@@ -57,6 +57,7 @@ export default {
   },
   contact: {
     title: 'Operating Organization',
+    jeonnamCenter: 'Jeollanam-do Infectious Disease Control Support Center',
     center: 'Research Center for Infectious Disease Epidemiology and Field Response',
     operate: 'Operated By',
     dept: 'Dept.',

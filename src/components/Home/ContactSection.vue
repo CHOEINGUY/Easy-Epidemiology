@@ -5,6 +5,7 @@
         <!-- Brand / Contact -->
         <div class="flex flex-col">
           <h3 class="text-2xl font-extrabold mb-3 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">{{ $t('home.contact.title') }}</h3>
+          <p class="text-slate-300 font-semibold mb-1 text-[0.95rem]">{{ $t('home.contact.jeonnamCenter') }}</p>
           <p class="text-slate-400 mb-8 text-[0.95rem]">{{ $t('home.contact.center') }}</p>
           <div class="flex flex-col gap-2">
             <div class="flex gap-3 text-sm">
