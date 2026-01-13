@@ -6,7 +6,7 @@
       :title="currentLocaleLabel"
     >
       <span class="material-icons text-[18px] text-slate-400 group-hover:text-blue-500 transition-colors">language</span>
-      <span class="text-[13px] font-semibold">{{ currentLocale === 'ko' ? '한국어' : 'English' }}</span>
+      <span class="hidden xl:block text-[13px] font-semibold">{{ currentLocale === 'ko' ? '한국어' : 'English' }}</span>
     </button>
 
     <Transition

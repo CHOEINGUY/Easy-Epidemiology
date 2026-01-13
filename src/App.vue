@@ -17,7 +17,7 @@
       <!-- 탭 네비게이션 (로그인 화면이 아닐 때만 표시) -->
       <!-- 탭 네비게이션 (로그인 화면이 아닐 때만 표시) -->
       <div v-if="showTabs" class="fixed bottom-0 z-20 w-full h-[48px] bg-white/90 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.03)] px-3 flex items-center justify-between transition-all duration-300">
-        <div class="flex items-center h-full gap-1.5 overflow-x-auto no-scrollbar mask-gradient-r">
+        <div class="flex-1 min-w-0 flex items-center h-full gap-1.5 overflow-x-auto no-scrollbar mask-gradient-r">
           <div
             v-for="tab in tabs"
             :key="tab.name"
@@ -53,7 +53,7 @@
           >
             <div class="flex items-center gap-1.5">
               <span class="material-icons text-[18px] text-slate-400 transition-transform duration-300 group-hover:text-red-500 group-hover:-translate-x-0.5 leading-none">logout</span>
-              <span class="hidden sm:inline font-medium text-[13px] leading-none pt-[1px]">{{ $t('common.logout') }}</span>
+              <span class="hidden xl:inline font-medium text-[13px] leading-none pt-[1px]">{{ $t('common.logout') }}</span>
             </div>
           </BaseButton>
         </div>
