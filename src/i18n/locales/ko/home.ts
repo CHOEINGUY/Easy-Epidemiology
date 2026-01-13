@@ -82,7 +82,6 @@ export default {
   },
   contact: {
     title: "운영 기관",
-    jeonnamCenter: "전라남도 감염병관리지원단",
     center: "감염병 역학조사 및 현장 대응 연구센터",
     operate: "운영",
     dept: "부서",
