@@ -21,11 +21,13 @@
         class="fixed bottom-0 z-20 w-full h-[48px] bg-white/90 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.03)] px-3 flex items-center justify-between transition-all duration-300"
       >
         <div
-          class="flex-1 min-w-0 flex items-center h-full gap-1.5 overflow-x-auto no-scrollbar mask-gradient-r relative z-0 mr-4"
+          ref="scrollContainer"
+          class="flex-1 min-w-0 flex items-center h-full gap-1.5 overflow-x-auto no-scrollbar mask-gradient-r"
         >
           <div
             v-for="tab in tabs"
             :key="tab.name"
+            :ref="(el) => setTabRef(el, tab.name)"
             :class="[
               'flex items-center justify-center gap-2 px-3 h-[38px] rounded-lg cursor-pointer text-[13px] font-medium transition-all duration-200 select-none whitespace-nowrap',
               currentRouteName === tab.name
@@ -46,7 +48,7 @@
 
         <!-- Language Switcher -->
         <div
-          class="flex-shrink-0 flex items-center pl-2 ml-2 border-l border-slate-200 h-[24px] gap-2 relative z-10 bg-white/0"
+          class="flex-shrink-0 flex items-center pl-2 ml-2 border-l border-slate-200 h-[24px] gap-2"
         >
           <LanguageSwitcher :direction="'up'" />
 
@@ -161,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ToastContainer from "./components/DataInputVirtualScroll/parts/ToastContainer.vue";
 import BaseModal from "./components/Common/BaseModal.vue";
@@ -190,6 +192,30 @@ const showLogoutConfirmModal = ref(false);
 const isLogoutProcessing = ref(false);
 const logoutModalTimer = ref<number | null>(null);
 const remainingSeconds = ref(1.5);
+
+// --- Auto-scroll Logic ---
+const scrollContainer = ref<HTMLElement | null>(null);
+const tabRefs = ref<Record<string, HTMLElement | null>>({});
+
+const setTabRef = (el: any, name: string) => {
+  if (el) tabRefs.value[name] = el;
+};
+
+watch(
+  currentRouteName,
+  async (newVal) => {
+    await nextTick();
+    const el = tabRefs.value[newVal as string];
+    if (el) {
+      el.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  },
+  { immediate: true }
+);
 
 // Constants
 // Constants
