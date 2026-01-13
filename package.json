@@ -5,7 +5,7 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "serve:noauth": "vue-cli-service serve --mode noauth",
-    "build": "vue-cli-service build",
+    "build": "vue-cli-service build --mode production",
     "build:noauth": "vue-cli-service build --mode noauth",
     "build:auth": "vue-cli-service build --mode production",
     "build:clean": "node cleanup-for-production.js && vue-cli-service build",
