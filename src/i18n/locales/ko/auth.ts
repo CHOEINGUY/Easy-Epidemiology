@@ -2,7 +2,7 @@ export default {
   title: '로그인',
   registerTitle: '회원가입',
   logoutConfirmTitle: '로그아웃',
-  logoutConfirmMessage: '정말로 로그아웃하시겠습니까?{br}진행 중인 모든 작업은 안전하게 저장됩니다.',
+  logoutConfirmMessage: '정말로 로그아웃하시겠습니까? {br}진행 중인 모든 작업은 안전하게 저장됩니다.',
   savedTitle: '저장 완료!',
   savedMessage: '모든 데이터가 안전하게 저장되었습니다.{br}잠시 후 로그인 화면으로 이동합니다.',
   goToLoginNow: '지금 이동',
