@@ -4,7 +4,7 @@
       <CommonHeader />
     </header>
 
-    <div class="flex gap-[30px] mx-[30px] mt-5 mb-[68px] flex-1 min-h-0 relative z-0">
+    <div class="flex gap-[30px] mx-[30px] mt-5 mb-5 flex-1 min-h-0 relative z-0">
       <ReportEditor :reportData="reportData" />
       <ReportPreview :reportData="reportData" />
     </div>

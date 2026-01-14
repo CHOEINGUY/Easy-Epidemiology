@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="h-full grid grid-rows-[auto_auto_1fr] bg-white overflow-hidden outline-none pb-[48px]"
+    class="h-full grid grid-rows-[auto_auto_1fr] bg-white overflow-hidden outline-none"
     tabindex="0"
     @keydown="onKeyDown"
     ref="dataContainerRef"
