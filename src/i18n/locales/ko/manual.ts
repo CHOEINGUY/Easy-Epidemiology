@@ -170,7 +170,7 @@ export default {
     devTeam: '개발팀',
     devs: {
       lead: { role: '통계 검증 및 자문 (전문의)', name: '양정호' },
-      tech: { role: '총괄 시스템 개발 및 설계', name: '최인규' }
+      tech: { role: '시스템 개발 및 설계', name: '최인규' }
     },
     inquiry: '문의',
     thanks: {
