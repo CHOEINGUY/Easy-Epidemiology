@@ -82,10 +82,10 @@ export default {
     processing: '처리 중... {progress}%'
   },
   toast: {
-    success: '시스템 성공',
-    error: '시스템 오류',
-    warning: '시스템 경고',
-    info: '시스템 알림',
+    success: '성공',
+    error: '오류',
+    warning: '주의',
+    info: '알림',
     confirmTitle: '확인 필요',
     confirmContext: '작업을 계속하시겠습니까?',
     resetConfirmBody: '모든 데이터가 삭제되고 초기화됩니다. 계속하시겠습니까?',

@@ -32,6 +32,7 @@
       @undo="onUndo"
       @redo="onRedo"
       @clear-all-filters="onClearAllFilters"
+      @load-demo-data="onLoadDemoData"
     />
     <div class="flex flex-col overflow-hidden bg-white min-h-0 relative z-10" ref="gridContainerRef">
       <VirtualGridHeader 
@@ -180,6 +181,7 @@ import { useGridRowOperations } from './composables/useGridRowOperations';
 import { useUndoRedoHandlers } from './composables/useUndoRedoHandlers';
 import { useDateTimePicker } from './composables/useDateTimePicker';
 import { useEditOverlay } from './composables/useEditOverlay';
+import { useDemoData } from './composables/useDemoData';
 
 // --- Template Refs ---
 const dataContainerRef = ref<HTMLElement | null>(null);
@@ -571,6 +573,9 @@ const {
   gridBodyRef,
   gridHeaderRef
 );
+
+// --- Demo Data (Portfolio) ---
+const { loadDemoData: onLoadDemoData } = useDemoData();
 
 // --- Drag & Drop ---
 const { isDragOver, setupDragDropListeners } = useDragDrop();

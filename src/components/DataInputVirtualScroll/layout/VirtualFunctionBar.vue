@@ -107,6 +107,22 @@
 
       <!-- 그룹 3: 데이터 입출력 -->
       <div class="button-group data-io">
+        <!-- Demo Data Button (Only in auth-required mode for portfolio) -->
+        <div v-if="isAuthRequired" class="control-button-wrapper">
+          <button 
+            class="function-button demo-button" 
+            aria-label="샘플 데이터 로드"
+            tabindex="-1"
+            @click="onLoadDemoData"
+            @mouseenter="showTooltip('demoData', '포트폴리오 데모용 샘플 데이터를 불러옵니다', $event)"
+            @mouseleave="hideTooltip"
+          >
+            <span class="material-icons-outlined function-button-icon demo-icon">
+              science
+            </span>
+            <span class="button-label">Demo</span>
+          </button>
+        </div>
         <div class="control-button-wrapper">
           <!-- Excel Upload Button -->
           <div @mouseenter="showTooltip('excelUpload', $t('dataInput.functionBar.excelUploadTooltip'), $event)" @mouseleave="hideTooltip">
@@ -266,6 +282,7 @@ const emit = defineEmits<{
   (e: 'undo'): void;
   (e: 'redo'): void;
   (e: 'clear-all-filters'): void;
+  (e: 'load-demo-data'): void;
 }>();
 
 const { t } = useI18n();
@@ -282,6 +299,9 @@ const isIndividualExposureColumnVisible = computed(
 const isConfirmedCaseColumnVisible = computed(
   () => settingsStore.isConfirmedCaseColumnVisible
 );
+
+// Auth required check (for portfolio demo button)
+const isAuthRequired = process.env.VUE_APP_AUTH_REQUIRED !== 'false';
 
 // === Tooltip State ===
 const activeTooltip = ref<string | null>(null);
@@ -399,6 +419,10 @@ function onRedo() {
 function onFilterButtonClick() {
   hideTooltip();
   emit('clear-all-filters');
+}
+
+function onLoadDemoData() {
+  emit('load-demo-data');
 }
 </script>
 
@@ -729,5 +753,58 @@ function onFilterButtonClick() {
 
 .filter-button.active .filter-badge {
   background: #1967d2;
+}
+
+/* Demo Button - Glassmorphism style with shimmer */
+.demo-button {
+  background: rgba(59, 130, 246, 0.1) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: #2563eb !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer animation */
+.demo-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.demo-button:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+}
+
+.demo-button .demo-icon {
+  color: #2563eb !important;
+}
+
+.demo-button .button-label {
+  color: inherit !important;
 }
 </style>

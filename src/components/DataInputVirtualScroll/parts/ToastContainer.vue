@@ -27,11 +27,8 @@
           <div class="absolute inset-0 bg-white/20 opacity-0 group-hover/toast:opacity-30 transition-opacity"></div>
         </div>
 
-        <!-- Content Area -->
+        <!-- Content Area (message only, no title) -->
         <div class="flex flex-col flex-1 gap-0.5 md:gap-1 min-w-0">
-          <span class="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-60 text-white truncate">
-            {{ getLabel(toast.type) }}
-          </span>
           <span class="text-sm md:text-[15px] font-bold text-white tracking-tight leading-snug break-words">
             {{ toast.message }}
           </span>
