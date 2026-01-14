@@ -47,7 +47,7 @@
       leave-from-class="translate-y-0 opacity-100"
       leave-to-class="translate-y-20 opacity-0"
     >
-      <div v-if="!authStore.isAuthenticated && !hasToken" class="fixed bottom-8 left-0 right-0 flex justify-center z-50 pointer-events-none px-6">
+      <div v-if="!authStore.isAuthenticated && !hasToken && isAuthRequired" class="fixed bottom-8 left-0 right-0 flex justify-center z-50 pointer-events-none px-6">
         <router-link 
           to="/login" 
           class="pointer-events-auto flex items-center gap-3 px-8 py-4 bg-slate-900/90 hover:bg-slate-800 text-white rounded-full shadow-2xl backdrop-blur-md transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-slate-900/30 group border border-slate-700/50"
@@ -79,6 +79,7 @@ import ContactSection from './ContactSection.vue';
 const { t } = useI18n();
 const config = ref(loadSiteConfig());
 const hasToken = computed(() => !!localStorage.getItem('authToken'));
+const isAuthRequired = process.env.VUE_APP_AUTH_REQUIRED !== 'false';
 const authStore = useAuthStore();
 const currentDate = ref('');
 
