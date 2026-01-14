@@ -1,9 +1,9 @@
 <template>
   <div id="app">
     <!-- 메인 앱 (로그인 화면 포함 모든 라우트 뷰) -->
-    <div class="main-app">
-      <!-- 메인 콘텐츠 영역 -->
-      <main :class="contentClass">
+    <div class="main-app flex flex-col h-screen overflow-hidden">
+      <!-- 메인 콘텐츠 영역 (flex-1로 남은 공간 차지) -->
+      <main :class="contentClass" class="flex-1 overflow-hidden relative">
         <router-view v-slot="{ Component }: { Component: any }">
           <component
             :is="Component"
@@ -18,7 +18,7 @@
       <!-- 탭 네비게이션 (로그인 화면이 아닐 때만 표시) -->
       <div
         v-if="showTabs"
-        class="fixed bottom-0 z-20 w-full h-[48px] bg-white/90 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.03)] px-3 flex items-center justify-between transition-all duration-300"
+        class="shrink-0 z-20 w-full h-[48px] bg-white/90 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.03)] px-3 flex items-center justify-between transition-all duration-300"
       >
         <div
           ref="scrollContainer"
@@ -150,7 +150,7 @@
           variant="primary"
           size="lg"
           rounded="xl"
-          @click="closeLogoutConfirmModal"
+          @click="handleLogoutComplete"
         >
           {{ $t("auth.goToLoginNow") }}
         </BaseButton>
@@ -264,11 +264,9 @@ const tabs = computed(() => {
 
 const contentClass = computed(() => {
   const classes = ["content"];
-
-  if (showTabs.value) {
-    classes.push("has-tabs");
-  }
-
+  // has-tabs is no longer needed for margin, but might be used by other css? 
+  // Checked css, only used for margin-bottom. So we can keep or remove.
+  // Ideally remove 'no-scroll' logic if we want universal behavior, but keeping it for specific route needs
   if (
     ["DataInputVirtual", "ReportWriter", "UserManual"].includes(
       currentRouteName.value as string
@@ -466,10 +464,14 @@ function startLogoutTimer() {
   logoutModalTimer.value = window.setInterval(() => {
     remainingSeconds.value = Math.max(0, remainingSeconds.value - step);
     if (remainingSeconds.value <= 0) {
-      closeLogoutConfirmModal();
-      router.push({ name: "Login" });
+      handleLogoutComplete();
     }
   }, 20);
+}
+
+function handleLogoutComplete() {
+  closeLogoutConfirmModal();
+  router.push({ name: "Login" });
 }
 
 function handleTabClick(routeName: string) {

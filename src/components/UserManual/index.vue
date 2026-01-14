@@ -9,7 +9,7 @@
 
     <!-- Main Content -->
     <main class="flex-1 overflow-y-auto scroll-smooth relative" ref="mainContent" @scroll="onScroll">
-      <div class="max-w-5xl mx-auto p-8 lg:p-12" :class="isLoggedIn ? 'pb-32' : 'pb-20'">
+      <div class="max-w-5xl mx-auto p-8 lg:p-12 pb-20">
         <!-- Header -->
         <div class="mb-12">
           <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-4">{{ $t('manual.title') }}</h1>
@@ -37,7 +37,7 @@
         class="fixed right-8 w-12 h-12 bg-white border border-slate-200 shadow-lg rounded-full flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all z-20"
         :class="[
           !showTopBtn ? 'translate-y-20 opacity-0' : 'translate-y-0 opacity-100',
-          isLoggedIn ? 'bottom-[72px]' : 'bottom-8'
+          'bottom-8'
         ]"
       >
         <span class="material-icons-round">arrow_upward</span>
@@ -53,6 +53,8 @@ import ManualSidebar from './ManualSidebar.vue';
 
 const authStore = useAuthStore();
 const isLoggedIn = computed(() => authStore.isAuthenticated);
+// Flexbox layout handles separation, so no need for conditional padding logic
+
 
 // Async Components for Sections
 const SectionIntro = defineAsyncComponent(() => import('./sections/SectionIntro.vue'));

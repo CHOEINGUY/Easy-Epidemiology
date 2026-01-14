@@ -27,7 +27,7 @@
     </div>
 
     <!-- Bottom Actions -->
-    <div class="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0 transform transition-all duration-300" :class="isLoggedIn ? 'pb-[64px]' : 'pb-4'">
+    <div class="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0 mt-auto">
       <router-link to="/input" class="flex items-center justify-center gap-2 w-full py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-slate-800 hover:scale-[1.02] active:scale-[0.98] transition-all text-sm">
         <span class="material-icons-round text-lg">play_arrow</span>
         앱 실행하기
@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-defineProps<{
+const props = defineProps<{
   activeSection: string;
   isLoggedIn: boolean;
 }>();
@@ -62,6 +62,7 @@ const navItems = computed(() => [
   { id: 'case-series', label: t('manual.menu.caseSeries'), icon: 'list_alt' },
   { id: 'team', label: t('manual.menu.team'), icon: 'info' },
 ]);
+
 </script>
 
 <style scoped>
