@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex bg-slate-50 font-['Pretendard',_sans-serif] overflow-hidden" :class="isLoggedIn ? 'pb-0' : 'pb-0'">
+  <div class="h-full flex bg-slate-50 font-['Pretendard',_sans-serif] overflow-hidden relative" :class="isLoggedIn ? 'pb-0' : 'pb-0'">
     <!-- Sidebar -->
     <ManualSidebar 
       :active-section="activeSection"
@@ -31,18 +31,19 @@
         </div>
       </div>
 
-      <!-- Quick Top Button -->
-      <button 
-        @click="scrollToTop"
-        class="fixed right-8 w-12 h-12 bg-white border border-slate-200 shadow-lg rounded-full flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all z-20"
-        :class="[
-          !showTopBtn ? 'translate-y-20 opacity-0' : 'translate-y-0 opacity-100',
-          'bottom-8'
-        ]"
-      >
-        <span class="material-icons-round">arrow_upward</span>
-      </button>
     </main>
+
+    <!-- Quick Top Button (Moved outside main to be relative to the wrapper, avoiding tab overlap) -->
+    <button 
+      @click="scrollToTop"
+      class="absolute right-8 w-12 h-12 bg-white border border-slate-200 shadow-lg rounded-full flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all z-20"
+      :class="[
+        !showTopBtn ? 'translate-y-20 opacity-0' : 'translate-y-0 opacity-100',
+        'bottom-8'
+      ]"
+    >
+      <span class="material-icons-round">arrow_upward</span>
+    </button>
   </div>
 </template>
 
