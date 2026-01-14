@@ -91,7 +91,6 @@
               @click="toast.onConfirm" 
               class="px-8 py-3 rounded-2xl text-sm font-bold text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
             >
-            >
               {{ $t('common.confirm') }}
             </button>
           </div>

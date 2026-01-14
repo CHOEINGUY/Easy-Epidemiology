@@ -608,7 +608,7 @@ export function useGridColumns(
   }
 
   async function onResetSheet() {
-    if (await showConfirmToast(t('dataInput.toast.confirmContext'))) {
+    if (await showConfirmToast(t('dataInput.toast.resetConfirmBody'))) {
       historyStore.captureSnapshot('reset_sheet');
       
       gridStore.clearAllFilters(); // 필터 초기화 추가

@@ -88,6 +88,7 @@ export default {
     info: '시스템 알림',
     confirmTitle: '확인 필요',
     confirmContext: '작업을 계속하시겠습니까?',
+    resetConfirmBody: '모든 데이터가 삭제되고 초기화됩니다. 계속하시겠습니까?',
     excel: {
       uploadSuccess: '엑셀 파일이 성공적으로 업로드되었습니다.',
       exportSuccess: '엑셀 다운로드가 완료되었습니다.',

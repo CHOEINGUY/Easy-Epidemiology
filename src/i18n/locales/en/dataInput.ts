@@ -88,6 +88,7 @@ export default {
     info: 'System Info',
     confirmTitle: 'Confirmation Required',
     confirmContext: 'Do you want to continue?',
+    resetConfirmBody: 'All data will be deleted and reset. Do you want to continue?',
     excel: {
       uploadSuccess: 'Excel file uploaded successfully.',
       exportSuccess: 'Excel download completed.',
