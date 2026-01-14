@@ -31,7 +31,7 @@
     
     <!-- Content Area -->
     <div class="flex-1 overflow-hidden p-5 pt-2 min-h-0 flex flex-col">
-      <div class="flex-1 border border-gray-200 rounded bg-white shadow-inner overflow-y-auto relative p-5">
+      <div class="flex-1 border border-gray-200 rounded bg-white shadow-inner overflow-y-auto relative p-5 preview-scroll-container">
         <div class="report-preview" v-html="reportData.renderedHtml.value"></div>
         <!-- Spacer to ensure bottom content is not hidden -->
         <div class="w-full h-10 flex-shrink-0"></div>
@@ -198,5 +198,24 @@ const handleDownload = async () => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+}
+
+/* Thin Scrollbar for Preview Container */
+.preview-scroll-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.preview-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.preview-scroll-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.preview-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 </style>

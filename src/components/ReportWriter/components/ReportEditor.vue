@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-none w-[320px] bg-white rounded-[10px] shadow-md p-5 overflow-y-auto flex flex-col gap-6">
+  <div class="flex-none w-[320px] bg-white rounded-[10px] shadow-md p-5 overflow-y-auto flex flex-col gap-6 editor-container">
     <div class="flex flex-col gap-2 w-full mb-2">
       <div class="flex justify-between items-end px-1">
         <h2 class="m-0 text-lg font-bold text-gray-800">{{ $t('reportWriter.editor.title') }}</h2>
@@ -211,5 +211,24 @@ const completionRate = computed(() => (completedCount.value / totalSteps.value) 
 
 .animate-fadeInScale {
   animation: fadeInScale 0.3s ease-out;
+}
+
+/* Thin Scrollbar for Editor Container */
+.editor-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.editor-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.editor-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 </style>
