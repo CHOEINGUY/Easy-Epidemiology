@@ -423,32 +423,32 @@ defineExpose({ bodyContainer });
   z-index: 5;
 }
 
-/* Scrollbar Customization */
-div::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+/* Scrollbar Customization - Original style */
+.grid-body-virtual::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
   background-color: transparent;
 }
 
-div::-webkit-scrollbar-track {
+.grid-body-virtual::-webkit-scrollbar-track {
   background-color: transparent;
 }
 
-div::-webkit-scrollbar-thumb {
+.grid-body-virtual::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-  border: 3px solid transparent;
+  border-radius: 10px;
+  border: 2px solid transparent;
   background-clip: content-box;
   transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
               border-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-div::-webkit-scrollbar-thumb:hover {
+.grid-body-virtual::-webkit-scrollbar-thumb:hover {
   background-color: rgba(95, 99, 104, 0.7);
-  border-width: 1px;
+  border-width: 0px;
 }
 
-div::-webkit-scrollbar-corner {
+.grid-body-virtual::-webkit-scrollbar-corner {
   background-color: transparent;
 }
 </style>

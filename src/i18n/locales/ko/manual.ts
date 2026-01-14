@@ -166,11 +166,11 @@ export default {
   team: {
     title: '10. 개발진 소개',
     desc: '이 프로그램은 {bold}에서 개발하였습니다.',
-    centerName: '전남대학교 의과대학 예방의학교실 감염병 역학조사 및 현장 대응 연구센터',
+    centerName: '전남대학교 의과대학 예방의학교실',
     devTeam: '개발팀',
     devs: {
-      lead: { role: '책임개발자', name: '양정호 (전남대학교)' },
-      tech: { role: '기술개발자', name: '최인규 (전남대학교)' }
+      lead: { role: '통계 검증 및 자문 (전문의)', name: '양정호' },
+      tech: { role: '총괄 시스템 개발 및 설계', name: '최인규' }
     },
     inquiry: '문의',
     thanks: {
