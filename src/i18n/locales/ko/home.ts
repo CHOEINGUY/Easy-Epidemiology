@@ -64,7 +64,7 @@ export default {
     members: {
       role1: "통계 검증 및 자문 (전문의)",
       name1: "양정호",
-      role2: "총괄 시스템 개발 및 설계",
+      role2: "시스템 개발 및 설계",
       name2: "최인규",
     },
     education: {

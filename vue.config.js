@@ -13,6 +13,12 @@ module.exports = defineConfig({
   
   // noauth/offline 모드에서는 상대경로 (file:// 지원), 프로덕션에서는 절대경로
   publicPath: isOfflineMode ? './' : '/',
+
+  // CSS 최적화: 별도 파일로 추출하여 로딩 속도 개선 (FOUC 방지)
+  css: {
+    extract: true,
+    sourceMap: false
+  },
   
   // 빌드 최적화 설정
   productionSourceMap: false,

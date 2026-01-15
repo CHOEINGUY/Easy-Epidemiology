@@ -161,7 +161,7 @@ export const siteConfig: SiteConfig = {
         center: '감염병 역학조사 및 현장 대응 연구센터',
         team: [
             { role: '통계 검증 및 자문 (전문의)', name: '양정호' },
-            { role: '총괄 시스템 개발 및 설계', name: '최인규' }
+            { role: '시스템 개발 및 설계', name: '최인규' }
         ]
     },
     // 빠른 시작 가이드
