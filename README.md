@@ -179,13 +179,13 @@ npm test -- --testPathPattern="gridStore"
 
 ### Current Test Coverage
 
-| Area                           | Status     |
-| ------------------------------ | ---------- |
-| Stores (dataLogic, gridStore)  | ✅ Covered |
-| Validation Logic               | ✅ Covered |
-| Composables (useEpidemicStats) | ✅ Covered |
-| Components                     | 🔴 Not yet |
-| E2E Scenarios                  | ✅ Covered |
+| Area                           | Status               |
+| ------------------------------ | -------------------- |
+| Stores (dataLogic, gridStore)  | ✅ Covered           |
+| Validation Logic               | ✅ Covered           |
+| Composables (useEpidemicStats) | ✅ Covered           |
+| Components                     | ✅ Covered (via E2E) |
+| E2E Scenarios                  | ✅ Covered           |
 
 ---
 

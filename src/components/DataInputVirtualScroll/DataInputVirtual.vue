@@ -726,7 +726,7 @@ onBeforeUnmount(() => {
   if (cleanupInteractionListeners) cleanupInteractionListeners();
   
   if (validationManager && typeof validationManager.clearTimers === 'function') {
-    try { validationManager.clearTimers(); } catch (error) {}
+    try { validationManager.clearTimers(); } catch { /* ignored */ }
   }
   validationManager.destroy();
   if (storageManager) storageManager.reset();
