@@ -49,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // No props needed now as we use i18n directly
 </script>
 

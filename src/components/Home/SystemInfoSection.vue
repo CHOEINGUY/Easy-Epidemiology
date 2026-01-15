@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 withDefaults(defineProps<{
   basicConfig: any;
   currentDate: string;

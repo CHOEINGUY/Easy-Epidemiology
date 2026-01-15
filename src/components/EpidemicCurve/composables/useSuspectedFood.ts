@@ -31,7 +31,7 @@ export interface UseSuspectedFoodReturn {
 
 export function useSuspectedFood(): UseSuspectedFoodReturn {
   const settingsStore = useSettingsStore();
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line
   const { t } = require('@/i18n').default.global;
 
   // 상태

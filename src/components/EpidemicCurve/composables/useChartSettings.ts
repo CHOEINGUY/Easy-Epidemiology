@@ -5,7 +5,7 @@ export function useChartSettings() {
     const settingsStore = useSettingsStore();
 
     // 상수 정의
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line
     const { t } = require('@/i18n').default.global;
 
     // 상수 정의

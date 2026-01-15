@@ -54,7 +54,7 @@ class AuthApiService {
           status: response.status,
           data
         });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line
         throw new Error((data as any).message || `API 요청 실패 (${response.status})`);
       }
       
@@ -148,7 +148,7 @@ class AdminApiService {
 
   // API 요청 헬퍼 함수 (관리자용)
   // 개발 모드: 모든 API 호출 우회
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line
   async makeRequest(): Promise<any> {
     console.log('🔓 개발 모드: Admin API 우회');
     return { success: true };
@@ -161,25 +161,25 @@ class AdminApiService {
   }
 
   // 사용자 승인 - 개발 모드
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   async approveUser(userId: string): Promise<{ success: boolean }> {
     return { success: true };
   }
 
   // 사용자 거부 - 개발 모드
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   async rejectUser(userId: string): Promise<{ success: boolean }> {
     return { success: true };
   }
 
   // 일괄 사용자 승인 - 개발 모드
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   async bulkApproveUsers(userIds: string[]): Promise<{ success: boolean }> {
     return { success: true };
   }
 
   // 일괄 사용자 거부 - 개발 모드
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   async bulkRejectUsers(userIds: string[]): Promise<{ success: boolean }> {
     return { success: true };
   }
@@ -204,19 +204,19 @@ class AdminApiService {
   }
 
   // 사용자 삭제 - 개발 모드
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   async deleteUser(userId: string): Promise<{ success: boolean }> {
     return { success: true };
   }
 
   // 사용자 권한 변경 - 개발 모드
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   async updateUserRole(userId: string, role: string): Promise<{ success: boolean }> {
     return { success: true };
   }
 
   // 사용자 정보 업데이트 - 개발 모드
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   async updateUserInfo(userId: string, data: any): Promise<{ success: boolean }> {
     return { success: true };
   }
