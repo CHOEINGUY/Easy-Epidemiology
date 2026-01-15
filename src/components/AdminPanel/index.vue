@@ -130,8 +130,7 @@ import { useI18n } from 'vue-i18n';
 import { adminApi } from '../../services/authApi';
 import type { User } from '@/types/auth'; // Ensure this path is correct
 
-// @ts-ignore
-import { loadSiteConfig } from '../../config/siteConfig';
+
 import { useAuthStore } from '../../stores/authStore';
 import { getAffiliationTypeLabel } from './utils';
 import { USER_ROLES } from '../../constants';

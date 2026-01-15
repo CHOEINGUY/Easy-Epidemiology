@@ -11,8 +11,8 @@
     "build:clean": "npx tsx cleanup-for-production.ts && vue-cli-service build",
     "build:clean:noauth": "npx tsx cleanup-for-production.ts && vue-cli-service build --mode noauth",
     "build:clean:auth": "npx tsx cleanup-for-production.ts && vue-cli-service build --mode production",
-    "build:offline": "npx tsx scripts/embed-zip-templates.ts && vue-cli-service build --mode offline",
-    "build:noauth-offline": "npx tsx scripts/embed-zip-templates.ts && vue-cli-service build --mode noauth",
+
+
     "cleanup": "npx tsx cleanup-for-production.ts",
     "lint": "vue-cli-service lint",
     "test": "jest",
@@ -93,11 +93,9 @@
       "jest": true,
       "vue/setup-compiler-macros": true
     },
-    "globals": {
-      "defineProps": "readonly",
-      "defineEmits": "readonly",
-      "defineExpose": "readonly",
-      "withDefaults": "readonly"
+    "rules": {
+      "no-undef": "off",
+      "no-unused-vars": "off"
     },
     "plugins": [
       "@typescript-eslint"

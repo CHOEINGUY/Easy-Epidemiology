@@ -4,7 +4,7 @@ const { defineConfig } = require('@vue/cli-service');
 // process.argv에서 --mode 파라미터 직접 파싱
 const modeIndex = process.argv.indexOf('--mode');
 const mode = modeIndex !== -1 ? process.argv[modeIndex + 1] : process.env.NODE_ENV;
-const isOfflineMode = mode === 'noauth' || mode === 'offline';
+const isOfflineMode = mode === 'noauth';
 console.log(`[vue.config.js] mode: ${mode}, isOfflineMode: ${isOfflineMode}, publicPath: ${isOfflineMode ? './' : '/'}`);
 
 

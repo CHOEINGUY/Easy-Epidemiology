@@ -113,11 +113,10 @@ The app will be available at `http://localhost:8080`
 
 ## 📦 Build Modes
 
-| Command                 | Mode              | Description                                 |
-| ----------------------- | ----------------- | ------------------------------------------- |
-| `npm run build`         | Production (Auth) | Requires Cloudflare Workers authentication  |
-| `npm run build:noauth`  | No Auth           | Public access without login                 |
-| `npm run build:offline` | Offline           | Embeds templates for file:// protocol usage |
+| Command                | Mode              | Description                                |
+| ---------------------- | ----------------- | ------------------------------------------ |
+| `npm run build`        | Production (Auth) | Requires Cloudflare Workers authentication |
+| `npm run build:noauth` | No Auth           | Public access without login                |
 
 ### Build for Deployment
 
@@ -127,9 +126,6 @@ npm run build:auth
 
 # Static hosting (no auth)
 npm run build:noauth
-
-# Offline distribution (USB drive, etc.)
-npm run build:offline
 ```
 
 ---
