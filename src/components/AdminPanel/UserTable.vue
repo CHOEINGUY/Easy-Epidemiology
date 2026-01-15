@@ -179,7 +179,7 @@ interface User {
 
 // UserRole and UserStatus for props typing
 type UserRole = User['role'];
-type UserStatus = User['status'];
+
 
 
 
@@ -201,11 +201,11 @@ const { t } = useI18n();
 
 // Emits symbol definition
 const emit = defineEmits<{
-  (e: 'update:selectedUsers', value: string[]): void;
-  (e: 'approve', userId: string): void;
-  (e: 'reject', userId: string): void;
-  (e: 'delete', userId: string): void;
-  (e: 'change-role', user: User): void;
+  (event: 'update:selectedUsers', value: string[]): void;
+  (event: 'approve', userId: string): void;
+  (event: 'reject', userId: string): void;
+  (event: 'delete', userId: string): void;
+  (event: 'change-role', user: User): void;
 }>();
 
 // Computeds

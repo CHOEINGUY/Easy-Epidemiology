@@ -48,8 +48,7 @@
 
 <script setup lang="ts">
 import StatCard from './StatCard.vue';
-// @ts-ignore
-import { useI18n } from 'vue-i18n';
+
 
 interface Stats {
   total: number;
@@ -58,7 +57,7 @@ interface Stats {
   admin: number;
 }
 
-const props = withDefaults(defineProps<{ stats: Stats }>(), {
+withDefaults(defineProps<{ stats: Stats }>(), {
   stats: () => ({ total: 0, pending: 0, approved: 0, admin: 0 })
 });
 </script>
