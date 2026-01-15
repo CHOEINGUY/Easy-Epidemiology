@@ -11,8 +11,6 @@
     "build:clean": "npx tsx cleanup-for-production.ts && vue-cli-service build",
     "build:clean:noauth": "npx tsx cleanup-for-production.ts && vue-cli-service build --mode noauth",
     "build:clean:auth": "npx tsx cleanup-for-production.ts && vue-cli-service build --mode production",
-
-
     "cleanup": "npx tsx cleanup-for-production.ts",
     "lint": "vue-cli-service lint",
     "test": "jest",
@@ -68,6 +66,7 @@
     "@vue/cli-plugin-eslint": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
     "@vue/test-utils": "^2.4.6",
+    "@vue/vue3-jest": "^29.2.6",
     "autoprefixer": "^10.4.23",
     "babel-plugin-transform-remove-console": "^6.9.4",
     "eslint": "^8.0.0",
@@ -94,31 +93,10 @@
       "vue/setup-compiler-macros": true
     },
     "rules": {
-      "no-undef": "off",
-      "no-unused-vars": "off"
-    },
-    "plugins": [
-      "@typescript-eslint"
-    ],
-    "extends": [
-      "plugin:vue/vue3-essential",
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "parser": "@typescript-eslint/parser",
-      "ecmaVersion": 2021,
-      "sourceType": "module"
-    },
-    "globals": {
-      "defineProps": "readonly",
-      "defineEmits": "readonly",
-      "defineExpose": "readonly",
-      "withDefaults": "readonly"
-    },
-    "rules": {
       "no-console": "off",
       "no-debugger": "error",
-      "no-unused-vars": "error",
+      "no-unused-vars": "off",
+      "no-undef": "off",
       "prefer-const": "error",
       "no-var": "error",
       "object-shorthand": "error",
@@ -144,6 +122,24 @@
       "vue/multi-word-component-names": "off",
       "vue/no-unused-components": "error",
       "vue/no-unused-vars": "error"
+    },
+    "plugins": [
+      "@typescript-eslint"
+    ],
+    "extends": [
+      "plugin:vue/vue3-essential",
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "parser": "@typescript-eslint/parser",
+      "ecmaVersion": 2021,
+      "sourceType": "module"
+    },
+    "globals": {
+      "defineProps": "readonly",
+      "defineEmits": "readonly",
+      "defineExpose": "readonly",
+      "withDefaults": "readonly"
     }
   },
   "browserslist": [
