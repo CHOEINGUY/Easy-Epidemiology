@@ -93,6 +93,12 @@
       "jest": true,
       "vue/setup-compiler-macros": true
     },
+    "globals": {
+      "defineProps": "readonly",
+      "defineEmits": "readonly",
+      "defineExpose": "readonly",
+      "withDefaults": "readonly"
+    },
     "plugins": [
       "@typescript-eslint"
     ],

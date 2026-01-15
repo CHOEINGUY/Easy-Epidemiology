@@ -200,13 +200,13 @@ const props = withDefaults(defineProps<Props>(), {
 const { t } = useI18n();
 
 // Emits symbol definition
-const emit = defineEmits<{
-  (event: 'update:selectedUsers', value: string[]): void;
-  (event: 'approve', userId: string): void;
-  (event: 'reject', userId: string): void;
-  (event: 'delete', userId: string): void;
-  (event: 'change-role', user: User): void;
-}>();
+const emit = defineEmits([
+  'update:selectedUsers',
+  'approve',
+  'reject',
+  'delete',
+  'change-role'
+]);
 
 // Computeds
 const typedUsers = computed(() => props.users as User[]);
