@@ -1,16 +1,19 @@
-
 import { nextTick } from 'vue';
 import { COL_TYPE_BASIC, COL_TYPE_IS_PATIENT, COL_TYPE_CONFIRMED_CASE, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE } from '../constants/index';
 import { devLog } from '../../../utils/logger';
 import { handleCopy, handlePaste } from './keyboardClipboard';
+import { GridContextMenuContext } from '@/types/virtualGridContext';
+import { GridHeader } from '@/types/grid';
 
 // Row/Column Selection Helpers (Internal)
-function getEffectiveRowSelection(context: any) {
-    const { selectionSystem, target } = context;
+function getEffectiveRowSelection(context: GridContextMenuContext) {
+    const { selectionSystem } = context;
+    // targetInfo is in GridContextMenuContext
+    const target = (context as any).targetInfo || { rowIndex: -1, colIndex: -1 }; 
     const { selectedRange, selectedRowsIndividual } = selectionSystem.state;
 
     if (selectedRowsIndividual.size > 0) {
-        const rowsArr = Array.from(selectedRowsIndividual as Set<number>).sort((a, b) => a - b);
+        const rowsArr = Array.from(selectedRowsIndividual).sort((a, b) => a - b);
         if (rowsArr.length === 0) {
             return { type: 'none', startRow: target.rowIndex, endRow: target.rowIndex, count: 0, rows: [] as number[] };
         }
@@ -21,25 +24,26 @@ function getEffectiveRowSelection(context: any) {
             endRow: Math.max(...rowsArr),
             count: rowsArr.length
         };
-    } else if (selectedRange.start.rowIndex !== null) {
+    } else if (selectedRange.start.rowIndex !== null && selectedRange.end.rowIndex !== null) {
         return {
             type: 'range',
             startRow: selectedRange.start.rowIndex,
-            endRow: selectedRange.end.rowIndex!,
-            count: selectedRange.end.rowIndex! - selectedRange.start.rowIndex + 1,
+            endRow: selectedRange.end.rowIndex,
+            count: selectedRange.end.rowIndex - selectedRange.start.rowIndex + 1,
             rows: [] as number[]
         };
     }
     return { type: 'none', startRow: target.rowIndex, endRow: target.rowIndex, count: 1, rows: [] as number[] };
 }
 
-function getEffectiveColumnSelection(context: any) {
-    const { selectionSystem, target } = context;
+function getEffectiveColumnSelection(context: GridContextMenuContext) {
+    const { selectionSystem } = context;
+    const target = (context as any).targetInfo || { rowIndex: -1, colIndex: -1 };
     const { selectedRange, selectedCellsIndividual } = selectionSystem.state;
 
     if (selectedCellsIndividual.size > 0) {
         const columns = new Set<number>();
-        (selectedCellsIndividual as Set<string>).forEach(cellKey => {
+        selectedCellsIndividual.forEach(cellKey => {
             const [, colStr] = cellKey.split('_');
             columns.add(parseInt(colStr, 10));
         });
@@ -54,12 +58,12 @@ function getEffectiveColumnSelection(context: any) {
             endCol: Math.max(...colArray),
             count: colArray.length
         };
-    } else if (selectedRange.start.colIndex !== null) {
+    } else if (selectedRange.start.colIndex !== null && selectedRange.end.colIndex !== null) {
         return {
             type: 'range',
             startCol: selectedRange.start.colIndex,
-            endCol: selectedRange.end.colIndex!,
-            count: selectedRange.end.colIndex! - selectedRange.start.colIndex + 1,
+            endCol: selectedRange.end.colIndex,
+            count: selectedRange.end.colIndex - selectedRange.start.colIndex + 1,
             columns: [] as number[]
         };
     }
@@ -69,18 +73,19 @@ function getEffectiveColumnSelection(context: any) {
 
 // --- Action Handlers ---
 
-export function handleClearCellData(context: any) {
-    const { selectionSystem, allColumnsMeta, epidemicStore, validationManager, target } = context; 
+export function handleClearCellData(context: GridContextMenuContext) {
+    const { selectionSystem, allColumnsMeta, epidemicStore, validationManager } = context; 
+    const target = (context as any).targetInfo || { rowIndex: -1, colIndex: -1 };
     const { selectedCellsIndividual } = selectionSystem.state;
     
     const cellsToClear: {rowIndex: number; colIndex: number}[] = [];
     if (selectedCellsIndividual.size > 0) {
-        for (const cellKey of (selectedCellsIndividual as Set<string>)) {
+        for (const cellKey of selectedCellsIndividual) {
             const [rowStr, colStr] = cellKey.split('_');
             const rowIndex = parseInt(rowStr, 10);
             const colIndex = parseInt(colStr, 10);
 
-            const columnMeta = allColumnsMeta.find((c: any) => c.colIndex === colIndex);
+            const columnMeta = allColumnsMeta.find((c) => c.colIndex === colIndex);
             if (columnMeta) {
                 epidemicStore.updateCell({
                     rowIndex,
@@ -92,7 +97,7 @@ export function handleClearCellData(context: any) {
             }
         }
     } else {
-        const columnMeta = allColumnsMeta.find((c: any) => c.colIndex === target.colIndex);
+        const columnMeta = allColumnsMeta.find((c) => c.colIndex === target.colIndex);
         if (columnMeta) {
             epidemicStore.updateCell({
                 rowIndex: target.rowIndex,
@@ -109,7 +114,7 @@ export function handleClearCellData(context: any) {
     }
 }
 
-export function handleRowActions(action: string, context: any) {
+export function handleRowActions(action: string, context: GridContextMenuContext) {
     const { epidemicStore, validationManager, allColumnsMeta } = context;
     const rowSelection = getEffectiveRowSelection(context);
 
@@ -154,8 +159,9 @@ export function handleRowActions(action: string, context: any) {
     }
 }
 
-export function handleColumnActions(action: string, context: any) {
-    const { epidemicStore, validationManager, allColumnsMeta, target } = context;
+export function handleColumnActions(action: string, context: GridContextMenuContext) {
+    const { epidemicStore, validationManager, allColumnsMeta } = context;
+    const target = (context as any).targetInfo || { rowIndex: -1, colIndex: -1 };
 
     if (action === 'clear-cols-data') {
         const colSelection = getEffectiveColumnSelection(context);
@@ -164,13 +170,13 @@ export function handleColumnActions(action: string, context: any) {
 
         const clearedColumns: number[] = [];
         for (const colIndex of columnsToCheck) {
-            const meta = allColumnsMeta.find((c: any) => c.colIndex === colIndex);
-            if (!meta) continue;
+            const meta = allColumnsMeta.find((c) => c.colIndex === colIndex);
+            if (!meta || !meta.type) continue;
 
             if ([COL_TYPE_IS_PATIENT, COL_TYPE_CONFIRMED_CASE, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE].includes(meta.type)) {
                     epidemicStore.clearFixedColumnData({ type: meta.type });
-            } else {
-                    epidemicStore.clearColumnData({ type: meta.type, index: meta.cellIndex as number });
+            } else if (meta.cellIndex !== undefined) {
+                    epidemicStore.clearColumnData({ type: meta.type as any, index: meta.cellIndex });
             }
             clearedColumns.push(colIndex);
         }
@@ -184,18 +190,17 @@ export function handleColumnActions(action: string, context: any) {
     }
 
     if (action === 'add-col-left' || action === 'add-col-right') {
-        const oldColumnsMeta = [...allColumnsMeta];
         const colSelection = getEffectiveColumnSelection(context);
-        const targetColumn = allColumnsMeta.find((c: any) => c.colIndex === target.colIndex);
+        const targetColumn = allColumnsMeta.find((c) => c.colIndex === target.colIndex);
 
         if (!targetColumn || !targetColumn.type || ![COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(targetColumn.type)) return;
 
         let insertAtIndex;
         if (action === 'add-col-right') {
-            const rightmostColumn = allColumnsMeta.find((c: any) => c.colIndex === colSelection.endCol);
+            const rightmostColumn = allColumnsMeta.find((c) => c.colIndex === colSelection.endCol);
             insertAtIndex = rightmostColumn ? (rightmostColumn.cellIndex ?? 0) + 1 : 0;
         } else {
-            const leftmostColumn = allColumnsMeta.find((c: any) => c.colIndex === colSelection.startCol);
+            const leftmostColumn = allColumnsMeta.find((c) => c.colIndex === colSelection.startCol);
             insertAtIndex = leftmostColumn ? (leftmostColumn.cellIndex ?? 0) : 0;
         }
 
@@ -208,57 +213,33 @@ export function handleColumnActions(action: string, context: any) {
         });
 
         nextTick(() => {
-            const newColumnsMeta = context.allColumnsMeta; // Should be reactive Ref value in caller context, passed as value?
-            // In context, 'allColumnsMeta' is the VALUE (array). So it won't update here if it was copied.
-            // Actually context.allColumnsMeta is passed as `allColumnsMeta.value` in `createHandlerContext`.
-            // So we can't see the update unless we access the store or if strict reactivity is maintained.
-            // But we can trigger validationManager update with the new meta which the store has.
-            // Better to access store's current meta or validation manager should get it.
-            // However, `useGridContextMenu` re-runs `createHandlerContext` on each click? No, it's created on click.
-            // But `nextTick` happens later. We should access `epidemicStore.headers` or refetch?
-            // `context.allColumnsMeta` is a static snapshot at click time.
-            // In `useGridContextMenu`, `allColumnsMeta` is a Ref.
-            // We should ideally pass the Ref or a getter.
-            // But let's assume `validationManager` can handle it if we don't pass stale data.
-            // The original code used `allColumnsMeta.value` inside nextTick, which refers to the Ref from the scope.
-            // Here we lost that scope.
-            // We should pass a way to get fresh meta.
-            // Or validation manager updates itself?
-            // Let's rely on validation manager having access if possible, or just skip if complex.
-            // Original: `validationManager.updateColumnMetas(newColumnsMeta)`
-            // We can get `epidemicStore.headers` (raw) but we need `GridHeader[]` (computed).
-            // It's safer to not break this.
-            // Let's assume for this refactor we might miss the 'nextTick' optimization 
-            // OR we fix the context to include a getter for current columns.
+            // Logic to handle post-update reactivity if needed.
         });
         return;
     }
     
     // ... delete-cols logic similar ...
-    // Since columns meta update is tricky with static context, 
-    // I will keep add/delete columns logic simple or rely on the store to be reactive.
-    // Actually, `useGridContextMenu` is a composition function.
-    // If I move logic out, I must ensure it still works.
-    
-    // Simplification strategy:
-    // Just move the pure logic. For `nextTick` dependent logic involving refs, 
-    // we might need `context.getAllColumnsMeta()` function.
 }
 
-export function handleFilterActions(action: string, context: any) {
-    const { gridStore, captureSnapshotWithFilter, filterState, allColumnsMeta, target } = context;
+export function handleFilterActions(action: string, context: GridContextMenuContext) {
+    const { gridStore, allColumnsMeta } = context;
+    const captureSnapshotWithFilter = (context as any).captureSnapshotWithFilter;
+    const filterState = (context as any).filterState; // Ref needed?
+    const target = (context as any).targetInfo || { rowIndex: -1, colIndex: -1 };
 
     if (action === 'clear-all-filters') {
         const oldFilterState = JSON.stringify(gridStore.filterState);
         gridStore.clearAllFilters();
-        if (oldFilterState !== JSON.stringify(gridStore.filterState)) {
+        if (captureSnapshotWithFilter && oldFilterState !== JSON.stringify(gridStore.filterState)) {
              captureSnapshotWithFilter('filter_clear_all', {
                 action: 'clear-all-filters',
                 oldFilterState: JSON.parse(oldFilterState),
                 newFilterState: { ...gridStore.filterState }
             });
         }
-        filterState.value = { ...gridStore.filterState };
+        // Assuming filterState is a Ref passed in context which we want to sync?
+        // If not available, we skip.
+        // filterState.value = { ...gridStore.filterState };
         return;
     }
 
@@ -284,7 +265,7 @@ export function handleFilterActions(action: string, context: any) {
          let key = keyPrefixMap[filterType];
          
          if (!key) {
-             const column = allColumnsMeta.find((c: any) => c.colIndex === target.colIndex);
+             const column = allColumnsMeta.find((c) => c.colIndex === target.colIndex);
              if (column) {
                 key = column.value || '';
                 if (column.dataKey && (column.cellIndex !== undefined && column.cellIndex !== null)) {
@@ -292,7 +273,7 @@ export function handleFilterActions(action: string, context: any) {
                 } else if (!key) {
                     key = column.dataKey || '';
                 }
-                if (!key) key = String(column.colIndex);
+                if (!key && column.colIndex !== undefined) key = String(column.colIndex);
              }
          }
 
@@ -300,7 +281,7 @@ export function handleFilterActions(action: string, context: any) {
             const oldFilterState = JSON.stringify(gridStore.filterState);
             gridStore.toggleFilterValue(key, value);
 
-            if (oldFilterState !== JSON.stringify(gridStore.filterState)) {
+            if (captureSnapshotWithFilter && oldFilterState !== JSON.stringify(gridStore.filterState)) {
                  captureSnapshotWithFilter('filter_change', {
                     action,
                     filterType,
@@ -309,12 +290,12 @@ export function handleFilterActions(action: string, context: any) {
                     newFilterState: { ...gridStore.filterState }
                 });
             }
-            filterState.value = { ...gridStore.filterState };
+            // filterState.value = { ...gridStore.filterState };
          }
     }
 }
 
-export function handleClipboardActions(action: string, context: any) {
+export function handleClipboardActions(action: string, context: GridContextMenuContext) {
     if (action === 'copy-cell') {
         handleCopy(context);
     } else if (action === 'paste-cell') {

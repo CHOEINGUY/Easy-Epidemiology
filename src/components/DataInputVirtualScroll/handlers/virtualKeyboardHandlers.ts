@@ -1,4 +1,3 @@
-
 import { nextTick } from 'vue';
 import { findNextCellForFastNavigation, handleNavigationKeyDown } from './keyboardNavigation';
 import { handleDateTimeTypeToEdit, setupDateTimeInputHandling } from './keyboardDateTime';
@@ -7,6 +6,8 @@ import { handleTypeToEdit, handleClearSelectedData, handleEditModeKeyDown, isTyp
 import { GridContext } from '@/types/virtualGridContext';
 import { GridHeader } from '@/types/grid';
 import { useHistoryStore } from '@/stores/historyStore';
+import { CellInputState } from '@/components/DataInputVirtualScroll/logic/virtualSelectionSystem';
+import { GridDomManager } from '../utils/domManager';
 
 export { setupDateTimeInputHandling }; 
 
@@ -118,18 +119,16 @@ export async function handleVirtualKeyDown(
         event.preventDefault();
         if (currentRow < 0) {
             if (startEditing) {
-                startEditing(currentRow, currentCol, getCellValue, null, gridStore as any, allColumnsMeta);
+                startEditing(currentRow, currentCol, getCellValue, null, gridStore as unknown as CellInputState, allColumnsMeta);
                 await nextTick();
-                const cellElement = document.querySelector(`[data-col="${currentCol}"]`) as HTMLElement;
-                if (cellElement) cellElement.focus();
+                GridDomManager.focusCell(currentRow, currentCol);
             }
         } else {
             const row = rows.value[currentRow];
             if (row && startEditing) {
-                startEditing(currentRow, currentCol, getCellValue, row, gridStore as any, allColumnsMeta);
+                startEditing(currentRow, currentCol, getCellValue, row, gridStore as unknown as CellInputState, allColumnsMeta);
                 await nextTick();
-                const cellElement = document.querySelector(`[data-row="${currentRow}"][data-col="${currentCol}"]`) as HTMLElement;
-                if (cellElement) cellElement.focus();
+                GridDomManager.focusCell(currentRow, currentCol);
             }
         }
     }

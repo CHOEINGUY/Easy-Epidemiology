@@ -41,7 +41,7 @@ export function useGridInteraction(
   const onDocumentMouseUpBound = ref<((e: MouseEvent) => void) | null>(null);
 
   // --- Helper Functions ---
-  function getCellValue(row: GridRow | null, columnMeta: GridHeader | undefined, rowIndex: number = -1): any {
+  function getCellValue(row: GridRow | null, columnMeta: GridHeader | undefined, rowIndex: number = -1): string | null {
     if (!columnMeta) return '';
 
     if (rowIndex < 0) { // Header cell
@@ -51,21 +51,21 @@ export function useGridInteraction(
 
     if (columnMeta.type === 'serial') {
       if (row && (row as any)._originalIndex !== undefined) {
-        return (row as any)._originalIndex + 1;
+        return String((row as any)._originalIndex + 1);
       }
-      return rowIndex + 1;
+      return String(rowIndex + 1);
     }
 
     if (!row || !columnMeta.dataKey) return '';
 
     if (columnMeta.cellIndex !== null && columnMeta.cellIndex !== undefined) {
-      const val = (row as any)[columnMeta.dataKey];
+      const val = row[columnMeta.dataKey];
       if (!val || !Array.isArray(val)) {
         return '';
       }
-      return val[columnMeta.cellIndex] ?? '';
+      return String(val[columnMeta.cellIndex] ?? '');
     } else {
-      return (row as any)[columnMeta.dataKey] ?? '';
+      return String(row[columnMeta.dataKey] ?? '');
     }
   }
 

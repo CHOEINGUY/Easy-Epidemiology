@@ -1,6 +1,5 @@
-
 import { Ref } from "vue";
-import { GridHeader, GridRow } from "./grid";
+import { GridHeader, GridRow, CellValue } from "./grid";
 import type { ValidationManager } from "@/validation/ValidationManager";
 import type { VirtualSelectionSystem } from "@/components/DataInputVirtualScroll/logic/virtualSelectionSystem";
 import type { EnhancedStorageManager } from "@/store/enhancedStorageManager";
@@ -43,7 +42,7 @@ export interface GridContext {
   selectionSystem: VirtualSelectionSystem;
   rows: Ref<GridRow[]>;
   filteredRows: Ref<GridRow[]>;
-  getCellValue: (row: GridRow | null, col: GridHeader | undefined, rowIndex: number) => any;
+  getCellValue: (row: GridRow | null, col: GridHeader | undefined, rowIndex: number) => string | null;
   
   gridStore: ReturnType<typeof useGridStore>;
   epidemicStore: ReturnType<typeof useEpidemicStore>;
@@ -63,10 +62,10 @@ export interface GridContext {
   isEditing: boolean;
   startEditing: VirtualSelectionSystem['startEditing'];
   stopEditing: VirtualSelectionSystem['stopEditing'];
-  t: (key: string, params?: any) => string;
+  t: (key: string, params?: Record<string, unknown>) => string;
 }
 
 export interface GridContextMenuContext extends GridContext {
-  showContextMenu: (x: number, y: number, items: any[], targetInfo: any) => void;
-  contextMenuState: any;
+  showContextMenu: (x: number, y: number, items: unknown[], targetInfo: unknown) => void;
+  contextMenuState: unknown;
 }

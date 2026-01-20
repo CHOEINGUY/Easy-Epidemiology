@@ -34,7 +34,7 @@ export function processExcelFile(
   if (isFileProtocol) {
     // file:/// 환경에서는 requestIdleCallback 기반 비동기 처리 사용
 
-    return processExcelFileAsync(file, onProgress) as Promise<ExcelProcessResult>;
+    return processExcelFileAsync(file, onProgress) as unknown as Promise<ExcelProcessResult>;
   }
 
   // 안전한 워커 사용 시도

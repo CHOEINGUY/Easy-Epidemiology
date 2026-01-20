@@ -1,9 +1,10 @@
-
 import { nextTick } from 'vue';
 import { handleInlineEdit } from './virtualEditHandlers'; // Fixed import to virtualEditHandlers
 import { calculatePickerPosition } from '../utils/uiUtils';
 import type { GridHeader, GridRow } from '@/types/grid';
 import type { GridContext } from '@/types/virtualGridContext';
+import { CellInputState } from '@/components/DataInputVirtualScroll/logic/virtualSelectionSystem';
+import { GridDomManager } from '../utils/domManager';
 
 /**
  * 날짜/시간 컬럼에서 타이핑을 시작하면 데이트피커를 활성화합니다.
@@ -20,7 +21,7 @@ export async function handleDateTimeTypeToEdit(event: KeyboardEvent, context: Gr
 
 
     const row = rowIndex >= 0 ? rows.value[rowIndex] : null;
-    startEditing(rowIndex, colIndex, getCellValue, row, gridStore as any, allColumnsMeta);
+    startEditing(rowIndex, colIndex, getCellValue, row, gridStore as unknown as CellInputState, allColumnsMeta);
     
     await nextTick();
 
@@ -29,10 +30,7 @@ export async function handleDateTimeTypeToEdit(event: KeyboardEvent, context: Gr
     const parsedDateTime = parseDateTime(currentValue as string);
 
     let cellRect: DOMRect;
-    const cellSelector = rowIndex < 0 
-        ? `[data-col="${colIndex}"]` 
-        : `[data-row="${rowIndex}"][data-col="${colIndex}"]`;
-    const cellElement = document.querySelector(cellSelector) as HTMLElement;
+    const cellElement = GridDomManager.getCellElementByAttribute(rowIndex, colIndex);
 
     if (cellElement) {
         cellRect = cellElement.getBoundingClientRect();

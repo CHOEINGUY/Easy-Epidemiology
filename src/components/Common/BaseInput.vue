@@ -91,7 +91,7 @@ const props = withDefaults(defineProps<{
   readonly?: boolean;
   clearable?: boolean;
   maxLength?: number;
-  rounded?: 'sm' | 'md' | 'lg' | 'full';
+  rounded?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }>(), {
   modelValue: '',
   type: 'text',
@@ -100,7 +100,7 @@ const props = withDefaults(defineProps<{
   disabled: false,
   readonly: false,
   clearable: false,
-  rounded: 'xl'
+  rounded: 'lg'
 });
 
 const emit = defineEmits<{
@@ -137,7 +137,7 @@ const roundedClasses: Record<string, string> = {
 const inputClasses = computed(() => {
   const classes = [
     'w-full py-3.5 bg-white border outline-none transition-all duration-200 placeholder-slate-300 text-[15px]',
-    roundedClasses[props.rounded],
+    roundedClasses[props.rounded || 'lg'],
     props.icon ? 'pl-10' : 'pl-4',
     // Right padding calculation based on icons
     (props.clearable || props.type === 'password' || props.error) ? 'pr-12' : 'pr-4',
@@ -159,6 +159,12 @@ const handleInput = (event: Event) => {
 const handleBlur = (event: FocusEvent) => {
   emit('blur', event);
   emit('change', props.modelValue);
+};
+
+const handleClear = () => {
+  emit('update:modelValue', '');
+  emit('clear');
+  inputRef.value?.focus();
 };
 
 const togglePasswordVisibility = () => {

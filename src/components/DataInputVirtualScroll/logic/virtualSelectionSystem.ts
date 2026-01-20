@@ -1,5 +1,5 @@
 import { readonly, reactive } from 'vue';
-import { GridHeader } from '@/types/grid';
+import { GridHeader, GridRow, CellValue } from '@/types/grid';
 
 export interface CellPosition {
   rowIndex: number | null;
@@ -27,10 +27,9 @@ export interface SelectionState {
 }
 
 export interface CellInputState {
-  startEditing: (rowIndex: number, colIndex: number, value: any, column: GridHeader) => void;
+  startEditing: (rowIndex: number, colIndex: number, value: CellValue, column: GridHeader) => void;
   stopEditing: (shouldSave: boolean) => void;
   cancelEditing: () => void;
-  [key: string]: any;
 }
 
 export interface VirtualSelectionSystem {
@@ -46,12 +45,12 @@ export interface VirtualSelectionSystem {
   startEditing: (
     rowIndex: number,
     colIndex: number,
-    getCellValue: (row: any, col: GridHeader, rowIndex: number) => any,
-    row: any,
-    cellInputState?: CellInputState,
-    allColumnsMeta?: GridHeader[]
+    getCellValue: (row: GridRow | null, col: GridHeader, rowIndex: number) => string | null,
+    row: GridRow | null,
+    cellInputState?: CellInputState | null,
+    allColumnsMeta?: GridHeader[] | null
   ) => void;
-  stopEditing: (shouldSaveChanges?: boolean, cellInputState?: CellInputState) => void;
+  stopEditing: (shouldSaveChanges?: boolean, cellInputState?: CellInputState | null) => void;
   toggleIndividualCell: (rowIndex: number, colIndex: number) => void;
   toggleIndividualRow: (rowIndex: number) => void;
   selectRowRange: (startRow: number, endRow: number) => void;
@@ -214,8 +213,8 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
   function startEditing(
     rowIndex: number,
     colIndex: number,
-    getCellValue: (row: any, col: GridHeader, rowIndex: number) => any,
-    row: any,
+    getCellValue: (row: GridRow | null, col: GridHeader, rowIndex: number) => string | null,
+    row: GridRow | null,
     cellInputState: CellInputState | null = null,
     allColumnsMeta: GridHeader[] | null = null
   ): void {
@@ -239,7 +238,7 @@ export function useVirtualSelectionSystem(): VirtualSelectionSystem {
     state.originalCellValue = originalValue;
 
     if (cellInputState) {
-      (cellInputState as any).startEditing(rowIndex, colIndex, originalValue, column);
+      cellInputState.startEditing(rowIndex, colIndex, originalValue, column);
     }
     state.isEditing = true;
     state.editingCell = { rowIndex, colIndex };

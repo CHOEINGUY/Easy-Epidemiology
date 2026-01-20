@@ -32,7 +32,7 @@ type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success' | 
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 type IconPosition = 'left' | 'right';
 
-type RoundedSize = 'sm' | 'md' | 'lg' | 'full';
+type RoundedSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
 const props = withDefaults(defineProps<{
   variant?: ButtonVariant;
@@ -79,6 +79,7 @@ const roundedClasses: Record<RoundedSize, string> = {
   sm: 'rounded-sm',
   md: 'rounded-md',
   lg: 'rounded-lg',
+  xl: 'rounded-xl',
   full: 'rounded-full'
 };
 

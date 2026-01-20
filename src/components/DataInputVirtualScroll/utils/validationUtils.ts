@@ -3,6 +3,10 @@
  */
 import { GridHeader } from '@/types/grid';
 
+interface ExtendedGridHeader extends GridHeader {
+    group?: string;
+}
+
 /**
  * 열 메타데이터로부터 고유 식별자 생성
  */
@@ -13,9 +17,8 @@ export function getColumnUniqueKey(columnMeta: GridHeader | null): string | null
     const dataKey = columnMeta.dataKey || '';
     const type = columnMeta.type || '';
     const cellIndex = columnMeta.cellIndex !== null && columnMeta.cellIndex !== undefined ? columnMeta.cellIndex : '';
-    // Special case for group if it exists on GridHeader, but it's not in the interface.
-    // Assuming it might be dynamic property.
-    const group = (columnMeta as any).group || '';
+    
+    const group = (columnMeta as ExtendedGridHeader).group || '';
     // 특수 열들의 경우 추가 식별자 사용
     if (type === 'individualExposureTime') {
         return `exposure_${dataKey}_${cellIndex}`;
@@ -53,7 +56,7 @@ export function parseErrorKey(errorKey: string): { rowIndex: number; uniqueKey: 
 /**
  * 고유 식별자 기반으로 에러 여부 확인
  */
-export function hasValidationError(rowIndex: number, colIndex: number, columnMeta: GridHeader | null, validationErrors: Map<string, any> | null): boolean {
+export function hasValidationError(rowIndex: number, colIndex: number, columnMeta: GridHeader | null, validationErrors: Map<string, unknown> | null): boolean {
     if (!validationErrors || !columnMeta)
         return false;
     const uniqueKey = getColumnUniqueKey(columnMeta);
@@ -65,7 +68,7 @@ export function hasValidationError(rowIndex: number, colIndex: number, columnMet
 /**
  * 고유 식별자 기반으로 에러 메시지 조회
  */
-export function getValidationMessage(rowIndex: number, colIndex: number, columnMeta: GridHeader | null, validationErrors: Map<string, any> | null): string {
+export function getValidationMessage(rowIndex: number, colIndex: number, columnMeta: GridHeader | null, validationErrors: Map<string, unknown> | null): string {
     if (!validationErrors || !columnMeta)
         return '';
     const uniqueKey = getColumnUniqueKey(columnMeta);
@@ -73,8 +76,8 @@ export function getValidationMessage(rowIndex: number, colIndex: number, columnM
         return '';
     const errorKey = getErrorKey(rowIndex, uniqueKey);
     if (validationErrors.has(errorKey)) {
-        const error = validationErrors.get(errorKey);
-        return error.message || '유효성 검사 오류';
+        const error = validationErrors.get(errorKey) as { message?: string } | undefined;
+        return error?.message || '유효성 검사 오류';
     }
     return '';
 }

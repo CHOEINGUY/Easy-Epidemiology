@@ -1,4 +1,4 @@
-import { GridHeader, GridRow, CellUpdatePayload } from './grid';
+import { GridHeader, GridRow, CellUpdatePayload, CellValue } from './grid';
 
 export interface IGridService {
   // State Accessors
@@ -24,7 +24,7 @@ export interface IGridService {
 
   // Cell Operations
   updateCell(payload: CellUpdatePayload): Promise<void>;
-  saveCellValue(rowIndex: number, colIndex: number, value: any, columnMeta: any): boolean;
+  saveCellValue(rowIndex: number, colIndex: number, value: CellValue, columnMeta: unknown): boolean;
   
   // History
   undo(): void;

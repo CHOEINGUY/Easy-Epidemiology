@@ -1,5 +1,7 @@
 export type ColumnType = 'basic' | 'clinical' | 'diet' | 'exposure' | 'symptom' | 'analysis' | 'hidden' | 'serial' | 'isPatient' | 'isConfirmedCase' | 'clinicalSymptoms' | 'individualExposureTime' | 'symptomOnset' | 'dietInfo' | 'patientId' | 'patientName';
 
+export type CellValue = string | number | boolean | null | undefined;
+
 export interface GridHeader {
   text: string;
   value: string;
@@ -17,19 +19,31 @@ export interface GridHeader {
   isCustom?: boolean; // Custom column flag
   hidden?: boolean;
   tooltip?: string; // Header tooltip text
-  meta?: Record<string, any>; // Meta data for specific column logic
+  meta?: Record<string, unknown>; // Meta data for specific column logic
 }
 
 export interface GridRow {
   id?: string | number;
   _rowKey?: string;
-  [key: string]: any; // Index signature for dynamic cell data access
+  [key: string]: CellValue | CellValue[]; // Index signature for dynamic cell data access
 }
 
 export interface CellUpdatePayload {
   rowIndex: number;
   key: string; // Column dataKey
-  value: any;
+  value: CellValue;
   cellIndex?: number;
-  originalValue?: any;
+  originalValue?: CellValue;
+}
+
+export interface HeaderGroup {
+  text: string;
+  rowspan?: number;
+  colspan?: number;
+  startColIndex: number;
+  style?: Record<string, string | number>;
+  type?: string;
+  addable?: boolean;
+  deletable?: boolean;
+  columnCount?: number;
 }

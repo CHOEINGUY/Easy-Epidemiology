@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import type { GridRow } from '@/types/grid';
 import { useSettingsStore } from '../settingsStore';
+import { COLUMN_KEYS, HEADER_TYPES } from '@/constants/columnKeys';
 
 export interface EpidemicHeaders {
   basic: string[];
@@ -74,15 +75,15 @@ function syncRowDataWithHeaders(headersState: EpidemicHeaders, rowsState: GridRo
 
 function isColumnEmpty(headers: EpidemicHeaders, rows: GridRow[], type: keyof EpidemicHeaders, index: number): boolean {
   const rowKeyMap: Record<keyof EpidemicHeaders, string> = { 
-    basic: 'basicInfo', 
-    clinical: 'clinicalSymptoms', 
-    diet: 'dietInfo' 
+    basic: COLUMN_KEYS.BASIC_INFO, 
+    clinical: COLUMN_KEYS.CLINICAL_SYMPTOMS, 
+    diet: COLUMN_KEYS.DIET_INFO 
   };
   const rowKey = rowKeyMap[type];
   if (!rowKey) return true;
   
   for (const row of rows) {
-    const arr = row[rowKey] as string[] | undefined;
+    const arr = row[rowKey] as unknown[];
     if (arr && arr[index] && String(arr[index]).trim() !== '') {
       return false;
     }
@@ -134,7 +135,7 @@ export function useDataLogic() {
 
   function addMultipleColumns({ type, count }: { type: keyof EpidemicHeaders; count: number }) {
     if (!headers.value[type] || count <= 0) return;
-    const rowKeyMap: Record<keyof EpidemicHeaders, string> = { basic: 'basicInfo', clinical: 'clinicalSymptoms', diet: 'dietInfo' };
+    const rowKeyMap: Record<keyof EpidemicHeaders, string> = { basic: COLUMN_KEYS.BASIC_INFO, clinical: COLUMN_KEYS.CLINICAL_SYMPTOMS, diet: COLUMN_KEYS.DIET_INFO };
     const rowKey = rowKeyMap[type];
     if (!rowKey) return;
     
@@ -299,9 +300,9 @@ export function useDataLogic() {
   }
 
   function clearFixedColumnData({ type }: { type: string }) {
-    if (type === 'isPatient') rows.value.forEach((row) => (row.isPatient = ''));
-    else if (type === 'symptomOnset') rows.value.forEach((row) => (row.symptomOnset = ''));
-    else if (type === 'individualExposureTime') rows.value.forEach((row) => (row.individualExposureTime = ''));
+    if (type === COLUMN_KEYS.IS_PATIENT) rows.value.forEach((row) => (row.isPatient = ''));
+    else if (type === COLUMN_KEYS.SYMPTOM_ONSET) rows.value.forEach((row) => (row.symptomOnset = ''));
+    else if (type === COLUMN_KEYS.INDIVIDUAL_EXPOSURE) rows.value.forEach((row) => (row.individualExposureTime = ''));
   }
 
   function updateHeader({ headerType, index, text }: { headerType: keyof EpidemicHeaders; index: number; text: string }) {
@@ -310,14 +311,14 @@ export function useDataLogic() {
     }
   }
 
-  function updateCell({ rowIndex, key, value, cellIndex }: { rowIndex: number; key: string; value: any; cellIndex?: number }) {
+  function updateCell({ rowIndex, key, value, cellIndex }: { rowIndex: number; key: string; value: string | null; cellIndex?: number }) {
     if (rowIndex < 0) {
       if (cellIndex === undefined || cellIndex === null) return;
       
       const headerKeyMap: Record<string, keyof EpidemicHeaders> = {
-        basicInfo: 'basic',
-        clinicalSymptoms: 'clinical',
-        dietInfo: 'diet'
+        [COLUMN_KEYS.BASIC_INFO]: HEADER_TYPES.BASIC,
+        [COLUMN_KEYS.CLINICAL_SYMPTOMS]: HEADER_TYPES.CLINICAL,
+        [COLUMN_KEYS.DIET_INFO]: HEADER_TYPES.DIET
       };
       
       const headerType = headerKeyMap[key];
@@ -339,7 +340,7 @@ export function useDataLogic() {
     }
   }
 
-  function updateCellsBatch(updates: { rowIndex: number; key: string; value: any; cellIndex?: number }[]) {
+  function updateCellsBatch(updates: { rowIndex: number; key: string; value: string | null; cellIndex?: number }[]) {
     if (!Array.isArray(updates)) return;
     updates.forEach(({ rowIndex, key, value, cellIndex }) => {
       updateCell({ rowIndex, key, value, cellIndex });
@@ -392,7 +393,7 @@ export function useDataLogic() {
 
   function deleteEmptyRows() {
     const emptyRowIndices: number[] = [];
-    const rowKeyMap: Record<string, string> = { basic: 'basicInfo', clinical: 'clinicalSymptoms', diet: 'dietInfo' };
+    const rowKeyMap: Record<string, string> = { basic: COLUMN_KEYS.BASIC_INFO, clinical: COLUMN_KEYS.CLINICAL_SYMPTOMS, diet: COLUMN_KEYS.DIET_INFO };
     
     rows.value.forEach((row, index) => {
       let isEmpty = true;
@@ -402,7 +403,7 @@ export function useDataLogic() {
       if (isEmpty) {
         for (const key in rowKeyMap) {
             const dataKey = rowKeyMap[key];
-            const arr = row[dataKey] as any[];
+            const arr = row[dataKey] as unknown[];
             if (arr && arr.some(val => val !== null && val !== undefined && String(val).trim() !== '')) {
             isEmpty = false; break;
             }
@@ -418,8 +419,8 @@ export function useDataLogic() {
   }
 
   function deleteEmptyColumns() {
-    const rowKeyMap: Record<string, string> = { basic: 'basicInfo', clinical: 'clinicalSymptoms', diet: 'dietInfo' };
-    const types: (keyof EpidemicHeaders)[] = ['basic', 'clinical', 'diet'];
+    const rowKeyMap: Record<string, string> = { basic: COLUMN_KEYS.BASIC_INFO, clinical: COLUMN_KEYS.CLINICAL_SYMPTOMS, diet: COLUMN_KEYS.DIET_INFO };
+    const types: (keyof EpidemicHeaders)[] = [HEADER_TYPES.BASIC, HEADER_TYPES.CLINICAL, HEADER_TYPES.DIET];
     
     for (const headerType of types) {
       if (!headers.value[headerType]) continue;
@@ -465,13 +466,13 @@ export function useDataLogic() {
       row.symptomOnset = ''; 
       row.individualExposureTime = '';
       
-      const basicInfo = row.basicInfo as any[];
+      const basicInfo = row.basicInfo as unknown[];
       if (basicInfo) basicInfo.fill('');
       
-      const clinicalSymptoms = row.clinicalSymptoms as any[];
+      const clinicalSymptoms = row.clinicalSymptoms as unknown[];
       if (clinicalSymptoms) clinicalSymptoms.fill('');
       
-      const dietInfo = row.dietInfo as any[];
+      const dietInfo = row.dietInfo as unknown[];
       if (dietInfo) dietInfo.fill('');
     }
   }
@@ -519,14 +520,14 @@ export function useDataLogic() {
   function pasteData(payload: { startRowIndex: number; startColIndex: number; data: string[][] }) {
     const settingsStore = useSettingsStore();
     const { startRowIndex, startColIndex, data } = payload;
-    const isIndividualExposureVisible = (settingsStore as any).isIndividualExposureColumnVisible;
-    const isConfirmedCaseVisible = (settingsStore as any).isConfirmedCaseColumnVisible;
+    const isIndividualExposureVisible = settingsStore.isIndividualExposureColumnVisible;
+    const isConfirmedCaseVisible = settingsStore.isConfirmedCaseColumnVisible;
     
     let currentColIndex = 0;
     const colMap: Record<number, { type: string }> = {};
-    colMap[currentColIndex++] = { type: 'serial' };
-    colMap[currentColIndex++] = { type: 'isPatient' };
-    if (isConfirmedCaseVisible) { colMap[currentColIndex++] = { type: 'isConfirmedCase' }; }
+    colMap[currentColIndex++] = { type: COLUMN_KEYS.SERIAL };
+    colMap[currentColIndex++] = { type: COLUMN_KEYS.IS_PATIENT };
+    if (isConfirmedCaseVisible) { colMap[currentColIndex++] = { type: COLUMN_KEYS.IS_CONFIRMED }; }
     
     const dynamicBasicStartIndex = currentColIndex;
     const clinicalStartIndex = dynamicBasicStartIndex + (headers.value.basic?.length || 0);
@@ -553,9 +554,9 @@ export function useDataLogic() {
       for (let j = 0; j < rowData.length; j++) {
         const cellValue = rowData[j] ?? '';
         
-        if (colMap[currentColumn]?.type === 'isPatient') {
+        if (colMap[currentColumn]?.type === COLUMN_KEYS.IS_PATIENT) {
           targetRow.isPatient = cellValue;
-        } else if (colMap[currentColumn]?.type === 'isConfirmedCase') {
+        } else if (colMap[currentColumn]?.type === COLUMN_KEYS.IS_CONFIRMED) {
           targetRow.isConfirmedCase = cellValue;
         } else if (isIndividualExposureVisible && currentColumn === individualExposureIndex) {
           targetRow.individualExposureTime = cellValue;
@@ -591,31 +592,19 @@ export function useDataLogic() {
     }
   }
 
-  function updateConfirmedCase({ rowIndex, value }: { rowIndex: number; value: any }) {
+  function updateConfirmedCase({ rowIndex, value }: { rowIndex: number; value: string | null }) {
     if (rows.value[rowIndex]) rows.value[rowIndex].isConfirmedCase = String(value);
   }
 
-  function updateIndividualExposureTime({ rowIndex, value }: { rowIndex: number; value: any }) {
+  function updateIndividualExposureTime({ rowIndex, value }: { rowIndex: number; value: string | null }) {
     if (rows.value[rowIndex]) rows.value[rowIndex].individualExposureTime = String(value);
   }
-
-  // Need to recreate this since it depends on computed start indices
-  // We will assume that `handleEnter` logic should return index, and store will handle it?
-  // No, handleEnter is an action that modifies state (addRows).
-  // But strictly `handleEnter` calculates indices. 
-  // We need `useGetterLogic` or similar? 
-  // Let's postpone `handleEnter` or pass the getters as arguments? 
-  // Actually, getters are computed properties on the Store. We can access store instance or pass values.
-  // For now, let's keep `handleEnter` here but we need the start indices.
-  // We can pass them as arguments to `handleEnter` since they are computed elsewhere.
-  // OR we can move the getters into this module too? 
-  // Yes, moving getters into `dataLogic` is valid.
 
   return {
     headers,
     rows,
     deletedRowIndex,
-    createInitialState, // exported for reset
+    createInitialState,
     loadInitialData,
     setInitialData,
     addRows,

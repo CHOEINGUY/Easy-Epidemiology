@@ -1,5 +1,6 @@
-import { GridRow } from '@/types/grid';
+import { GridRow, CellValue } from '@/types/grid';
 import { RecoveryHeaders } from './recovery';
+import { COLUMN_KEYS } from '@/constants/columnKeys';
 
 export interface ValidationRule {
     type: 'binary' | 'string' | 'datetime';
@@ -32,46 +33,46 @@ export interface DataValidationResult {
 // ----------------------------------------------------------------------
 
 export const VALIDATION_RULES: Record<string, ValidationRule> = {
-    isPatient: {
+    [COLUMN_KEYS.IS_PATIENT]: {
         type: 'binary',
         required: false,
         allowEmpty: true,
         message: '0 또는 1만 입력 가능합니다.'
     },
-    isConfirmedCase: {
+    [COLUMN_KEYS.IS_CONFIRMED]: {
         type: 'binary',
         required: false,
         allowEmpty: true,
         message: '0 또는 1만 입력 가능합니다.'
     },
-    basicInfo: {
+    [COLUMN_KEYS.BASIC_INFO]: {
         type: 'string',
         maxLength: 100,
         required: false,
         allowEmpty: true,
         message: ''
     },
-    clinicalSymptoms: {
+    [COLUMN_KEYS.CLINICAL_SYMPTOMS]: {
         type: 'binary',
         required: false,
         allowEmpty: true,
         message: '0 또는 1만 입력 가능합니다.'
     },
-    symptomOnset: {
+    [COLUMN_KEYS.SYMPTOM_ONSET]: {
         type: 'datetime',
         format: 'YYYY-MM-DD HH:mm',
         required: false,
         allowEmpty: true,
         message: 'YYYY-MM-DD HH:mm 형식으로 입력하세요.'
     },
-    individualExposureTime: {
+    [COLUMN_KEYS.INDIVIDUAL_EXPOSURE]: {
         type: 'datetime',
         format: 'YYYY-MM-DD HH:mm',
         required: false,
         allowEmpty: true,
         message: 'YYYY-MM-DD HH:mm 형식으로 입력하세요.'
     },
-    dietInfo: {
+    [COLUMN_KEYS.DIET_INFO]: {
         type: 'binary',
         required: false,
         allowEmpty: true,
@@ -86,7 +87,7 @@ export const VALIDATION_RULES: Record<string, ValidationRule> = {
 /**
  * 빈 값인지 확인합니다.
  */
-export function isEmpty(value: any): boolean {
+export function isEmpty(value: CellValue | CellValue[] | unknown): boolean {
     if (value === null || value === undefined)
         return true;
     if (typeof value === 'string')
@@ -101,7 +102,7 @@ export function isEmpty(value: any): boolean {
 /**
  * 이진 값(0/1)인지 검증합니다.
  */
-export function validateBinary(value: any): ValidationResult {
+export function validateBinary(value: CellValue): ValidationResult {
     if (isEmpty(value))
         return { valid: true };
     const normalizedValue = String(value).trim();
@@ -117,7 +118,7 @@ export function validateBinary(value: any): ValidationResult {
 /**
  * 문자열 값을 검증합니다.
  */
-export function validateString(value: any, rule: ValidationRule): ValidationResult {
+export function validateString(value: CellValue, rule: ValidationRule): ValidationResult {
     if (isEmpty(value)) {
         return rule.required ?
             { valid: false, message: '필수 입력 항목입니다.' } :
@@ -136,7 +137,7 @@ export function validateString(value: any, rule: ValidationRule): ValidationResu
 /**
  * 날짜/시간 값을 검증합니다.
  */
-export function validateDateTime(value: any, rule: ValidationRule): ValidationResult {
+export function validateDateTime(value: CellValue, rule: ValidationRule): ValidationResult {
     if (isEmpty(value)) {
         return rule.required ?
             { valid: false, message: '필수 입력 항목입니다.' } :
@@ -179,7 +180,7 @@ export function validateDateTime(value: any, rule: ValidationRule): ValidationRe
 /**
  * 셀 값을 검증합니다.
  */
-export function validateCell(value: any, columnType: string): ValidationResult {
+export function validateCell(value: CellValue, columnType: string): ValidationResult {
     const rule = VALIDATION_RULES[columnType];
     if (!rule) {
         return { valid: true };
@@ -197,7 +198,7 @@ export function validateCell(value: any, columnType: string): ValidationResult {
         case 'string': {
             const stringResult = validateString(value, rule);
             // 기본정보는 길이 제한이 있어도 툴팁을 표시하지 않음 (기존 로직 유지)
-            if (columnType === 'basicInfo' && !stringResult.valid) {
+            if (columnType === COLUMN_KEYS.BASIC_INFO && !stringResult.valid) {
                 return { valid: false, message: '' };
             }
             return stringResult;
@@ -212,70 +213,71 @@ export function validateCell(value: any, columnType: string): ValidationResult {
 /**
  * 행 데이터를 검증합니다.
  */
-export function validateRow(row: GridRow, _headers?: any): { valid: boolean; errors: ValidationError[] } {
+export function validateRow(row: GridRow, _headers?: unknown): { valid: boolean; errors: ValidationError[] } {
     const errors: ValidationError[] = [];
 
     // 환자여부 검증
     if (row.isPatient !== undefined) {
-        const result = validateCell(row.isPatient, 'isPatient');
+        // cast to CellValue is implicit
+        const result = validateCell(row.isPatient as CellValue, COLUMN_KEYS.IS_PATIENT);
         if (!result.valid) {
-            errors.push({ field: 'isPatient', message: result.message });
+            errors.push({ field: COLUMN_KEYS.IS_PATIENT, message: result.message });
         }
     }
 
     // 확진자 여부 검증
     if (row.isConfirmedCase !== undefined) {
-        const result = validateCell(row.isConfirmedCase, 'isConfirmedCase');
+        const result = validateCell(row.isConfirmedCase as CellValue, COLUMN_KEYS.IS_CONFIRMED);
         if (!result.valid) {
-            errors.push({ field: 'isConfirmedCase', message: result.message });
+            errors.push({ field: COLUMN_KEYS.IS_CONFIRMED, message: result.message });
         }
     }
 
     // 기본정보 검증
-    const basicInfo = row.basicInfo as any[];
+    const basicInfo = row.basicInfo;
     if (basicInfo && Array.isArray(basicInfo)) {
         basicInfo.forEach((value, index) => {
-            const result = validateCell(value, 'basicInfo');
+            const result = validateCell(value, COLUMN_KEYS.BASIC_INFO);
             if (!result.valid) {
-                errors.push({ field: `basicInfo[${index}]`, message: result.message });
+                errors.push({ field: `${COLUMN_KEYS.BASIC_INFO}[${index}]`, message: result.message });
             }
         });
     }
 
     // 임상증상 검증
-    const clinicalSymptoms = row.clinicalSymptoms as any[];
+    const clinicalSymptoms = row.clinicalSymptoms;
     if (clinicalSymptoms && Array.isArray(clinicalSymptoms)) {
         clinicalSymptoms.forEach((value, index) => {
-            const result = validateCell(value, 'clinicalSymptoms');
+            const result = validateCell(value, COLUMN_KEYS.CLINICAL_SYMPTOMS);
             if (!result.valid) {
-                errors.push({ field: `clinicalSymptoms[${index}]`, message: result.message });
+                errors.push({ field: `${COLUMN_KEYS.CLINICAL_SYMPTOMS}[${index}]`, message: result.message });
             }
         });
     }
 
     // 증상발현시간 검증
     if (row.symptomOnset !== undefined) {
-        const result = validateCell(row.symptomOnset, 'symptomOnset');
+        const result = validateCell(row.symptomOnset as CellValue, COLUMN_KEYS.SYMPTOM_ONSET);
         if (!result.valid) {
-            errors.push({ field: 'symptomOnset', message: result.message });
+            errors.push({ field: COLUMN_KEYS.SYMPTOM_ONSET, message: result.message });
         }
     }
 
     // 개별 노출시간 검증
     if (row.individualExposureTime !== undefined) {
-        const result = validateCell(row.individualExposureTime, 'individualExposureTime');
+        const result = validateCell(row.individualExposureTime as CellValue, COLUMN_KEYS.INDIVIDUAL_EXPOSURE);
         if (!result.valid) {
-            errors.push({ field: 'individualExposureTime', message: result.message });
+            errors.push({ field: COLUMN_KEYS.INDIVIDUAL_EXPOSURE, message: result.message });
         }
     }
 
     // 식단정보 검증
-    const dietInfo = row.dietInfo as any[];
+    const dietInfo = row.dietInfo;
     if (dietInfo && Array.isArray(dietInfo)) {
         dietInfo.forEach((value, index) => {
-            const result = validateCell(value, 'dietInfo');
+            const result = validateCell(value, COLUMN_KEYS.DIET_INFO);
             if (!result.valid) {
-                errors.push({ field: `dietInfo[${index}]`, message: result.message });
+                errors.push({ field: `${COLUMN_KEYS.DIET_INFO}[${index}]`, message: result.message });
             }
         });
     }
@@ -289,7 +291,7 @@ export function validateRow(row: GridRow, _headers?: any): { valid: boolean; err
 /**
  * 전체 데이터를 검증합니다.
  */
-export function validateData(rows: GridRow[], headers?: any): DataValidationResult {
+export function validateData(rows: GridRow[], headers?: unknown): DataValidationResult {
     const allErrors: ValidationError[] = [];
 
     rows.forEach((row, rowIndex) => {
@@ -319,7 +321,7 @@ export function validateData(rows: GridRow[], headers?: any): DataValidationResu
 /**
  * 실시간 검증을 위한 함수 (DOM 조작 포함)
  */
-export function validateAndShowFeedback(value: any, columnType: string, cellElement: HTMLElement): boolean {
+export function validateAndShowFeedback(value: CellValue, columnType: string, cellElement: HTMLElement): boolean {
     const result = validateCell(value, columnType);
     if (!result.valid) {
         cellElement.classList.add('validation-error');

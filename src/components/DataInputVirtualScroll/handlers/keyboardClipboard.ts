@@ -1,6 +1,5 @@
-
 import { showToast } from '../logic/toast';
-import type { GridHeader, GridRow } from '@/types/grid';
+import type { GridHeader, GridRow, CellUpdatePayload } from '@/types/grid';
 import type { GridContext } from '@/types/virtualGridContext';
 import { useHistoryStore } from '@/stores/historyStore';
 
@@ -44,11 +43,11 @@ export async function handleCopy(context: GridContext) {
             if (!columnMeta) continue;
 
             if (r < 0) { // Header
-                rowData.push(getCellValue(null, columnMeta, r));
+                rowData.push(String(getCellValue(null, columnMeta, r) ?? ''));
             } else { // Body
                 const row = rows.value[r];
                 if (row) {
-                     rowData.push(getCellValue(row, columnMeta, r));
+                     rowData.push(String(getCellValue(row, columnMeta, r) ?? ''));
                 } else {
                      rowData.push('');
                 }
@@ -61,7 +60,12 @@ export async function handleCopy(context: GridContext) {
     }
 
     try {
-        await (navigator as any).clipboard.writeText(clipboardData);
+        const nav = navigator as any;
+        if (nav.clipboard) {
+            await nav.clipboard.writeText(clipboardData);
+        } else {
+            console.warn('Clipboard API not available');
+        }
     } catch (err) {
         console.error('Failed to copy text: ', err);
         showToast(context.t('common.copyFailed'), 'error');
@@ -73,40 +77,35 @@ export async function handlePaste(context: GridContext) {
     const { selectedCell } = selectionSystem.state;
 
     if (selectedCell.rowIndex === null || selectedCell.colIndex === null) {
-        // Removed header check to allow pasting into header
         return;
     }
 
     try {
+        const nav = navigator as any;
+        if (!nav.clipboard) {
+            console.warn('Clipboard API not available');
+            return;
+        }
 
-        const clipboardText = await (navigator as any).clipboard.readText();
+        const clipboardText = await nav.clipboard.readText();
         if (!clipboardText) return;
         
         const historyStore = useHistoryStore();
-        historyStore.captureSnapshot('paste'); // Capture before paste
+        historyStore.captureSnapshot('paste'); 
 
         const parsedData = clipboardText
-            .split(/\r?\n/) // Windows(\r\n)와 Unix(\n) 모두 처리
-            .filter((row: string) => row.trim() !== '') // 빈 행 제거
+            .split(/\r?\n/)
+            .filter((row: string) => row.trim() !== '') 
             .map((row: string) => row.split('\t').map((cell: string) => cell.replace(/\r/g, '').trim()));
 
         const startRow = selectedCell.rowIndex;
         const startCol = selectedCell.colIndex;
 
-        // Implement paste logic using epidemicStore
-        // Note: epidemicStore does not have a bulk 'pasteData' action, so we iterate.
-        // Or if we implemented 'updateCellsBatch' or similar.
-        // For efficiency, direct mutation via action would be best.
-        // Assuming epidemicStore has updateCell.
-
-        // Expand rows if needed
         const requiredRows = startRow + parsedData.length;
         if (requiredRows > context.rows.value.length) {
             const rowsToAdd = requiredRows - context.rows.value.length;
-            epidemicStore.addRows(rowsToAdd); // Assuming addRows exists
+            epidemicStore.addRows(rowsToAdd);
         }
-
-        const updates: any[] = [];
 
         parsedData.forEach((rowValues: string[], rIndex: number) => {
             const currentRowIndex = startRow + rIndex;
@@ -124,7 +123,6 @@ export async function handlePaste(context: GridContext) {
             });
         });
 
-        // UX 개선: 붙여넣기된 영역을 시각적으로 선택하고 첫 번째 셀 활성화
         const endRow = startRow + parsedData.length - 1;
         const maxRowLength = parsedData.reduce((max: number, row: string[]) => Math.max(max, row.length), 0);
         const endCol = startCol + maxRowLength - 1;
@@ -134,7 +132,6 @@ export async function handlePaste(context: GridContext) {
             await ensureCellIsVisible(startRow, startCol);
         }
 
-        // Trigger Validation on Pasted Data
         if (context.validationManager) {
             context.validationManager.handlePasteData(parsedData, startRow, startCol, allColumnsMeta);
         }

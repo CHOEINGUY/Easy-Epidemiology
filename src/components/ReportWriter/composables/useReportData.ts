@@ -481,7 +481,7 @@ export function useReportData(): ReportData {
     const clinicalHeaders = epidemicStore.headers?.clinical || [];
     const diagnosisLabel = t('common.symptom') || (locale.value === 'ko' ? '증상' : 'Symptom');
     const firstCase = rows.value.find((r: any) => r.symptomOnset && new Date(r.symptomOnset).getTime() === Math.min(...rows.value.map((rr:any)=>rr.symptomOnset?new Date(rr.symptomOnset).getTime():Infinity)));
-    const diagnosis = firstCase?.clinical_diagnosis?.split(',').map((val: any, idx: number) => String(val) === '1' ? (clinicalHeaders[idx] || `${diagnosisLabel}${idx+1}`) : null).filter(Boolean).join(', ');
+    const diagnosis = String(firstCase?.clinical_diagnosis ?? '').split(',').map((val: any, idx: number) => String(val) === '1' ? (clinicalHeaders[idx] || `${diagnosisLabel}${idx+1}`) : null).filter(Boolean).join(', ');
     return diagnosis || null;
   });
 

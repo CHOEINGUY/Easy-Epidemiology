@@ -1,5 +1,6 @@
 import { GridContext } from '@/types/virtualGridContext';
 import { GridHeader } from '@/types/grid';
+import { GridDomManager } from '../utils/domManager';
 
 let autoScrollInterval: number | null = null;
 /**
@@ -61,7 +62,7 @@ export function handleVirtualCellMouseDown(
     }
 
     // Block selection if clicking inside the currently edited cell
-    const { isEditing, editingCell } = selectionSystem.state as any;
+    const { isEditing, editingCell } = selectionSystem.state;
     if (isEditing &&
         editingCell.rowIndex === originalRowIndex &&
         editingCell.colIndex === colIndex) {

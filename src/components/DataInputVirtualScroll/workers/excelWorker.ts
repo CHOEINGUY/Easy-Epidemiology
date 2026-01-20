@@ -5,7 +5,7 @@ import { RecoveryHeaders } from '@/store/utils/recovery';
 import { GridRow } from '@/types/grid';
 
 // Define the worker context
-const ctx: Worker = self as any;
+const ctx: Worker = self as unknown as Worker;
 
 // 워커 오류 처리
 ctx.onerror = (error) => {
@@ -23,7 +23,8 @@ interface ColumnRanges {
   diet: { start: number; end: number };
 }
 
-function findColumnRanges(headerRow1: any[], headerRow2: any[]): ColumnRanges {
+function findColumnRanges(headerRow1: unknown[], headerRow2: unknown[]): ColumnRanges {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ranges: any = {};
 
   // 연번 컬럼 (고정) - Excel template 에서 첫 열
@@ -31,37 +32,37 @@ function findColumnRanges(headerRow1: any[], headerRow2: any[]): ColumnRanges {
 
   // 환자여부 컬럼 위치 탐색 (행 1 우선, 실패 시 기본 1)
   const isPatientIndex = headerRow1.findIndex(cell =>
-    cell?.toString().includes('환자여부') || cell?.toString().includes('환자 여부')
+    String(cell ?? '').includes('환자여부') || String(cell ?? '').includes('환자 여부')
   );
   ranges.isPatient = isPatientIndex !== -1 ? isPatientIndex : 1;
 
   // 확진 여부 컬럼 위치 탐색 (환자여부 다음)
   const isConfirmedCaseIndex = headerRow1.findIndex(cell =>
-    cell?.toString().includes('확진여부') || cell?.toString().includes('확진 여부')
+    String(cell ?? '').includes('확진여부') || String(cell ?? '').includes('확진 여부')
   );
   ranges.isConfirmedCase = isConfirmedCaseIndex !== -1 ? isConfirmedCaseIndex : -1;
 
   // 기본정보 범위
-  const basicStart = headerRow1.findIndex(cell => cell?.toString().includes('기본정보'));
+  const basicStart = headerRow1.findIndex(cell => String(cell ?? '').includes('기본정보'));
   if (basicStart === -1) throw new Error('기본정보 카테고리 없음');
   let basicEnd = basicStart + 1;
-  while (basicEnd < headerRow1.length && (!headerRow1[basicEnd] || headerRow1[basicEnd].toString().trim()==='')) {
+  while (basicEnd < headerRow1.length && (!headerRow1[basicEnd] || String(headerRow1[basicEnd]).trim()==='')) {
     basicEnd++;
   }
   ranges.basic = { start: basicStart, end: basicEnd };
 
   // 임상증상 범위
-  const clinicalStart = headerRow1.findIndex(cell => cell?.toString().includes('임상증상'));
+  const clinicalStart = headerRow1.findIndex(cell => String(cell ?? '').includes('임상증상'));
   if (clinicalStart === -1) throw new Error('임상증상 카테고리 없음');
   let clinicalEnd = clinicalStart + 1;
-  while (clinicalEnd < headerRow1.length && (!headerRow1[clinicalEnd] || headerRow1[clinicalEnd].toString().trim()==='')) {
+  while (clinicalEnd < headerRow1.length && (!headerRow1[clinicalEnd] || String(headerRow1[clinicalEnd]).trim()==='')) {
     clinicalEnd++;
   }
   ranges.clinical = { start: clinicalStart, end: clinicalEnd };
 
   // 증상발현시간 컬럼 (2행 검색)
   const onsetIdx = headerRow2.findIndex(cell =>
-    cell?.toString().includes('증상발현시간') || cell?.toString().includes('발현시간')
+    String(cell ?? '').includes('증상발현시간') || String(cell ?? '').includes('발현시간')
   );
   if (onsetIdx === -1) throw new Error('증상발현시간 컬럼 없음');
   ranges.symptomOnset = onsetIdx;
@@ -73,14 +74,14 @@ function findColumnRanges(headerRow1: any[], headerRow2: any[]): ColumnRanges {
   ranges.individualExposureTime = exposureIdx; // -1 if not present
 
   // 식단 범위
-  const dietStart = headerRow1.findIndex(cell => cell?.toString().includes('식단'));
+  const dietStart = headerRow1.findIndex(cell => String(cell ?? '').includes('식단'));
   if (dietStart === -1) throw new Error('식단 카테고리 없음');
   ranges.diet = { start: dietStart, end: headerRow2.length };
 
   return ranges as ColumnRanges;
 }
 
-function convertExcelDate(cellValue: any): string {
+function convertExcelDate(cellValue: unknown): string {
   if (cellValue === null || cellValue === undefined || String(cellValue).trim() === '') return '';
   const str = String(cellValue).trim();
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(str)) return str;
@@ -117,7 +118,7 @@ interface SmartMatchingResult {
 /**
  * 빈 열을 감지하고 제거하는 스마트 매칭 함수
  */
-function smartColumnMatching(headerRow: any[], dataRows: any[][], start: number, end: number): SmartMatchingResult {
+function smartColumnMatching(headerRow: unknown[], dataRows: unknown[][], start: number, end: number): SmartMatchingResult {
   const validHeaderIndices: number[] = [];
   const validHeaders: string[] = [];
   let emptyColumnCount = 0;
@@ -158,7 +159,7 @@ interface ParsedAOAData {
   emptyColumnCount: number;
 }
 
-function parseAOAData(aoa: any[][]): ParsedAOAData {
+function parseAOAData(aoa: unknown[][]): ParsedAOAData {
   const [headerRow1 = [], headerRow2 = []] = aoa;
   const dataRows = aoa.slice(2);
 
@@ -181,7 +182,7 @@ function parseAOAData(aoa: any[][]): ParsedAOAData {
     .filter(row => {
       // A열(연번) 제외하고 데이터 유무 확인 (연번은 필수 아님)
       const dataCells = row.slice(1);
-      return dataCells.some(cell => cell !== null && cell !== undefined && cell.toString().trim() !== '');
+      return dataCells.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
     })
     .map((row, index) => ({
       isPatient: (row[ranges.isPatient] ?? '').toString().trim(),
@@ -220,13 +221,14 @@ ctx.onmessage = function (e: MessageEvent) {
     const sheet = wb.Sheets[firstSheetName];
 
     // Convert to AOA – streaming is not easily available in browser; this is simplified.
-    const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false }) as any[][];
+    const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false }) as unknown[][];
     ctx.postMessage({ type: 'progress', progress: 80 });
 
     const parsed = parseAOAData(aoa);
 
     ctx.postMessage({ type: 'complete', data: parsed });
-  } catch (err: any) {
-    ctx.postMessage({ type: 'error', error: err.message || String(err) });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    ctx.postMessage({ type: 'error', error: message });
   }
 };

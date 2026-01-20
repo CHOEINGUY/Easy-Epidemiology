@@ -21,21 +21,9 @@ import { useGridStore } from '@/stores/gridStore';
 
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useHistoryStore } from '@/stores/historyStore';
-import type { GridHeader, GridRow } from '@/types/grid';
+import type { GridHeader, GridRow, HeaderGroup } from '@/types/grid';
 import type { ValidationManager } from '@/validation/ValidationManager';
 import type { VirtualSelectionSystem } from '../logic/virtualSelectionSystem';
-
-export interface HeaderGroup {
-  text: string;
-  rowspan?: number;
-  colspan?: number;
-  startColIndex: number;
-  style?: Record<string, string | number>;
-  type?: string;
-  addable?: boolean;
-  deletable?: boolean;
-  columnCount?: number;
-}
 
 export function useGridColumns(
   validationManager: ValidationManager | undefined,

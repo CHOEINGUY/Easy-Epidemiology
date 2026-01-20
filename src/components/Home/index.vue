@@ -25,7 +25,7 @@
         platform: $t('home.system.status.platformValue')
       }"
       :current-date="currentDate"
-      :system-features="$tm('home.system.features')"
+      :system-features="$tm('home.system.features') as any"
       :target-users="[
         { name: $t('home.target.users.gov'), type: 'gov' },
         { name: $t('home.target.users.local'), type: 'local' },

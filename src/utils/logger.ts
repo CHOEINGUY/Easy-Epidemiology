@@ -15,7 +15,8 @@ type LogLevel = typeof LOG_LEVELS[keyof typeof LOG_LEVELS];
 
 // 현재 환경의 로그 레벨 가져오기
 const getCurrentLogLevel = (): LogLevel => {
-  const envLogLevel = process.env.VUE_APP_LOG_LEVEL || 'INFO';
+  // Vite uses import.meta.env, check for that or process.env fallback
+  const envLogLevel = (import.meta as any).env?.VITE_APP_LOG_LEVEL || (process.env as any).VUE_APP_LOG_LEVEL || 'INFO';
   return LOG_LEVELS[envLogLevel.toUpperCase() as keyof typeof LOG_LEVELS] || LOG_LEVELS.INFO;
 };
 
@@ -26,33 +27,33 @@ const shouldLog = (level: LogLevel): boolean => {
 };
 
 export interface Logger {
-  debug: (...args: any[]) => void;
-  info: (...args: any[]) => void;
-  warn: (...args: any[]) => void;
-  error: (...args: any[]) => void;
+  debug: (...args: unknown[]) => void;
+  info: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
 }
 
 // 로깅 함수들
 export const logger: Logger = {
-  debug: (...args: any[]) => {
+  debug: (...args: unknown[]) => {
     if (shouldLog(LOG_LEVELS.DEBUG)) {
       console.log('[DEBUG]', ...args);
     }
   },
   
-  info: (...args: any[]) => {
+  info: (...args: unknown[]) => {
     if (shouldLog(LOG_LEVELS.INFO)) {
       console.log('[INFO]', ...args);
     }
   },
   
-  warn: (...args: any[]) => {
+  warn: (...args: unknown[]) => {
     if (shouldLog(LOG_LEVELS.WARN)) {
       console.warn('[WARN]', ...args);
     }
   },
   
-  error: (...args: any[]) => {
+  error: (...args: unknown[]) => {
     if (shouldLog(LOG_LEVELS.ERROR)) {
       console.error('[ERROR]', ...args);
     }
@@ -60,15 +61,17 @@ export const logger: Logger = {
 };
 
 // 개발 환경에서만 실행되는 로그
-export const devLog = (...args: any[]): void => {
-  if (process.env.NODE_ENV === 'development') {
+export const devLog = (...args: unknown[]): void => {
+  const isDev = (import.meta as any).env?.MODE === 'development' || process.env.NODE_ENV === 'development';
+  if (isDev) {
     console.log('[DEV]', ...args);
   }
 };
 
 // 성능 측정용 로그 (배포 환경에서 제거)
 export const perfLog = <T>(label: string, fn: () => T): T => {
-  if (process.env.NODE_ENV === 'development') {
+  const isDev = (import.meta as any).env?.MODE === 'development' || process.env.NODE_ENV === 'development';
+  if (isDev) {
     console.time(`[PERF] ${label}`);
     const result = fn();
     console.timeEnd(`[PERF] ${label}`);
@@ -80,25 +83,25 @@ export const perfLog = <T>(label: string, fn: () => T): T => {
 // 컴포넌트별 로거 생성 (기존 호환성 유지)
 export const createComponentLogger = (componentName: string): Logger => {
   return {
-    debug: (...args: any[]) => {
+    debug: (...args: unknown[]) => {
       if (shouldLog(LOG_LEVELS.DEBUG)) {
         console.log(`[${componentName}] [DEBUG]`, ...args);
       }
     },
     
-    info: (...args: any[]) => {
+    info: (...args: unknown[]) => {
       if (shouldLog(LOG_LEVELS.INFO)) {
         console.log(`[${componentName}] [INFO]`, ...args);
       }
     },
     
-    warn: (...args: any[]) => {
+    warn: (...args: unknown[]) => {
       if (shouldLog(LOG_LEVELS.WARN)) {
         console.warn(`[${componentName}] [WARN]`, ...args);
       }
     },
     
-    error: (...args: any[]) => {
+    error: (...args: unknown[]) => {
       if (shouldLog(LOG_LEVELS.ERROR)) {
         console.error(`[${componentName}] [ERROR]`, ...args);
       }

@@ -1,20 +1,22 @@
-import { GridHeader } from '@/types/grid';
+import { GridHeader, GridRow } from '@/types/grid';
 import { useEpidemicStore } from '@/stores/epidemicStore';
 import { ValidationErrorManager } from './ValidationErrorManager';
 import { validateCell as _validateCell } from '@/store/utils/validation';
 
 type EpidemicStore = ReturnType<typeof useEpidemicStore>;
+type ToastType = 'success' | 'warning' | 'error' | 'info';
+type TranslationFn = (key: string, params?: Record<string, unknown>) => string;
 
 export class ValidationDataOps {
   private store: EpidemicStore;
   private errorManager: ValidationErrorManager;
   private debug: boolean;
   private onProgress: ((progress: number) => void) | null;
-  private showToast: ((message: string, type: 'success' | 'warning' | 'error' | 'info') => void) | null;
-  private _validateCellFn: ((rowIndex: number, colIndex: number, value: any, type: string, immediate: boolean) => void) | null;
-  private _getCellValueFn: ((row: any, columnMeta: GridHeader) => any) | null;
+  private showToast: ((message: string, type: ToastType) => void) | null;
+  private _validateCellFn: ((rowIndex: number, colIndex: number, value: unknown, type: string, immediate: boolean) => void) | null;
+  private _getCellValueFn: ((row: GridRow, columnMeta: GridHeader) => unknown) | null;
 
-  constructor(store: EpidemicStore, errorManager: ValidationErrorManager, options: { debug?: boolean; onProgress?: (p: number) => void; showToast?: (msg: string, type: any) => void } = {}) {
+  constructor(store: EpidemicStore, errorManager: ValidationErrorManager, options: { debug?: boolean; onProgress?: (p: number) => void; showToast?: (msg: string, type: ToastType) => void } = {}) {
     this.store = store;
     this.errorManager = errorManager;
     this.debug = options.debug || false;
@@ -24,15 +26,15 @@ export class ValidationDataOps {
     this._getCellValueFn = null;
   }
 
-  setValidateCellFn(validateCellFn: (rowIndex: number, colIndex: number, value: any, type: string, immediate: boolean) => void) {
+  setValidateCellFn(validateCellFn: (rowIndex: number, colIndex: number, value: unknown, type: string, immediate: boolean) => void) {
     this._validateCellFn = validateCellFn;
   }
 
-  setGetCellValueFn(getCellValueFn: (row: any, columnMeta: GridHeader) => any) {
+  setGetCellValueFn(getCellValueFn: (row: GridRow, columnMeta: GridHeader) => unknown) {
     this._getCellValueFn = getCellValueFn;
   }
 
-  async handleDataImport(importedData: any[], columnMetas: GridHeader[]) {
+  async handleDataImport(importedData: GridRow[], columnMetas: GridHeader[]) {
     this.errorManager.clearAllErrors();
     
     const chunkSize = 1000;
@@ -98,23 +100,7 @@ export class ValidationDataOps {
     const errors = this.store.validationState.errors;
     for (const key of errors.keys()) {
       const parts = key.split('_');
-      // Warning: key might be unique key format!
-      // ValidationDataOps in JS seemed to assume row_col format for this paste area logic?
-      // Or maybe 'get' based logic.
-      // JS code: const [errorRow, errorCol] = key.split('_').map(Number);
-      // This implies it only supported numerical keys? 
-      // If we use unique keys, this logic needs to be robust.
-      // But usually `pasteData` operation works on visual grid coordinates.
-      // Unique keys contain underscores too.
-      // Let's rely on standard parsing if possible, or skip unique keys if we cannot map them back to colIndex easily without looking up.
-      
-      // If we strictly follow the visual area, we should look up which columns fall into this area.
-      // But clearing errors by coordinate is tricky if errors are stored by unique key.
-      
-      // Alternative: Iterate all columns in range, get unique key, form error key options.
-      // This is expensive? 
-      // Let's stick to the direct key parsing if it matches row_col.
-      
+      // Logic for row_col keys
       if (parts.length === 2 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1]))) {
           const errorRow = Number(parts[0]);
           const errorCol = Number(parts[1]);
@@ -132,15 +118,11 @@ export class ValidationDataOps {
       const [row, col] = key.split('_').map(Number);
       this.store.removeValidationError({ rowIndex: row, colIndex: col });
     });
-    
-    // We should also handle Unique Keys if we can map them.
-    // Ideally we iterate the target area:
-    // for r in rows, for c in cols:
-    //   this.errorManager.removeError(r, c) which handles unique keys lookup internally.
   }
 
-  validateCellImmediate(rowIndex: number, colIndex: number, value: any, columnType: string, columnMeta?: GridHeader) {
-    const result = _validateCell(value, columnType);
+  validateCellImmediate(rowIndex: number, colIndex: number, value: unknown, columnType: string, columnMeta?: GridHeader) {
+    // Use utility directly for immediate return
+    const result = _validateCell(value as any, columnType);
     
     if (!result.valid) {
       this.errorManager.addError(rowIndex, colIndex, result.message || 'Validation failed', columnMeta);
@@ -149,7 +131,7 @@ export class ValidationDataOps {
     return result;
   }
 
-  showPasteValidationSummary(errors: any[], totalCells: number, t?: any) {
+  showPasteValidationSummary(errors: any[], totalCells: number, t?: TranslationFn) {
     const errorCount = errors.length;
     const errorRate = ((errorCount / totalCells) * 100).toFixed(1);
     
@@ -185,7 +167,7 @@ export class ValidationDataOps {
     }
   }
 
-  validateIndividualExposureColumn(exposureData: { rowIndex: number; value: string }[], colIndex: number, onProgress: ((p: number) => void) | null = null) {
+  validateIndividualExposureColumn(exposureData: { rowIndex: number; value: unknown }[], colIndex: number, onProgress: ((p: number) => void) | null = null) {
     if (!exposureData || exposureData.length === 0) return;
     
     if (this.debug) {
@@ -194,19 +176,6 @@ export class ValidationDataOps {
     
     const totalCells = exposureData.length;
     const chunkSize = 50;
-    
-    // Using simple loop for now, async via promise/timeout is verbose in TS without async helper class standard
-    // Or we keep the chunk logic via setTimeout if run in browser
-    // Since this is a method, we can't easily make it fully async without `await` at callsites?
-    // The JS version used a loop with setTimeout(..., 0) if totalCells > 200? No, it was synchronous loop logic but had `setTimeout` call uselessly at end of loop?
-    // Wait: `if (i + chunkSize < totalCells && totalCells > 200) { setTimeout(() => {}, 0); }` -> This does nothing to yield.
-    // It just creates a timer that does empty function. The loop wasn't async in JS unless it was breaking out. 
-    // Ah, checking JS again:
-    // for (let i = 0... ) { ... }
-    // It was a synchronous loop. The setTimeout was a no-op? 
-    // Actually, maybe I misread.
-    // Yes, the JS code was purely synchronous blocking unless I missed an `await`.
-    // So I will implement synchronous here too.
     
     for (let i = 0; i < totalCells; i += chunkSize) {
       const chunk = exposureData.slice(i, i + chunkSize);
@@ -226,7 +195,7 @@ export class ValidationDataOps {
     if (onProgress) onProgress(100);
   }
 
-  validateConfirmedCaseColumn(confirmedCaseData: { rowIndex: number; value: string }[], colIndex: number, onProgress: ((p: number) => void) | null = null) {
+  validateConfirmedCaseColumn(confirmedCaseData: { rowIndex: number; value: unknown }[], colIndex: number, onProgress: ((p: number) => void) | null = null) {
     if (!confirmedCaseData || confirmedCaseData.length === 0) return;
     
     const totalCells = confirmedCaseData.length;
@@ -249,13 +218,13 @@ export class ValidationDataOps {
     if (onProgress) onProgress(100);
   }
 
-  private _validateCell(rowIndex: number, colIndex: number, value: any, type: string, immediate: boolean) {
+  private _validateCell(rowIndex: number, colIndex: number, value: unknown, type: string, immediate: boolean) {
     if (this._validateCellFn) {
       this._validateCellFn(rowIndex, colIndex, value, type, immediate);
     }
   }
 
-  private _getCellValue(row: any, columnMeta: GridHeader): any {
+  private _getCellValue(row: GridRow, columnMeta: GridHeader): unknown {
     if (this._getCellValueFn) {
       return this._getCellValueFn(row, columnMeta);
     }

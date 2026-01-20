@@ -4,6 +4,7 @@ export type UserStatus = 'active' | 'pending' | 'suspended' | 'inactive' | 'appr
 export interface User {
   id: string;
   email: string;
+  username?: string; // Added for legacy support
   name: string;
   organization?: string;
   role: UserRole;

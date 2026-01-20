@@ -2,9 +2,17 @@
 import { nextTick } from 'vue';
 import { setupDateTimeInputHandling } from './keyboardDateTime';
 import { findNextNavigableCell } from './keyboardNavigation';
-import type { GridHeader, GridRow } from '@/types/grid';
+import type { GridHeader } from '@/types/grid';
 import type { GridContext } from '@/types/virtualGridContext';
 import { useHistoryStore } from '@/stores/historyStore';
+import { CellInputState } from '@/components/DataInputVirtualScroll/logic/virtualSelectionSystem';
+import { GridDomManager } from '../utils/domManager';
+
+// Extend HTMLElement to include custom properties used by DateTimePicker
+interface DateTimeCellElement extends HTMLElement {
+    __dtSaveValue?: () => Promise<void>;
+    __dtKeyHandler?: (event: KeyboardEvent) => void;
+}
 
 export function isTypingKey(key: string): boolean {
     return key.length === 1 && !/[`~]/.test(key);
@@ -14,7 +22,7 @@ export function isTypingKey(key: string): boolean {
  * 선택된 셀에서 타이핑을 시작하면 편집 모드로 전환합니다.
  */
 export async function handleTypeToEdit(event: KeyboardEvent, context: GridContext) {
-    const { selectionSystem, rows, allColumnsMeta, startEditing, getCellValue, gridStore, storageManager, epidemicStore, focusGrid, ensureCellIsVisible } = context;
+    const { selectionSystem, rows, allColumnsMeta, startEditing, getCellValue, gridStore, storageManager, focusGrid, ensureCellIsVisible } = context;
     const { state } = selectionSystem;
 
     if (state.isEditing) return;
@@ -29,13 +37,9 @@ export async function handleTypeToEdit(event: KeyboardEvent, context: GridContex
     const isDateTimeColumn = column.type === 'symptomOnset' || column.type === 'individualExposureTime';
 
     try {
-        // 오버레이 시스템 사용 (전역 함수로 등록됨)
         // 오버레이 시스템 사용 (Dependency Injection)
         if (context.overlayController) {
-            const cellSelector = rowIndex < 0
-                ? `th[data-col="${colIndex}"]`
-                : `td[data-row="${rowIndex}"][data-col="${colIndex}"]`;
-            const cellElement = document.querySelector(cellSelector) as HTMLElement;
+            const cellElement = GridDomManager.getCellElement(rowIndex, colIndex);
             
             if (cellElement) {
                 // 초기 키 값과 함께 오버레이 시작
@@ -47,21 +51,18 @@ export async function handleTypeToEdit(event: KeyboardEvent, context: GridContex
         // Fallback: 기존 contenteditable 방식
         if (rowIndex < 0) {
             // 헤더 셀 편집
-            startEditing(rowIndex, colIndex, getCellValue, null, context.gridStore as any, allColumnsMeta);
+            startEditing(rowIndex, colIndex, getCellValue, null, context.gridStore as unknown as CellInputState, allColumnsMeta);
         } else {
             // 바디 셀 편집
             const row = rows.value[rowIndex];
             if (row) {
-                startEditing(rowIndex, colIndex, getCellValue, row, context.gridStore as any, allColumnsMeta);
+                startEditing(rowIndex, colIndex, getCellValue, row, context.gridStore as unknown as CellInputState, allColumnsMeta);
             }
         }
 
         await nextTick();
 
-        const cellSelector = rowIndex < 0
-            ? `[data-col="${colIndex}"]`
-            : `[data-row="${rowIndex}"][data-col="${colIndex}"]`;
-        const cellElement = document.querySelector(cellSelector) as HTMLElement;
+        const cellElement = GridDomManager.getCellElementByAttribute(rowIndex, colIndex);
 
         if (cellElement) {
             cellElement.focus();
@@ -151,14 +152,7 @@ export async function handleTypeToEdit(event: KeyboardEvent, context: GridContex
 
                 cellElement.textContent = event.key;
 
-                const range = document.createRange();
-                const selection = window.getSelection();
-                range.selectNodeContents(cellElement);
-                range.collapse(false);
-                if (selection) {
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                }
+                GridDomManager.selectContent(cellElement);
 
                 const inputEvent = new Event('input', { bubbles: true });
                 cellElement.dispatchEvent(inputEvent);
@@ -179,11 +173,6 @@ export async function handleClearSelectedData(context: GridContext) {
     const historyStore = useHistoryStore();
 
     historyStore.captureSnapshot('clear_selection');
-
-    const changedCells: any[] = []; // Snapshot tracking (simplified)
-
-    // TODO: Snapshot logic needs HistoryStore integration if we want full undo support for this action properly.
-    // For now, we focus on replacing GridService dispatch calls.
 
     if (selectedRowsIndividual.size > 0) {
         const rowIndices = Array.from(selectedRowsIndividual);
@@ -226,23 +215,10 @@ export async function handleClearSelectedData(context: GridContext) {
         }
     }
     
-    // NOTE: epidemicStore.clearRangeData might not exist. I should check.
-    // If not, I can loop and call updateCell or clearRowData.
-    // Given the complexity of implementing `clearRangeData` in store right now without reading it, 
-    // I will implement a loop here if unsure, but checking `epidemicStore` would be better.
-    // Previously I used `gridService.dispatch('updateCellsBatch', updates)`.
-    // EpidemicStore SHOULD have `updateCellsBatch`. I will assume it does or use loop.
-    
-    // Let's use `updateMultipleCells` if available or loop.
-    // I will assume `updateCell` is cheap enough or `epidemicStore` handles reactivity well.
-    // Or check if I can define it.
-    
     // --- Update Validation State ---
-    const clearedCells: { row: number, col: number }[] = [];
+    const clearedCells: { rowIndex: number, colIndex: number }[] = [];
     
     if (selectedRowsIndividual.size > 0) {
-        // Can't easily list all cols for rows without iterating all cols.
-        // Instead, use validationManager.clearErrorsForRow
         if (context.validationManager) {
              selectedRowsIndividual.forEach(r => context.validationManager?.clearErrorsForRow(r));
         }
@@ -251,7 +227,7 @@ export async function handleClearSelectedData(context: GridContext) {
     if (selectedCellsIndividual.size > 0) {
         selectedCellsIndividual.forEach(key => {
              const [r, c] = key.split('_').map(Number);
-             clearedCells.push({ row: r, col: c });
+             clearedCells.push({ rowIndex: r, colIndex: c });
         });
     }
 
@@ -261,21 +237,13 @@ export async function handleClearSelectedData(context: GridContext) {
             
         for (let r = selectedRange.start.rowIndex!; r <= selectedRange.end.rowIndex!; r++) {
             for (let c = selectedRange.start.colIndex!; c <= selectedRange.end.colIndex!; c++) {
-                 clearedCells.push({ row: r, col: c });
+                 clearedCells.push({ rowIndex: r, colIndex: c });
             }
         }
     }
     
     if (clearedCells.length > 0 && context.validationManager) {
-        // handleDataClear will re-validate (check for required) or just clear?
-        // In ValidationRowColumnOps.ts (where handleDataClear usually is), let's assume it clears errors.
-        // If the cell becomes empty, it might be valid or invalid (if required).
-        // If we just want to remove errors for now assuming empty is valid:
-        context.validationManager.clearErrorsForCells(clearedCells);
-        // Or strictly: context.validationManager.handleDataClear(clearedCells);
-        // Let's use handleDataClear if we confirmed it exists.
-        // I saw handleDataClear in ValidationManager.ts list of delegations.
-        context.validationManager.handleDataClear(clearedCells);
+        context.validationManager.handleDataClear(clearedCells.map(c => ({ rowIndex: c.rowIndex, colIndex: c.colIndex })));
     }
 
     return { changed: true };
@@ -290,22 +258,14 @@ export async function handleEditModeKeyDown(event: KeyboardEvent, context: GridC
     if (editRow === null || editCol === null) return false;
 
     // --- 오버레이 시스템 처리 ---
-    // 오버레이가 켜져있는데 포커스를 잃어서 그리드로 이벤트가 샌 경우 처리
     if (context.overlayController?.isVisible()) {
         if (key === 'Enter') {
             event.preventDefault();
             event.stopPropagation();
-            context.overlayController.confirm(gridStore.tempValue || '');
-            // 오버레이의 moveNextRow는 confirmCellEditOverlay 내부에서 처리되지 않으므로 수동 호출
-            // 하지만 confirmCellEditOverlay는 단순히 값 저장만 함. 이동은 별도.
-            // CellEditOverlay.vue는 이벤트를 emit하지만, 여기서는 직접 네비게이션 처리해야 함.
-            
-            // 오버레이 닫기 및 저장
-            // (window as any).confirmCellEditOverlay가 이미 저장 및 닫기를 수행함
+            context.overlayController.confirm(String(gridStore.tempValue ?? ''));
             
             await nextTick();
             const nextRow = editRow < rows.value.length - 1 ? (editRow) + 1 : editRow;
-            // 헤더(-1) -> 첫 행(0) 처리
             const targetRow = editRow < 0 ? 0 : nextRow;
             
             selectionSystem.selectCell(targetRow, editCol);
@@ -315,7 +275,7 @@ export async function handleEditModeKeyDown(event: KeyboardEvent, context: GridC
         } else if (key === 'Tab') {
             event.preventDefault();
             event.stopPropagation();
-            context.overlayController.confirm(gridStore.tempValue || '');
+            context.overlayController.confirm(String(gridStore.tempValue ?? ''));
             
             await nextTick();
             const totalRows = rows.value.length;
@@ -336,7 +296,6 @@ export async function handleEditModeKeyDown(event: KeyboardEvent, context: GridC
              return true;
         }
         
-        // 타이핑 키 처리 (빠른 입력 시 포커스 잃음 방지)
         const { ctrlKey, metaKey, altKey } = event;
         if (isTypingKey(key) && !ctrlKey && !metaKey && !altKey && key.length === 1) {
              event.preventDefault();
@@ -345,8 +304,6 @@ export async function handleEditModeKeyDown(event: KeyboardEvent, context: GridC
              return true;
         }
     }
-
-
 
     // ... (기존 fallback 로직)
     const totalRows = rows.value.length;
@@ -383,7 +340,6 @@ export async function handleEditModeKeyDown(event: KeyboardEvent, context: GridC
         stopEditing(true);
 
         const nextRow = editRow < totalRows - 1 ? editRow + 1 : editRow;
-        // 헤더 처리 추가
         const targetRow = editRow < 0 ? 0 : nextRow;
 
         selectionSystem.selectCell(targetRow, editCol);
@@ -437,17 +393,12 @@ export async function handleEditModeKeyDown(event: KeyboardEvent, context: GridC
     );
 
     if (isDateTimeColumn) {
-        const cellSelector = editRow < 0 
-           ? `[data-col="${editCol}"]` 
-           : `[data-row="${editRow}"][data-col="${editCol}"]`;
-        const cellElement = document.querySelector(cellSelector);
+        const cellElement = GridDomManager.getCellElementByAttribute(editRow, editCol) as DateTimeCellElement;
 
         if (/\d/.test(key)) {
             event.preventDefault();
-            // @ts-ignore
             if (cellElement && cellElement.__dtKeyHandler) {
                 const keyEvent = new KeyboardEvent('keydown', { key });
-                 // @ts-ignore
                 cellElement.__dtKeyHandler(keyEvent);
             }
             return true;
@@ -455,10 +406,8 @@ export async function handleEditModeKeyDown(event: KeyboardEvent, context: GridC
 
         if (key === 'Backspace') {
             event.preventDefault();
-            // @ts-ignore
             if (cellElement && cellElement.__dtKeyHandler) {
                 const keyEvent = new KeyboardEvent('keydown', { key });
-                 // @ts-ignore
                 cellElement.__dtKeyHandler(keyEvent);
             }
             return true;
@@ -467,10 +416,8 @@ export async function handleEditModeKeyDown(event: KeyboardEvent, context: GridC
         if (key === 'Tab' || key === 'Enter') {
             event.preventDefault();
             
-            // @ts-ignore
-            if (cellElement && (cellElement as any).__dtSaveValue) {
-                 // @ts-ignore
-                await (cellElement as any).__dtSaveValue();
+            if (cellElement && cellElement.__dtSaveValue) {
+                await cellElement.__dtSaveValue();
             }
             return true;
         }

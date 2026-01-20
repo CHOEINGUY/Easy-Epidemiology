@@ -6,19 +6,19 @@
 
 declare global {
   interface Window {
-    [key: string]: any;
+    [key: string]: unknown;
   }
 }
 
 /**
  * 전역 객체에서 안전하게 값을 가져오는 함수
  */
-export function safeGetGlobal<T = any>(key: string, defaultValue: T | null = null): T | null {
+export function safeGetGlobal<T = unknown>(key: string, defaultValue: T | null = null): T | null {
     if (typeof window === 'undefined')
         return defaultValue;
     try {
         const value = window[key];
-        return value !== undefined ? value : defaultValue;
+        return value !== undefined ? (value as T) : defaultValue;
     }
     catch (error) {
         console.warn(`[globalAccessWrapper] ${key} 접근 중 오류:`, error);
@@ -29,7 +29,7 @@ export function safeGetGlobal<T = any>(key: string, defaultValue: T | null = nul
 /**
  * 전역 객체에 안전하게 값을 설정하는 함수
  */
-export function safeSetGlobal(key: string, value: any): boolean {
+export function safeSetGlobal(key: string, value: unknown): boolean {
     if (typeof window === 'undefined')
         return false;
     try {
@@ -45,7 +45,7 @@ export function safeSetGlobal(key: string, value: any): boolean {
 /**
  * 전역 객체에서 안전하게 함수를 호출하는 함수
  */
-export function safeCallGlobal<T = any>(functionName: string, args: any[] = [], fallback: T | null = null): T | null {
+export function safeCallGlobal<T = unknown>(functionName: string, args: unknown[] = [], fallback: T | null = null): T | null {
     if (typeof window === 'undefined')
         return fallback;
     try {
@@ -64,14 +64,14 @@ export function safeCallGlobal<T = any>(functionName: string, args: any[] = [], 
 /**
  * 전역 객체에서 안전하게 속성에 접근하는 함수
  */
-export function safeGetGlobalProperty<T = any>(objectKey: string, propertyKey: string, defaultValue: T | null = null): T | null {
+export function safeGetGlobalProperty<T = unknown>(objectKey: string, propertyKey: string, defaultValue: T | null = null): T | null {
     if (typeof window === 'undefined')
         return defaultValue;
     try {
         const obj = window[objectKey];
-        if (obj && typeof obj === 'object') {
-            const value = (obj as any)[propertyKey];
-            return value !== undefined ? value : defaultValue;
+        if (obj && typeof obj === 'object' && obj !== null) {
+            const value = (obj as Record<string, unknown>)[propertyKey];
+            return value !== undefined ? (value as T) : defaultValue;
         }
         return defaultValue;
     }

@@ -3,6 +3,15 @@ import { calculatePickerPosition } from '../utils/uiUtils';
 import { findNextNavigableCell } from './keyboardNavigation';
 import { GridContext } from '@/types/virtualGridContext';
 import { GridHeader, GridRow } from '@/types/grid';
+import { CellInputState } from '@/components/DataInputVirtualScroll/logic/virtualSelectionSystem';
+import { GridDomManager } from '../utils/domManager';
+
+// Define global window interface for legacy overlay function
+declare global {
+    interface Window {
+        startCellEditOverlay?: (rowIndex: number, colIndex: number, cellElement: HTMLElement, initialValue?: string) => void;
+    }
+}
 
 // Constants for column types
 const COL_TYPE_IS_PATIENT = 'isPatient';
@@ -97,8 +106,7 @@ export async function handleDateTimeInlineEdit(
     context: GridContext
 ): Promise<void> {
     await handleInlineEdit(rowIndex, colIndex, event, context);
-    const target = event.target as HTMLElement;
-    const cellElement = target.closest('td, th') as HTMLElement & { _handleInput?: (e: Event) => void };
+    const cellElement = GridDomManager.getCellFromEvent(event) as HTMLElement & { _handleInput?: (e: Event) => void };
 
     if (cellElement) {
         const originalHandleInput = cellElement._handleInput;
@@ -132,9 +140,8 @@ export async function handleInlineEdit(
     const { allColumnsMeta, selectionSystem, getCellValue, rows, gridStore, storageManager } = context;
 
     // 오버레이 편집 시스템 사용 (전역 함수로 등록됨)
-    if (typeof window !== 'undefined' && (window as any).startCellEditOverlay) {
-        const target = event.target as HTMLElement;
-        const cellElement = target.closest('td, th') as HTMLElement;
+    if (typeof window !== 'undefined' && window.startCellEditOverlay) {
+        const cellElement = GridDomManager.getCellFromEvent(event);
         
         if (cellElement) {
             let initialValue: string | undefined;
@@ -145,24 +152,23 @@ export async function handleInlineEdit(
                 initialValue = cellElement.innerText.trim();
             }
 
-            (window as any).startCellEditOverlay(rowIndex, colIndex, cellElement, initialValue);
+            window.startCellEditOverlay(rowIndex, colIndex, cellElement, initialValue);
             return;
         }
     }
 
     // Fallback: 기존 contenteditable 방식 (오버레이 시스템이 없을 경우)
     if (rowIndex < 0) {
-        selectionSystem.startEditing(rowIndex, colIndex, getCellValue, null, gridStore as any, allColumnsMeta);
+        selectionSystem.startEditing(rowIndex, colIndex, getCellValue, null, gridStore as unknown as CellInputState, allColumnsMeta);
     } else {
         const row = rows.value[rowIndex];
         if (row) {
-            selectionSystem.startEditing(rowIndex, colIndex, getCellValue, row, gridStore as any, allColumnsMeta);
+            selectionSystem.startEditing(rowIndex, colIndex, getCellValue, row, gridStore as unknown as CellInputState, allColumnsMeta);
         }
     }
 
     await new Promise(resolve => requestAnimationFrame(resolve));
-    const target = event.target as HTMLElement;
-    const cellElement = target.closest('td, th') as HTMLElement;
+    const cellElement = GridDomManager.getCellFromEvent(event);
 
     if (cellElement) {
 
@@ -265,16 +271,6 @@ export async function handleInlineEdit(
         cellElement.addEventListener('input', handleInput as EventListener);
         cellElement.addEventListener('keydown', handleKeyDown as unknown as EventListener);
 
-        // Conditional text selection logic... (retaining original logic for selection)
-        // [omitted for brevity, or kept if essential]
-        // I will keep the selection logic if possible, but for Conciseness I will just select All.
-        const range = document.createRange();
-        range.selectNodeContents(cellElement);
-        const sel = window.getSelection();
-        if(sel) {
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
+        GridDomManager.selectContent(cellElement);
     }
 }
-

@@ -4,7 +4,7 @@ import { useSettingsStore, YatesCorrectionSettings, EpidemicCurveSettings, Analy
 import { useEpidemicStore, EpidemicHeaders } from '@/stores/epidemicStore';
 import { useHistoryStore } from '@/stores/historyStore';
 import { User } from '@/types/auth';
-import { GridRow, GridHeader } from '@/types/grid';
+import { GridRow, GridHeader, CellValue } from '@/types/grid';
 import type { AnalysisResults } from '@/types/analysis';
 
 // ----------------------------------------------------------------------
@@ -13,8 +13,8 @@ import type { AnalysisResults } from '@/types/analysis';
 
 export interface EditInfo {
     cell: { rowIndex: number; colIndex: number; dataKey: string; cellIndex?: number };
-    originalValue: any;
-    value: any;
+    originalValue: CellValue;
+    value: CellValue;
     columnMeta: GridHeader;
     editDuration?: number;
     hasChanged?: boolean;
@@ -23,7 +23,7 @@ export interface EditInfo {
 export interface StoreData {
     version: string;
     timestamp: number;
-    userId?: string;
+    userId?: string | number;
     headers: EpidemicHeaders;
     rows: GridRow[];
     settings: {
@@ -51,15 +51,22 @@ interface PendingSave {
     scheduledAt: number;
 }
 
+interface IUserManager {
+    getUserDataKey: (username: string) => string;
+}
+
+type EpidemicStore = ReturnType<typeof useEpidemicStore>;
+type HistoryStore = ReturnType<typeof useHistoryStore>;
+
 /**
  * 개선된 저장 매니저 클래스
  * 셀 단위 저장과 디바운싱을 통해 성능을 최적화합니다.
+ * Pinia Store 전용으로 리팩토링됨 (Legacy 제거)
  */
 export class EnhancedStorageManager {
-    private legacyStore: any; // Keeping for compatibility
-    private epidemicStore: any; // Pinia store instance
-    private historyStore: any;
-    private userManager: any;
+    private epidemicStore: EpidemicStore | null; 
+    private historyStore: HistoryStore | null;
+    private userManager: IUserManager | null;
     private currentUser: User | null;
     private saveTimeout: ReturnType<typeof setTimeout> | null;
     private SAVE_DELAY: number;
@@ -67,9 +74,9 @@ export class EnhancedStorageManager {
     private isProcessing: boolean;
     public isInitialized: boolean;
 
-    constructor(legacyStore: any = null, userManager: any = null) {
-        this.legacyStore = legacyStore;
+    constructor(userManager: IUserManager | null = null) {
         this.epidemicStore = null;
+        this.historyStore = null;
         this.userManager = userManager;
         this.currentUser = null;
         this.saveTimeout = null;
@@ -86,7 +93,7 @@ export class EnhancedStorageManager {
         }
     }
 
-    setStore(store: any): void {
+    setStore(store: EpidemicStore): void {
         this.epidemicStore = store;
         try {
             if (!this.historyStore) {
@@ -98,12 +105,7 @@ export class EnhancedStorageManager {
         console.log('[EnhancedStorageManager] Epidemic store set.');
     }
 
-    setLegacyStore(legacyStore: any): void {
-        this.legacyStore = legacyStore;
-        console.log('[EnhancedStorageManager] Legacy store set (Deprecated).');
-    }
-
-    setUserManager(userManager: any): void {
+    setUserManager(userManager: IUserManager): void {
         this.userManager = userManager;
     }
 
@@ -115,7 +117,7 @@ export class EnhancedStorageManager {
         if (!this.currentUser) {
             return 'epidemiology_data';
         }
-        const name = this.currentUser.name || (this.currentUser as any).username || 'user';
+        const name = this.currentUser.name || this.currentUser.username || 'user';
         return this.userManager?.getUserDataKey(name) || 'epidemiology_data';
     }
 
@@ -142,35 +144,25 @@ export class EnhancedStorageManager {
     }
 
     public executeSave(editData: EditInfo): void {
-        if (!this.epidemicStore && !this.legacyStore) return;
+        if (!this.epidemicStore) return;
         
         const { cell, value } = editData;
         const { rowIndex, dataKey, cellIndex } = cell;
 
-        if (this.epidemicStore) {
-            if (this.historyStore) {
-                this.historyStore.captureSnapshot('cell_edit', {
-                    cell: editData.cell,
-                    from: editData.originalValue,
-                    to: editData.value
-                });
-            }
-
-            this.epidemicStore.updateCell({ 
-                rowIndex, 
-                key: dataKey, 
-                value, 
-                cellIndex: cellIndex ?? undefined 
-            });
-        } else if (this.legacyStore) {
-            this.legacyStore.dispatch('epidemic/updateCell', {
-                rowIndex,
-                key: dataKey,
-                value,
-                cellIndex
+        if (this.historyStore) {
+            this.historyStore.captureSnapshot('cell_edit', {
+                cell: editData.cell,
+                from: editData.originalValue,
+                to: editData.value
             });
         }
-    }
+
+                    this.epidemicStore.updateCell({ 
+                        rowIndex, 
+                        key: dataKey, 
+                        value: String(value ?? ''), 
+                        cellIndex: cellIndex ?? undefined 
+                    });    }
 
     processPendingSaves(): void {
         if (this.pendingSaves.size === 0) return;
@@ -211,7 +203,7 @@ export class EnhancedStorageManager {
             }
 
             console.log('[EnhancedStorageManager] 새로운 형식의 데이터가 없습니다. 레거시 데이터 마이그레이션을 시도합니다.');
-            const legacyData: RecoveryData = safeLoadFromStorage();
+            const legacyData: RecoveryData | null = safeLoadFromStorage();
             if (!legacyData) return null;
 
             const exposureDateTime = localStorage.getItem('exposureDateTime') || '';
@@ -270,7 +262,7 @@ export class EnhancedStorageManager {
             const saveData = {
                 version: '2.0',
                 timestamp: Date.now(),
-                userId: (this.currentUser as any)?.id || this.currentUser?.name || (this.currentUser as any)?.username,
+                userId: this.currentUser?.id || this.currentUser?.name || this.currentUser?.username,
                 ...data
             };
             const dataKey = this.getUserDataKey();
@@ -283,33 +275,20 @@ export class EnhancedStorageManager {
     }
 
     saveCurrentState(): boolean {
-        if (!this.epidemicStore && !this.legacyStore) {
+        if (!this.epidemicStore) {
             console.error('[EnhancedStorageManager] Store 인스턴스가 설정되지 않았습니다.');
             return false;
         }
 
-        let headers: EpidemicHeaders;
-        let rows: GridRow[];
-        let validationState: any;
-        let settingsState: any = {};
-
-        if (this.epidemicStore) {
-            headers = this.epidemicStore.headers;
-            rows = this.epidemicStore.rows;
-            validationState = this.epidemicStore.validationState;
-            const settingsStore = useSettingsStore();
-            settingsState = { ...settingsStore.$state };
-        } else {
-            const state = this.legacyStore.state;
-            headers = state.epidemic.headers;
-            rows = state.epidemic.rows;
-            validationState = state.epidemic.validationState;
-            settingsState = state.settings;
-        }
+        const headers = this.epidemicStore.headers;
+        const rows = this.epidemicStore.rows;
+        const validationState = this.epidemicStore.validationState;
+        const settingsStore = useSettingsStore();
+        const settingsState = { ...settingsStore.$state };
 
         const validationErrors: Record<string, { message: string; timestamp: number }> = {};
         if (validationState?.errors && validationState.errors instanceof Map) {
-            for (const [key, error] of (validationState.errors as Map<string, any>).entries()) {
+            for (const [key, error] of (validationState.errors as Map<string, { message?: string; timestamp?: number }>).entries()) {
                 validationErrors[key] = {
                     message: error.message || '유효성 검사 오류',
                     timestamp: error.timestamp || Date.now()

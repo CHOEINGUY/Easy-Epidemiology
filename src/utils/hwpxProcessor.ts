@@ -15,7 +15,7 @@ const logger = createComponentLogger('HwpxProcessor');
 interface ChartImageDef {
   width?: number;
   dataUrl?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ChartImages {
@@ -525,7 +525,7 @@ export async function loadTemplateSection0(studyDesign: StudyDesign = 'case-cont
     
     // HWPX 파일 내용 확인
     console.log('📁 HWPX 파일 내용:');
-    zip.forEach((relativePath: string, file: any) => {
+    zip.forEach((relativePath: string, file: JSZip.JSZipObject) => {
       console.log(`  - ${relativePath} (${file.dir ? 'DIR' : 'FILE'})`);
     });
     

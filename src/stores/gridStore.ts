@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed, reactive, watch } from 'vue';
 import { useEpidemicStore } from '@/stores/epidemicStore';
-import { GridRow, GridHeader } from '@/types/grid';
+import { GridRow, GridHeader, CellValue } from '@/types/grid';
 
 // ----------------------------------------------------------------------
 // Interfaces for Input State
@@ -17,9 +17,9 @@ export interface CellIdentifier {
 
 export interface EditInfo {
   cell: CellIdentifier;
-  originalValue: any;
-  value?: any;  
-  tempValue?: any; 
+  originalValue: CellValue;
+  value?: CellValue;  
+  tempValue?: CellValue; 
   columnMeta: GridHeader;
   editDuration: number;
   hasChanged?: boolean;
@@ -39,8 +39,8 @@ export const useGridStore = defineStore('grid', () => {
     // --- Input / Edit State ---
     const isEditing = ref(false);
     const currentCell = ref<CellIdentifier | null>(null);
-    const originalValue = ref<any>(null);
-    const tempValue = ref<any>(null);
+    const originalValue = ref<CellValue>(null);
+    const tempValue = ref<CellValue>(null);
     const editingColumnMeta = ref<GridHeader | null>(null);
     const editStartTime = ref<number | null>(null);
 
@@ -70,7 +70,8 @@ export const useGridStore = defineStore('grid', () => {
     function setFilter(key: string, values: string[]) {
         if (values.length === 0) {
             activeFilters.delete(key);
-        } else {
+        }
+        else {
             activeFilters.set(key, values);
         }
         _applyFilters();
@@ -85,7 +86,8 @@ export const useGridStore = defineStore('grid', () => {
         let newValues: string[];
         if (index === -1) {
             newValues = [...currentValues, value];
-        } else {
+        }
+        else {
             newValues = currentValues.filter(v => v !== value);
         }
 
@@ -109,7 +111,7 @@ export const useGridStore = defineStore('grid', () => {
     // Helper to check match
     function _matchesFilter(row: GridRow, colIndex: number | string, filterConfig: string[] | { values: string[] }): boolean {
         // filterConfig is now string[] (the set of selected values)
-        const filterValues = Array.isArray(filterConfig) ? filterConfig : (filterConfig as any).values;
+        const filterValues = Array.isArray(filterConfig) ? filterConfig : filterConfig.values;
         if (!filterValues || filterValues.length === 0) return true;
         
         // OR logic: if cell matches ANY of the selected filter values
@@ -134,7 +136,7 @@ export const useGridStore = defineStore('grid', () => {
              if (parts.length === 2) {
                  const [type, idxStr] = parts;
                  const idx = parseInt(idxStr, 10);
-                 const arr = (row as any)[type]; 
+                 const arr = row[type]; 
                  if (Array.isArray(arr)) {
                      const val = arr[idx];
                      if (val !== undefined) {
@@ -145,7 +147,8 @@ export const useGridStore = defineStore('grid', () => {
                  }
              } else {
                  // Fallback: try direct property access
-                 cellValue = String((row as any)[colIndex] ?? '');
+                 const val = row[String(colIndex)];
+                 cellValue = String(val ?? '');
              }
         }
         
@@ -206,7 +209,7 @@ export const useGridStore = defineStore('grid', () => {
 
     // --- Actions: Input State (Replacing CellInputState) ---
 
-    function startEditing(rowIndex: number, colIndex: number, val: any, columnMeta: GridHeader) {
+    function startEditing(rowIndex: number, colIndex: number, val: CellValue, columnMeta: GridHeader) {
         if (isEditing.value) {
             cancelEditing();
         }
@@ -224,7 +227,7 @@ export const useGridStore = defineStore('grid', () => {
         editStartTime.value = Date.now();
     }
 
-    function updateTempValue(val: any) {
+    function updateTempValue(val: CellValue) {
         if (!isEditing.value) return;
         tempValue.value = val;
     }

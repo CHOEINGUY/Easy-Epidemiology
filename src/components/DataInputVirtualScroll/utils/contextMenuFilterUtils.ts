@@ -5,6 +5,8 @@
 
 import type { GridHeader, GridRow } from '@/types/grid';
 import type { Ref } from 'vue';
+import type { useGridStore } from '@/stores/gridStore';
+import type { useEpidemicStore } from '@/stores/epidemicStore';
 
 export interface FilterCount {
   value: string;
@@ -12,8 +14,9 @@ export interface FilterCount {
 }
 
 export interface FilterContext {
-  gridStore?: any;
-  epidemicStore?: any;
+  gridStore?: ReturnType<typeof useGridStore>;
+  epidemicStore?: ReturnType<typeof useEpidemicStore>;
+  storeBridge?: any; // Legacy
   rows: Ref<GridRow[]> | GridRow[];
   filteredRows: Ref<GridRow[]> | GridRow[];
   allColumnsMeta: GridHeader[];
@@ -22,7 +25,7 @@ export interface FilterContext {
 /**
  * 필터가 활성화되어 있는지 확인합니다.
  */
-export function isFilterActive(colIndex: number, value: string, context: any): boolean {
+export function isFilterActive(colIndex: number, value: string, context: FilterContext): boolean {
   // gridStore 우선 사용
   const filterState = context.gridStore?.filterState || context.storeBridge?.filterState;
 
@@ -33,7 +36,7 @@ export function isFilterActive(colIndex: number, value: string, context: any): b
   // Resolve key from colIndex to match useGridContextMenu logic
   let key = String(colIndex);
   if (context.allColumnsMeta) {
-      const column = context.allColumnsMeta.find((c: any) => c.colIndex === colIndex);
+      const column = context.allColumnsMeta.find((c) => c.colIndex === colIndex);
       if (column) {
           // Priority: dataKey-cellIndex (for arrays) -> dataKey -> colIndex
           if (column.dataKey && (column.cellIndex !== undefined && column.cellIndex !== null)) {
@@ -71,37 +74,20 @@ export function getUniqueValuesForColumn(colIndex: number, context: FilterContex
     return [];
   }
 
-  // 컨텍스트 메뉴 로직:
-  // 1. 현재 컬럼의 필터가 있는 경우: 전체 데이터 기준으로 모든 값 표시
-  // 2. 현재 컬럼의 필터가 없는 경우: 다른 컬럼의 필터로 인해 보이는 행들 기준으로 표시
   const allData = (rows as Ref<GridRow[]>).value || rows;
-  const filteredData = (filteredRows as Ref<GridRow[]>).value || filteredRows;
-  
-  const filterState = context.gridStore?.filterState || (context as any).storeBridge?.filterState;
-  const isFiltered = filterState?.isFiltered;
-  const currentColumnFilter = filterState?.activeFilters?.get(colIndex);
   
   if (!allData || !Array.isArray(allData)) {
     return [];
   }
 
   // 데이터 소스 결정
-  // 항상 전체 데이터를 기준으로 고유 값을 계산해야, 필터링 후에도 다른 선택지가 사라지지 않음
-  // (예: 0을 선택해서 0만 남았을 때도 컨텍스트 메뉴에는 0, 1이 모두 떠야 함)
   const dataToUse = allData;
   
-  if (!dataToUse || !Array.isArray(dataToUse)) {
-    return [];
-  }
-
   // Determine the current column's filter key (using explicit logic for consistency)
   let currentKey = String(colIndex);
   if (columnMeta.dataKey && (columnMeta.cellIndex !== undefined && columnMeta.cellIndex !== null)) {
       currentKey = `${columnMeta.dataKey}-${columnMeta.cellIndex}`;
   } else if (columnMeta.dataKey) {
-      // For basic/clinical/diet columns that are handled as arrays but filtered by index? 
-      // Actually gridStore uses complex keys. For 'isPatient' it is colIndex name.
-      // Let's use the helper if possible, or replicate:
       if (['isPatient','isConfirmedCase','symptomOnset','individualExposureTime'].includes(columnMeta.dataKey)) {
           currentKey = columnMeta.dataKey;
       }
@@ -110,19 +96,11 @@ export function getUniqueValuesForColumn(colIndex: number, context: FilterContex
       }
   }
 
-  // Dependent Filter Logic: 
-  // We want rows that match ALL filters EXCEPT the filter on the current column.
-  // This ensures that if we filter Column A, Column B shows only values available in A's result.
-  // But if we filter Column B, we still see all B values compatible with A.
-  
   const activeFilters = context.gridStore?.activeFilters;
   const otherFilters = new Map<string, string[]>();
   
   if (activeFilters) {
       for (const [key, val] of activeFilters.entries()) {
-          // If the filter key is NOT the current column's key (and not just "starts with" to avoid partial matches on similar keys)
-          // We need precise key matching.
-          // The key used in store is exact.
           if (key !== currentKey) {
               otherFilters.set(key, val);
           }
@@ -150,7 +128,12 @@ export function getUniqueValuesForColumn(colIndex: number, context: FilterContex
     if (columnMeta.cellIndex !== null && columnMeta.cellIndex !== undefined) {
       // 배열 기반 컬럼 (기본정보, 임상증상, 식단)
       if (row[columnMeta.dataKey!] && Array.isArray(row[columnMeta.dataKey!])) {
-        cellValue = String(row[columnMeta.dataKey!][columnMeta.cellIndex!] ?? '');
+        // Safe access with unknown cast if needed, but GridRow defines values as CellValue
+        const arr = row[columnMeta.dataKey!] as unknown[];
+        // Check if arr is valid array before index access
+        if (arr) {
+             cellValue = String(arr[columnMeta.cellIndex!] ?? '');
+        }
       }
     } else {
       // 단일 값 컬럼 (환자여부, 확진여부, 증상발현시간, 개별노출시간)
@@ -202,23 +185,13 @@ export function getUniqueDatesForColumn(colIndex: number, context: FilterContext
   }
 
   const allData = (rows as Ref<GridRow[]>).value || rows;
-  const filteredData = (filteredRows as Ref<GridRow[]>).value || filteredRows;
-  
-  const filterState = context.gridStore?.filterState || (context as any).storeBridge?.filterState;
-  const isFiltered = filterState?.isFiltered;
-  const currentColumnFilter = filterState?.activeFilters?.get(colIndex);
   
   if (!allData || !Array.isArray(allData)) {
     return [];
   }
 
-  // 데이터 소스 결정: 항상 전체 데이터 사용
   const dataToUse = allData;
   
-  if (!dataToUse || !Array.isArray(dataToUse)) {
-    return [];
-  }
-
   const extractDatePart = (dateTimeString: string): string => {
     if (!dateTimeString || dateTimeString === '') return '';
     const dateMatch = dateTimeString.match(/^(\d{4}-\d{2}-\d{2})/);

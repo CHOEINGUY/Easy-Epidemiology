@@ -13,6 +13,7 @@ import {
   getErrorKey, 
   parseErrorKey 
 } from '@/components/DataInputVirtualScroll/utils/validationUtils';
+import { COLUMN_KEYS } from '@/constants/columnKeys';
 
 // Sub-modules
 import { ValidationErrorManager } from './ValidationErrorManager';
@@ -24,15 +25,24 @@ import { ValidationStructuralMapper } from './ValidationStructuralMapper';
 // asyncProcessor and workerUtils might be JS still.
 // We declare them here or expect shims.
 
+export type ToastType = 'success' | 'warning' | 'error' | 'info';
+export type TranslationFn = (key: string, params?: Record<string, unknown>) => string;
+
 export interface ValidationManagerOptions {
   debounceDelay?: number;
   chunkSize?: number | null;
   useWorker?: boolean;
   debug?: boolean;
   onProgress?: (progress: number) => void;
-  showToast?: (message: string, type: 'success' | 'warning' | 'error' | 'info') => void;
+  showToast?: (message: string, type: ToastType) => void;
   useAsyncProcessor?: boolean; 
-  t?: any;
+  t?: TranslationFn;
+}
+
+interface ValidationWorkerMessage {
+  type: string;
+  invalidCells?: { row: number; col: number; message: string }[];
+  error?: unknown;
 }
 
 type EpidemicStore = ReturnType<typeof useEpidemicStore>;
@@ -43,8 +53,8 @@ export class ValidationManager {
   private defaultChunkSize: number | null;
   private useWorker: boolean;
   private onProgress: ((progress: number) => void) | null;
-  private showToast: ((message: string, type: any) => void) | null;
-  private t: any;
+  private showToast: ((message: string, type: ToastType) => void) | null;
+  private t: TranslationFn | null;
   private debug: boolean;
   private _destroyed: boolean;
 
@@ -56,7 +66,7 @@ export class ValidationManager {
   private validationTimers: Map<string, ReturnType<typeof setTimeout>>;
   private columnMetas: GridHeader[];
   private _worker: Worker | null = null;
-  private _currentValidationTask: any = null; // Promise or Task object
+  private _currentValidationTask: Promise<void> | unknown | null = null; // Promise or Task object
 
   constructor(store: EpidemicStore, options: ValidationManagerOptions = {}) {
     if (!store) throw new Error('ValidationManager: Store instance required');
@@ -122,7 +132,7 @@ export class ValidationManager {
       if (this._worker) {
         this._worker.onmessage = (e: MessageEvent) => {
           if (this._destroyed) return;
-          const { type, invalidCells, error } = e.data || {};
+          const { type, invalidCells, error } = (e.data || {}) as ValidationWorkerMessage;
           if (type === 'error') {
             console.error('[ValidationManager worker]', error);
             return;
@@ -182,53 +192,14 @@ export class ValidationManager {
     const currentErrors = this.store.validationState.errors;
     if (!currentErrors || currentErrors.size === 0) return;
 
-    const newErrors = new Map<string, any>();
+    const newErrors = new Map<string, { message: string; timestamp: number }>();
     let migratedCount = 0;
     let skippedCount = 0;
     let alreadyUniqueCount = 0;
 
     for (const [oldKey, error] of currentErrors) {
       const parsed = this.parseErrorKey(oldKey);
-      if (parsed) { // Means it has unique key structure or row_unique format
-         // Wait, parseErrorKey returns null if only 1 part.
-         // If "row_uniqueKey", it returns {rowIndex, uniqueKey}. 
-         // If "row_col", it parses "col" as uniqueKey if "_" logic holds.
-         // But uniqueKey logic usually involves check:
-         
-         // Assuming old keys were row_col, which is what we want to migrate FROM.
-         // row_col parsed: uniqueKey = col.
-         // If col is number, it's not a unique key string (usually).
-         
-         // Logic in JS was: `if (parsed)`. But `parseErrorKey` just splits by `_`.
-         // `row_10` -> rowIndex=row, uniqueKey="10".
-         // Is "10" a unique key? No. 
-         // We need robust check.
-         
-         // However, `ValidationManager.js` logic was:
-         // `if (parsed) { ... alreadyUniqueCount++ }` -> Wait, that function returns object if successful split.
-         // If `oldKey` is `0_1`, it splits to `0` and `1`.
-         // JS Code: `if (parsed) { newErrors.set... continue }`
-         // This implies ANY key with underscore was treated as valid unique key format in migration? 
-         // Or `parseErrorKey` in JS has different logic?
-         // JS: `const parts = errorKey.split('_'); if (parts.length < 2) return null; ... return {rowIndex, uniqueKey}`.
-         // So `0_1` -> `rowIndex:0, uniqueKey:"1"`.
-         // It seems the migration logic assumes if we CAN parse it using new logic, keep it?
-         
-         // NO. Look at JS code: 
-         // `if (parsed) { ... continue }`
-         // It assumes it IS a unique key if parseErrorKey works?
-         // But later: `const parts = oldKey.split('_'); if (parts.length !== 2) ...`
-         // If `0_1` passed `parseErrorKey`, it skips loop.
-         // So `0_1` is NOT migrated. 
-         // That implies migration effectively does nothing if all keys are `row_col` and `parseErrorKey` accepts them.
-         // Unless `parseErrorKey` in JS checks if `uniqueKey` is actual unique key?? No.
-         
-         // Actually, I should probably stick to `ValidationManager.js` logic exactly or improve it.
-         // If `0_1` is treated as "Already Unique", then migration fails to migrate `row_col` keys.
-         // I'll assume the intention is:
-         // If key looks like `row_col` (numerical col), convert to `row_uniqueKey`.
-         // How to distinguish? `isNaN(uniqueKey)`.
-         
+      if (parsed) { 
          if (isNaN(Number(parsed.uniqueKey))) {
              newErrors.set(oldKey, error);
              alreadyUniqueCount++;
@@ -236,8 +207,6 @@ export class ValidationManager {
          }
       }
       
-      // If we are here, it's either not parsed or it looks numerical (legacy).
-      // Parse manually
       const parts = oldKey.split('_');
       if (parts.length !== 2) { skippedCount++; continue; }
       const rowIndex = parseInt(parts[0]);
@@ -256,11 +225,11 @@ export class ValidationManager {
       migratedCount++;
     }
 
-    this.store.setValidationErrors(newErrors);
+    this.store.setValidationErrors(newErrors as Map<string, { message: string; timestamp: number; }>);
     if (this.debug) console.log(`[ValidationManager] 마이그레이션 완료: 성공 ${migratedCount}개, 이미 고유 키 ${alreadyUniqueCount}개, 건너뜀 ${skippedCount}개`);
   }
 
-  validateCell(rowIndex: number, colIndex: number, value: any, columnType: string, immediate: boolean = false) {
+  validateCell(rowIndex: number, colIndex: number, value: unknown, columnType: string, immediate: boolean = false) {
     if (this._destroyed) return;
     if (rowIndex < 0) return;
 
@@ -313,12 +282,12 @@ export class ValidationManager {
         // Types for asyncProcessor might be missing, assume valid JS
         const validationTask = validateDataAsync(
           rows,
-          columnMetas as any,
+          columnMetas,
           _validateCell,
           {
             chunkSize: Math.min(chunkSize, 100),
             onProgress: (progress: number) => { if (onProgress) onProgress(progress); },
-            onComplete: (invalidCells: any[]) => {
+            onComplete: (invalidCells: { row: number; col: number; message: string }[]) => {
               invalidCells.forEach(({ row, col, message }) => {
                 const columnMeta = columnMetas.find(meta => meta.colIndex === col);
                 if (columnMeta) {
@@ -335,7 +304,7 @@ export class ValidationManager {
               });
               resolve();
             },
-            onError: (error: any) => {
+            onError: (error: unknown) => {
               console.error('[ValidationManager] Validation error:', error);
               reject(error);
             }
@@ -352,8 +321,8 @@ export class ValidationManager {
   clearErrorsForColumn(colIndex: number) { this.errorManager.clearErrorsForColumn(colIndex); }
   clearAllErrors() { this.errorManager.clearAllErrors(); }
   clearTimers() { this.errorManager.clearTimers(); }
-  printErrorKeys(label: string, errors?: Map<string, any>) { this.errorManager.printErrorKeys(label, errors); }
-  printErrorDiff(before: Map<string, any>, after: Map<string, any>) { this.errorManager.printErrorDiff(before, after); }
+  printErrorKeys(label: string, errors?: Map<string, unknown>) { this.errorManager.printErrorKeys(label, errors); }
+  printErrorDiff(before: Map<string, unknown>, after: Map<string, unknown>) { this.errorManager.printErrorDiff(before, after); }
   printUniqueKeyMapping(columnMetas?: GridHeader[]) { this.errorManager.printUniqueKeyMapping(columnMetas); }
 
   handleRowAddition(rowIndex: number, newRow: GridRow | GridRow[], columnMetas: GridHeader[], count: number = 1) { this.rowColumnOps.handleRowAddition(rowIndex, newRow, columnMetas, count); }
@@ -364,15 +333,15 @@ export class ValidationManager {
   revalidateColumns(colIndices: number[], rows: GridRow[], columnMetas: GridHeader[]) { this.rowColumnOps.revalidateColumns(colIndices, rows, columnMetas); }
   reindexErrorsAfterRowDeletion(deletedRowIndices: number[]) { this.rowColumnOps.reindexErrorsAfterRowDeletion(deletedRowIndices); }
   remapValidationErrorsByRowDeletion(deletedRowIndices: number[], columnMetas: GridHeader[]) { this.rowColumnOps.remapValidationErrorsByRowDeletion(deletedRowIndices, columnMetas); }
-  handleDataClear(clearedCells: any[]) { this.rowColumnOps.handleDataClear(clearedCells); }
+  handleDataClear(clearedCells: {rowIndex: number; colIndex: number}[]) { this.rowColumnOps.handleDataClear(clearedCells); }
 
   async handleDataImport(importedData: any[], columnMetas: GridHeader[]) { return this.dataOps.handleDataImport(importedData, columnMetas); }
   handlePasteData(pasteData: string[][], startRow: number, startCol: number, columnMetas: GridHeader[]) { this.dataOps.handlePasteData(pasteData, startRow, startCol, columnMetas); }
-  validateIndividualExposureColumn(exposureData: any[], colIndex: number, onProgress?: (p: number) => void) { this.dataOps.validateIndividualExposureColumn(exposureData, colIndex, onProgress); }
-  validateConfirmedCaseColumn(confirmedCaseData: any[], colIndex: number, onProgress?: (p: number) => void) { this.dataOps.validateConfirmedCaseColumn(confirmedCaseData, colIndex, onProgress); }
+  validateIndividualExposureColumn(exposureData: {rowIndex: number; value: unknown}[], colIndex: number, onProgress?: (p: number) => void) { this.dataOps.validateIndividualExposureColumn(exposureData, colIndex, onProgress); }
+  validateConfirmedCaseColumn(confirmedCaseData: {rowIndex: number; value: unknown}[], colIndex: number, onProgress?: (p: number) => void) { this.dataOps.validateConfirmedCaseColumn(confirmedCaseData, colIndex, onProgress); }
   _clearErrorsInPasteArea(startRow: number, startCol: number, rowCount: number, colCount: number) { this.dataOps.clearErrorsInPasteArea(startRow, startCol, rowCount, colCount); }
-  _validateCellImmediate(rowIndex: number, colIndex: number, value: any, columnType: string, columnMeta: GridHeader) { return this.dataOps.validateCellImmediate(rowIndex, colIndex, value, columnType, columnMeta); }
-  _showPasteValidationSummary(errors: any[], totalCells: number) { this.dataOps.showPasteValidationSummary(errors, totalCells, this.t); }
+  _validateCellImmediate(rowIndex: number, colIndex: number, value: unknown, columnType: string, columnMeta: GridHeader) { return this.dataOps.validateCellImmediate(rowIndex, colIndex, value, columnType, columnMeta); }
+  _showPasteValidationSummary(errors: unknown[], totalCells: number) { this.dataOps.showPasteValidationSummary(errors, totalCells, this.t || undefined); }
 
   remapValidationErrorsByColumnIdentity(oldColumnsMeta: GridHeader[], newColumnsMeta: GridHeader[], deletedColIndices: number[] = []) { this.structuralMapper.remapValidationErrorsByColumnIdentity(oldColumnsMeta, newColumnsMeta, deletedColIndices); }
   remapValidationErrorsByColumnOrder(oldColumnsMeta: GridHeader[], newColumnsMeta: GridHeader[]) { this.structuralMapper.remapValidationErrorsByColumnOrder(oldColumnsMeta, newColumnsMeta); }
@@ -401,9 +370,9 @@ export class ValidationManager {
     this._destroyed = true;
   }
 
-  performValidation(rowIndex: number, colIndex: number, value: any, columnType: string, columnMeta?: GridHeader) {
+  performValidation(rowIndex: number, colIndex: number, value: unknown, columnType: string, columnMeta?: GridHeader) {
      if (this.debug) console.log(`performValidation: ${rowIndex}, ${colIndex}, "${value}", ${columnType}`);
-     const result = _validateCell(value, columnType);
+     const result = _validateCell(value as any, columnType);
      if (!result.valid) {
          this.errorManager.addError(rowIndex, colIndex, result.message || 'Validation failed', columnMeta);
      } else {
@@ -411,19 +380,20 @@ export class ValidationManager {
      }
   }
 
-  _shouldValidateImmediately(value: any) {
+  _shouldValidateImmediately(value: unknown) {
     return value === '' || value === null || value === undefined;
   }
 
-  _getCellValue(row: GridRow, columnMeta: GridHeader) {
+  _getCellValue(row: GridRow, columnMeta: GridHeader): unknown {
     if (!row || !columnMeta.dataKey) return '';
+    const dataKey = columnMeta.dataKey;
     if (columnMeta.cellIndex !== null && columnMeta.cellIndex !== undefined) {
-      const arr = (row as any)[columnMeta.dataKey];
+      const arr = row[dataKey];
       if (!Array.isArray(arr)) return '';
-      if (columnMeta.cellIndex < 0 || columnMeta.cellIndex >= (arr as any[]).length) return '';
+      if (columnMeta.cellIndex < 0 || columnMeta.cellIndex >= arr.length) return '';
       return arr[columnMeta.cellIndex] ?? '';
     }
-    return (row as any)[columnMeta.dataKey] ?? '';
+    return row[dataKey] ?? '';
   }
   
   // Public for compatibility

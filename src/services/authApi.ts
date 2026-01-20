@@ -149,9 +149,9 @@ class AdminApiService {
   // API 요청 헬퍼 함수 (관리자용)
   // 개발 모드: 모든 API 호출 우회
   // eslint-disable-next-line
-  async makeRequest(): Promise<any> {
+  async makeRequest<T = { success: boolean }>(endpoint?: string, options?: RequestInit): Promise<T> {
     console.log('🔓 개발 모드: Admin API 우회');
-    return { success: true };
+    return { success: true } as unknown as T;
   }
 
   // 승인 대기 사용자 목록 - 개발 모드
@@ -217,7 +217,7 @@ class AdminApiService {
 
   // 사용자 정보 업데이트 - 개발 모드
   // eslint-disable-next-line
-  async updateUserInfo(userId: string, data: any): Promise<{ success: boolean }> {
+  async updateUserInfo(userId: string, data: Record<string, unknown>): Promise<{ success: boolean }> {
     return { success: true };
   }
 }

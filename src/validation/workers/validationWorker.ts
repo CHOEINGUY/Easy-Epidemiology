@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import { validateCell } from '../../store/utils/validation';
-import { GridRow, GridHeader } from '@/types/grid';
+import { GridRow, GridHeader, CellValue } from '@/types/grid';
 
 // Define the shape of the error object we return
 interface CellError {
@@ -49,7 +49,7 @@ if (typeof self === 'undefined') {
         // Skip non-editable columns
         if (!meta.isEditable) return;
 
-        let value: any = '';
+        let value: CellValue = '';
 
         // Extract value based on meta definition
         if (meta.cellIndex !== null && meta.cellIndex !== undefined && meta.dataKey) {
@@ -67,7 +67,7 @@ if (typeof self === 'undefined') {
            }
         } else if (meta.dataKey) {
            // Standard property access
-           value = row[meta.dataKey] ?? '';
+           value = (row[meta.dataKey] as CellValue) ?? '';
         }
 
         const res = validateCell(value, meta.type);
@@ -85,8 +85,12 @@ if (typeof self === 'undefined') {
     // Send back the results
     postMessage({ type: 'done', invalidCells });
 
-  } catch (error: any) {
-    postMessage({ type: 'error', error: error.message || 'Validation error' });
+  } catch (error: unknown) {
+    let errorMessage = 'Validation error';
+    if (error instanceof Error) {
+        errorMessage = error.message;
+    }
+    postMessage({ type: 'error', error: errorMessage });
   }
 };
 

@@ -49,7 +49,7 @@
               <div v-if="group.addable || group.deletable" class="absolute top-1/2 left-[5px] -translate-y-1/2 flex gap-[3px] items-center z-[2]">
                 <button
                   v-if="group.addable"
-                  @click.stop="$emit('add-column', group.type)"
+                  @click.stop="$emit('add-column', group.type || '')"
                   @mouseenter="showTooltip('add', $t('dataInput.tooltips.addColumn'), $event)"
                   @mouseleave="hideTooltip"
                   class="inline-flex items-center justify-center w-[22px] h-[22px] min-w-[22px] bg-white/90 border border-slate-300 rounded text-[13px] font-semibold text-slate-500 cursor-pointer transition-all duration-200 select-none p-0 leading-none shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-blue-50 hover:border-blue-600 hover:text-blue-600 hover:scale-105 hover:shadow-md active:bg-blue-100 active:scale-95 active:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1"
@@ -59,9 +59,9 @@
                 </button>
                 <button
                   v-if="group.deletable"
-                  @click.stop="$emit('delete-column', group.type)"
-                  :disabled="group.columnCount <= 1"
-                  @mouseenter="showTooltip('delete', group.columnCount <= 1 ? $t('dataInput.tooltips.minColumn') : $t('dataInput.tooltips.deleteColumn'), $event)"
+                  @click.stop="$emit('delete-column', group.type || '')"
+                  :disabled="(group.columnCount || 0) <= 1"
+                  @mouseenter="showTooltip('delete', (group.columnCount || 0) <= 1 ? $t('dataInput.tooltips.minColumn') : $t('dataInput.tooltips.deleteColumn'), $event)"
                   @mouseleave="hideTooltip"
                   class="inline-flex items-center justify-center w-[22px] h-[22px] min-w-[22px] bg-white/90 border border-slate-300 rounded text-[13px] font-semibold text-slate-500 cursor-pointer transition-all duration-200 select-none p-0 leading-none shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-red-50 hover:border-red-600 hover:text-red-600 hover:scale-105 hover:shadow-md active:bg-red-100 active:scale-95 active:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1"
                   :aria-label="`${group.text} ${$t('dataInput.tooltips.deleteColumn')}`"
@@ -80,19 +80,19 @@
               class="relative border border-slate-300 p-2 text-center font-medium text-sm bg-clip-padding align-middle whitespace-nowrap select-none tracking-tight leading-[1.4] bg-slate-50 cursor-default h-[35px] hover:bg-slate-200 group"
               role="columnheader"
               :data-col="column.colIndex"
-              :class="getCellClasses(-1, column.colIndex)"
+              :class="getCellClasses(-1, column.colIndex ?? -1)"
               :data-validation-message="getValidationMessage()"
-              :contenteditable="isCellEditing(-1, column.colIndex)"
-              @input="$emit('cell-input', $event, -1, column.colIndex)"
-              @dblclick="$emit('cell-dblclick', -1, column.colIndex, $event)"
-              @mousedown="$emit('cell-mousedown', -1, column.colIndex, $event)"
-              @mousemove="$emit('cell-mousemove', -1, column.colIndex, $event)"
-              @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, column.colIndex)"
+              :contenteditable="isCellEditing(-1, column.colIndex ?? -1)"
+              @input="$emit('cell-input', $event, -1, column.colIndex ?? -1)"
+              @dblclick="$emit('cell-dblclick', -1, column.colIndex ?? -1, $event)"
+              @mousedown="$emit('cell-mousedown', -1, column.colIndex ?? -1, $event)"
+              @mousemove="$emit('cell-mousemove', -1, column.colIndex ?? -1, $event)"
+              @contextmenu.prevent="$emit('cell-contextmenu', $event, -1, column.colIndex ?? -1)"
               :title="column.tooltip"
             >
               <span class="header-text">{{ column.headerText }}</span>
 
-              <span v-if="isColumnFiltered(column.colIndex)" class="absolute top-[2px] right-[4px] w-[14px] h-[14px] inline-flex items-center justify-center z-[3] pointer-events-auto bg-blue-50/50 rounded-[2px] p-[1px] cursor-default transition-all border border-transparent" aria-hidden="true">
+              <span v-if="isColumnFiltered(column.colIndex ?? -1)" class="absolute top-[2px] right-[4px] w-[14px] h-[14px] inline-flex items-center justify-center z-[3] pointer-events-auto bg-blue-50/50 rounded-[2px] p-[1px] cursor-default transition-all border border-transparent" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
                 </svg>
@@ -121,13 +121,14 @@ import { ref, reactive, computed } from 'vue';
 import { useUiStore } from '../../../stores/uiStore';
 import { safeGetGlobalProperty } from '../../../utils/globalAccessWrapper';
 import { useI18n } from 'vue-i18n';
+import type { GridHeader, HeaderGroup } from '@/types/grid';
 
 const { t } = useI18n();
 const uiStore = useUiStore();
 
 interface Props {
-  headerGroups: any[];
-  allColumnsMeta: any[];
+  headerGroups: HeaderGroup[];
+  allColumnsMeta: GridHeader[];
   tableWidth: string;
   selectedCell?: { rowIndex: number | null; colIndex: number | null };
   selectedRange?: {
@@ -138,7 +139,7 @@ interface Props {
   editingCell?: { rowIndex: number | null; colIndex: number | null };
   individualSelectedCells?: Set<string> | null;
   scrollbarWidth?: number;
-  activeFilters?: Map<number, any>;
+  activeFilters?: Map<string | number, any>;
   isFiltered?: boolean;
 }
 
@@ -290,7 +291,7 @@ const headerContainerStyle = computed(() => {
 
 const isColumnFiltered = (colIndex: number) => {
   // Access store state via props or bridge
-  const activeFilters = props.activeFilters || (window as any).storeBridge?.filterState?.activeFilters;
+  const activeFilters = (props.activeFilters || (window as any).storeBridge?.filterState?.activeFilters) as unknown as Map<string, any> | undefined;
   
   if (!activeFilters || activeFilters.size === 0) return false;
 

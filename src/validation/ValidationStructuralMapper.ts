@@ -17,12 +17,16 @@ interface StructuralChange {
   totalNewCols: number;
 }
 
+interface ExtendedGridHeader extends GridHeader {
+  group?: string;
+}
+
 export class ValidationStructuralMapper {
   private store: EpidemicStore;
   private errorManager: ValidationErrorManager;
   private debug: boolean;
-  private _validateCellFn: ((rowIndex: number, colIndex: number, value: any, type: string, immediate: boolean) => void) | null;
-  private _getCellValueFn: ((row: GridRow, columnMeta: GridHeader) => any) | null;
+  private _validateCellFn: ((rowIndex: number, colIndex: number, value: unknown, type: string, immediate: boolean) => void) | null;
+  private _getCellValueFn: ((row: GridRow, columnMeta: GridHeader) => unknown) | null;
 
   constructor(store: EpidemicStore, errorManager: ValidationErrorManager, options: { debug?: boolean } = {}) {
     this.store = store;
@@ -32,11 +36,11 @@ export class ValidationStructuralMapper {
     this._getCellValueFn = null;
   }
 
-  setValidateCellFn(validateCellFn: (rowIndex: number, colIndex: number, value: any, type: string, immediate: boolean) => void) {
+  setValidateCellFn(validateCellFn: (rowIndex: number, colIndex: number, value: unknown, type: string, immediate: boolean) => void) {
     this._validateCellFn = validateCellFn;
   }
 
-  setGetCellValueFn(getCellValueFn: (row: GridRow, columnMeta: GridHeader) => any) {
+  setGetCellValueFn(getCellValueFn: (row: GridRow, columnMeta: GridHeader) => unknown) {
     this._getCellValueFn = getCellValueFn;
   }
 
@@ -48,7 +52,7 @@ export class ValidationStructuralMapper {
     const structuralChanges = this._analyzeStructuralChanges(oldColumnsMeta, newColumnsMeta, deletedColIndices);
     
     // 2. Remap
-    const newErrors = new Map<string, any>();
+    const newErrors = new Map<string, unknown>();
     const rows = this.store.rows || [];
 
     for (const [oldErrorKey, error] of currentErrors) {
@@ -140,7 +144,7 @@ export class ValidationStructuralMapper {
       const matchingNewCol = newColumnsMeta.find(newCol => 
         newCol.type === oldCol.type && 
         newCol.cellIndex === oldCol.cellIndex &&
-        ((newCol as any).group || '') === ((oldCol as any).group || '')
+        ((newCol as ExtendedGridHeader).group || '') === ((oldCol as ExtendedGridHeader).group || '')
       );
       
       if (matchingNewCol && oldCol.colIndex !== undefined && matchingNewCol.colIndex !== undefined) {
@@ -208,22 +212,12 @@ export class ValidationStructuralMapper {
        if (oldCellIndex !== null && !isNaN(oldCellIndex)) {
          for (const insertion of structuralChanges.insertions) {
            const currentColumnType = uniqueKeyParts[0];
-           if (this._isMatchingType(insertion.type, currentColumnType) && oldCellIndex >= insertion.position) /* logic check: insertion.position is cellIndex for grouped types? Yes */ {
-              // Wait, insertion.position logic in analyze assumes cellIndex for typed groups?
-              // The `_findInsertionPosition` function works on `colIndex` for `insertPosition` calculation but here we compare with `oldCellIndex`.
-              // `_findInsertionPosition` returns min `colIndex`.
-              // But `insertion` object structure: position, count, type.
-              // Logic in analyze: `changes.insertions.push({ position: insertPosition ... })` where position came from `_findInsertionPosition` (colIndex).
-              // BUT here in `_calculateNewErrorKey`, `insertion.position` is seemingly used as cellIndex threshold?
-              // JS Code used: `if (isMatchingType && oldCellIndex >= insertionPosCellIndex)`
-              // And `const insertionPosCellIndex = ...`.
-              // Let's replicate JS logic carefully.
-              
+           if (this._isMatchingType(insertion.type, currentColumnType) && oldCellIndex >= insertion.position) {
               const insertionPosMeta = newColumnsMeta.find(col => col.colIndex === insertion.position && col.type === insertion.type);
               const insertionPosCellIndex = insertionPosMeta && insertionPosMeta.cellIndex !== undefined ? insertionPosMeta.cellIndex : insertion.position;
               
               if (oldCellIndex >= insertionPosCellIndex) {
-                 newCellIndex! += insertion.count; // ! assertion safe because oldCellIndex is number
+                 newCellIndex! += insertion.count;
               }
            }
          }
@@ -231,7 +225,6 @@ export class ValidationStructuralMapper {
          for (const deletion of structuralChanges.deletions) {
              const currentColumnType = uniqueKeyParts[0];
              const deletionPosCellIndex = deletion.position; 
-             // Deletion position in analyze is derived from cellIndex or colIndex.
              
              if (this._isMatchingType(deletion.type, currentColumnType)) {
                  if (oldCellIndex >= deletionPosCellIndex + deletion.count) {
@@ -310,22 +303,18 @@ export class ValidationStructuralMapper {
   }
 
   private _calculateNewColIndex(oldColIndex: number, structuralChanges: StructuralChange, oldColumnsMeta: GridHeader[], newColumnsMeta: GridHeader[]): number | null {
-     // ... Logic from JS ...
-     // Basic mapping
      if (structuralChanges.typeChanges[oldColIndex] !== undefined) return structuralChanges.typeChanges[oldColIndex];
      
-     // Same type find
      const oldColumnMeta = oldColumnsMeta.find(col => col.colIndex === oldColIndex);
      if (!oldColumnMeta) return null;
      
      const matchingNewCol = newColumnsMeta.find(col => 
       col.type === oldColumnMeta.type && 
       col.cellIndex === oldColumnMeta.cellIndex &&
-      ((col as any).group || '') === ((oldColumnMeta as any).group || '')
+      ((col as ExtendedGridHeader).group || '') === ((oldColumnMeta as ExtendedGridHeader).group || '')
      );
      if (matchingNewCol) return matchingNewCol.colIndex ?? null;
      
-     // Structural
      let newColIndex = oldColIndex;
      for (const insertion of structuralChanges.insertions) {
          if (oldColIndex >= insertion.position) newColIndex += insertion.count;
@@ -344,7 +333,7 @@ export class ValidationStructuralMapper {
       return value !== undefined && value !== null && value !== '';
   }
 
-  private _getCellValue(row: GridRow, columnMeta: GridHeader): any {
+  private _getCellValue(row: GridRow, columnMeta: GridHeader): unknown {
     if (this._getCellValueFn) return this._getCellValueFn(row, columnMeta);
     return columnMeta.dataKey ? row[columnMeta.dataKey] : undefined;
   }

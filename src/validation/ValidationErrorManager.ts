@@ -113,7 +113,6 @@ export class ValidationErrorManager {
 
   addError(rowIndex: number, colIndex: number, message: string, columnMeta?: GridHeader) {
     // If columnMeta passed, use it, else find it
-    // Wait, signature says optional. 
     const meta = columnMeta || this.columnMetas.find(m => m.colIndex === colIndex);
     
     if (meta) {
@@ -145,13 +144,13 @@ export class ValidationErrorManager {
     this.store.removeValidationError({ rowIndex, colIndex });
   }
 
-  printErrorKeys(label: string, errors?: Map<string, any>) {
+  printErrorKeys(label: string, errors?: Map<string, unknown>) {
     if (!this.debug) return;
     const errorMap = errors || this.store.validationState.errors;
     console.log(`[ValidationErrorManager] ${label}:`, Array.from(errorMap.keys()));
   }
 
-  printErrorDiff(before: Map<string, any>, after: Map<string, any>) {
+  printErrorDiff(before: Map<string, unknown>, after: Map<string, unknown>) {
     if (!this.debug) return;
     
     const beforeKeys = Array.from(before.keys());
@@ -180,13 +179,14 @@ export class ValidationErrorManager {
     return this.store.validationState.errors.size;
   }
 
-  createErrorSnapshot(): Map<string, any> {
+  createErrorSnapshot(): Map<string, unknown> {
     return new Map(this.store.validationState.errors);
   }
   
-  setErrors(newErrors: Map<string, any>) {
+  setErrors(newErrors: Map<string, unknown>) {
       // Pinia store should expose setErrors or setter
-      this.store.setValidationErrors(newErrors);
+      // Assuming store accepts Map<string, any> still, as we might have legacy error objects
+      this.store.setValidationErrors(newErrors as Map<string, any>);
   }
 
   destroy() {

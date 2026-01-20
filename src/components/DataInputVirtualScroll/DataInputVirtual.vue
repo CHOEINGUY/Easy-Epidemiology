@@ -158,6 +158,7 @@ import { useContextMenu } from './logic/useContextMenu';
 import { useVirtualSelectionSystem, setColumnsMeta } from './logic/virtualSelectionSystem';
 import { showToast } from './logic/toast';
 import { useDragDrop } from './logic/dragDrop';
+import { COLUMN_KEYS } from '@/constants/columnKeys';
 import {
   COL_TYPE_BASIC,
   COL_TYPE_IS_PATIENT,
@@ -199,7 +200,7 @@ const epidemicStore = useEpidemicStore();
 const settingsStore = useSettingsStore();
 
 // --- Persistence Manager ---
-const storageManager = new EnhancedStorageManager(null, null); 
+const storageManager = new EnhancedStorageManager(); 
 storageManager.setStore(epidemicStore); // Link to Pinia
 
 const rows = computed(() => epidemicStore.rows);
@@ -480,7 +481,7 @@ const selectedCellInfo = computed(() => {
 
   let value = '';
   if (rowIndex < 0) {
-    value = getCellValue(null, columnMeta, -1);
+    value = String(getCellValue(null, columnMeta, -1) ?? '');
   } else {
     // Check key mapping for rowIndex if needed? 
     // filteredRows are used for model usually, but getCellValue might need original row?
@@ -490,7 +491,7 @@ const selectedCellInfo = computed(() => {
     // Safety check
     const row = filteredRows.value[rowIndex];
     if (row) {
-        value = getCellValue(row, columnMeta, rowIndex);
+        value = String(getCellValue(row, columnMeta, rowIndex) ?? '');
     }
   }
 
@@ -761,7 +762,7 @@ function handleFocusFirstError() {
     if (col.dataKey === uniqueKeyOrColIndex) return true;
     
     // 1-3. 예외적인 별칭(Alias) 처리 (confirmed -> isConfirmedCase)
-    if (uniqueKeyOrColIndex === 'confirmed' && col.dataKey === 'isConfirmedCase') return true;
+    if (uniqueKeyOrColIndex === 'confirmed' && col.dataKey === COLUMN_KEYS.IS_CONFIRMED) return true;
     
     return false;
   });

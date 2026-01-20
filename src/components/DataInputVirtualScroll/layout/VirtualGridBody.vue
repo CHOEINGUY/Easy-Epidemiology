@@ -23,7 +23,7 @@
         <tbody>
           <tr 
             v-for="(item, index) in visibleRows" 
-            :key="item.originalIndex"
+            :key="Number(item.originalIndex ?? index)"
             :data-row="item.originalIndex"
             class="h-[35px] max-h-[35px] min-h-[35px]"
           >
@@ -82,10 +82,11 @@ import { ref, computed } from 'vue';
 import AddRowsControls from '../parts/AddRowsControls.vue';
 import { hasValidationError } from '../utils/validationUtils';
 import { FilterRowValidationManager } from '../utils/FilterRowValidationManager';
+import type { GridHeader, GridRow } from '@/types/grid';
 
 interface Props {
-  visibleRows: any[];
-  allColumnsMeta: any[];
+  visibleRows: GridRow[];
+  allColumnsMeta: GridHeader[];
   tableWidth: string;
   totalHeight: number;
   paddingTop: number;
@@ -286,14 +287,14 @@ function handleCellMouseEnter(event: any, index: any, colIndex: any) {
   
   if (props.isFiltered) {
     if (item._originalIndex !== undefined) {
-      originalRowIndex = item._originalIndex;
+      originalRowIndex = Number(item._originalIndex);
     } else if (item._filteredOriginalIndex !== undefined) {
-      originalRowIndex = item._filteredOriginalIndex;
+      originalRowIndex = Number(item._filteredOriginalIndex);
     } else {
-      originalRowIndex = item.originalIndex || 0;
+      originalRowIndex = Number(item.originalIndex || 0);
     }
   } else {
-    originalRowIndex = item.originalIndex || 0;
+    originalRowIndex = Number(item.originalIndex || 0);
   }
 
   const message = getValidationMessage(Number(originalRowIndex) as any, Number(colIndex) as any);

@@ -1,4 +1,3 @@
-
 import {
   COL_TYPE_BASIC,
   COL_TYPE_SERIAL,
@@ -11,15 +10,26 @@ import {
 import { 
   isFilterActive, 
   getUniqueValuesForColumn, 
-  getUniqueDatesForColumn 
-  // @ts-ignore
+  getUniqueDatesForColumn,
+  FilterContext,
+  FilterCount
 } from '../utils/contextMenuFilterUtils';
 import type { GridHeader } from '@/types/grid';
 import type { GridContextMenuContext } from '../../../types/virtualGridContext';
+import { SelectionState } from '@/components/DataInputVirtualScroll/logic/virtualSelectionSystem';
 import i18n from '@/i18n';
 
+interface MenuItem {
+  label?: string;
+  action?: string;
+  icon?: string;
+  type?: 'separator' | 'checkbox';
+  checked?: boolean;
+  danger?: boolean;
+}
+
 // Access translation function
-const t = (key: string, props?: any) => {
+const t = (key: string, props?: Record<string, unknown>) => {
   // @ts-ignore
   return i18n.global.t(key, props);
 };
@@ -63,7 +73,6 @@ export function handleContextMenu(
       
       if (colIndex === COL_IDX_SERIAL && originalRowIndex >= 0) {
         // 연번(serial) 컬럼을 우클릭하면 행 전체를 선택합니다.
-        // @ts-ignore - selectRow signature
         selectionSystem.selectRow(originalRowIndex, allColumnsMeta);
       } else {
         // 그 외의 셀은 해당 셀만 선택합니다.
@@ -74,8 +83,6 @@ export function handleContextMenu(
 
   const menuItems = getMenuItemsForContext(originalRowIndex, colIndex, selectionSystem.state, allColumnsMeta, context);
   const targetInfo = { rowIndex: originalRowIndex, colIndex };
-
-
 
   if (menuItems.length > 0) {
     showContextMenu(event.clientX, event.clientY, menuItems, targetInfo);
@@ -90,7 +97,7 @@ export function handleContextMenu(
 function getMenuItemsForContext(
   rowIndex: number, 
   colIndex: number, 
-  selectionState: any, 
+  selectionState: SelectionState, 
   allColumnsMeta: GridHeader[], 
   context: GridContextMenuContext
 ) {
@@ -102,8 +109,8 @@ function getMenuItemsForContext(
   const individualCellCount = selectedCellsIndividual.size;
 
   // 범위 선택 개수 계산
-  const rangeRowCount = selectedRange.start.rowIndex !== null ? Math.abs(selectedRange.end.rowIndex - selectedRange.start.rowIndex) + 1 : 0;
-  const rangeColCount = selectedRange.start.colIndex !== null ? Math.abs(selectedRange.end.colIndex - selectedRange.start.colIndex) + 1 : 0;
+  const rangeRowCount = selectedRange.start.rowIndex !== null && selectedRange.end.rowIndex !== null ? Math.abs(selectedRange.end.rowIndex - selectedRange.start.rowIndex) + 1 : 0;
+  const rangeColCount = selectedRange.start.colIndex !== null && selectedRange.end.colIndex !== null ? Math.abs(selectedRange.end.colIndex - selectedRange.start.colIndex) + 1 : 0;
 
   // 우선순위: 개별 선택 > 범위 선택
   const effectiveRowCount = individualRowCount > 0 ? individualRowCount : rangeRowCount;
@@ -112,7 +119,7 @@ function getMenuItemsForContext(
   const isMultiRow = effectiveRowCount > 1;
   const isMultiCol = effectiveColCount > 1;
 
-  const menuItems: any[] = [];
+  const menuItems: MenuItem[] = [];
 
   // --- 셀 데이터 삭제 메뉴 (맨 위에 추가) ---
   if (rowIndex >= 0 && colIndex > COL_IDX_SERIAL) {
@@ -185,19 +192,19 @@ function getMenuItemsForContext(
       menuItems.push({ type: 'separator' });
     }
 
-    const targetColumnTypes = new Set();
+    const targetColumnTypes = new Set<string>();
     if (individualCellCount > 0) {
       selectedCellsIndividual.forEach((cellKey: string) => {
         const [, colStr] = cellKey.split('_');
         const col = allColumnsMeta.find(c => c.colIndex === parseInt(colStr, 10));
-        if (col) targetColumnTypes.add(col.type);
+        if (col && col.type) targetColumnTypes.add(col.type);
       });
-    } else if (column) {
+    } else if (column && column.type) {
       targetColumnTypes.add(column.type);
     }
 
     // 1. 삭제 가능한 열
-    const hasDeletableColumns = Array.from(targetColumnTypes).some((type: any) => 
+    const hasDeletableColumns = Array.from(targetColumnTypes).some((type) => 
       [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(type)
     );
 
@@ -239,7 +246,7 @@ function getMenuItemsForContext(
       }
     } 
     // 2. 고정 열 (환자여부, 확진자여부, 증상발현시간 등) - 데이터 지우기만 가능
-    else if (Array.from(targetColumnTypes).some((type: any) => 
+    else if (Array.from(targetColumnTypes).some((type) => 
       [COL_TYPE_IS_PATIENT, COL_TYPE_CONFIRMED_CASE, COL_TYPE_ONSET, COL_TYPE_INDIVIDUAL_EXPOSURE].includes(type)
     )) {
       menuItems.push(
@@ -269,93 +276,94 @@ function getMenuItemsForContext(
     );
 
     const emptyCellText = t('dataInput.contextMenu.emptyCell');
+    const filterCtx = context as unknown as FilterContext;
 
     if (column && column.type === COL_TYPE_IS_PATIENT) {
-      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
+      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, filterCtx);
       menuItems.push({ type: 'separator' });
-      uniqueValuesWithCounts.forEach(({ value, count }: any) => {
+      uniqueValuesWithCounts.forEach(({ value, count }: FilterCount) => {
         const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-patient-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
           action,
           type: 'checkbox',
-          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, context as any)
+          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, filterCtx)
         });
       });
     }
     
     if (column && column.type === COL_TYPE_CONFIRMED_CASE) {
-      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
+      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, filterCtx);
       menuItems.push({ type: 'separator' });
-      uniqueValuesWithCounts.forEach(({ value, count }: any) => {
+      uniqueValuesWithCounts.forEach(({ value, count }: FilterCount) => {
         const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-confirmed-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
           action,
           type: 'checkbox',
-          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, context as any)
+          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, filterCtx)
         });
       });
     }
     
     if (column && column.type === 'clinicalSymptoms') {
-      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
+      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, filterCtx);
       menuItems.push({ type: 'separator' });
-      uniqueValuesWithCounts.forEach(({ value, count }: any) => {
+      uniqueValuesWithCounts.forEach(({ value, count }: FilterCount) => {
         const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-clinical-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
           action,
           type: 'checkbox',
-          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, context as any)
+          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, filterCtx)
         });
       });
     }
 
     if (column && column.type === 'dietInfo') {
-      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
+      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, filterCtx);
       menuItems.push({ type: 'separator' });
-      uniqueValuesWithCounts.forEach(({ value, count }: any) => {
+      uniqueValuesWithCounts.forEach(({ value, count }: FilterCount) => {
         const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-diet-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
           action,
           type: 'checkbox',
-          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, context as any)
+          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, filterCtx)
         });
       });
     }
 
     if (column && column.type === COL_TYPE_BASIC) {
-      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, context as any);
+      const uniqueValuesWithCounts = getUniqueValuesForColumn(colIndex, filterCtx);
       menuItems.push({ type: 'separator' });
-      uniqueValuesWithCounts.forEach(({ value, count }: any) => {
+      uniqueValuesWithCounts.forEach(({ value, count }: FilterCount) => {
         const displayValue = value === '' ? emptyCellText : value;
         const action = `filter-basic-${value === '' ? 'empty' : value}`;
         menuItems.push({
           label: `${displayValue} (${count})`,
           action,
           type: 'checkbox',
-          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, context)
+          checked: isFilterActive(colIndex, value === '' ? 'empty' : value, filterCtx)
         });
       });
     }
     
     if (column && (column.type === COL_TYPE_ONSET || column.type === COL_TYPE_INDIVIDUAL_EXPOSURE)) {
-      const uniqueDatesWithCounts = getUniqueDatesForColumn(colIndex, context as any);
+      const uniqueDatesWithCounts = getUniqueDatesForColumn(colIndex, filterCtx);
       menuItems.push({ type: 'separator' });
-      uniqueDatesWithCounts.forEach(({ date, count }: any) => {
+      uniqueDatesWithCounts.forEach(({ date, count }: { date: string, count: number }) => {
         const displayDate = date === '' ? emptyCellText : date;
         const action = `filter-datetime-${date === '' ? 'empty' : date}`;
         menuItems.push({
           label: `${displayDate} (${count})`,
           action,
           type: 'checkbox',
-          checked: isFilterActive(colIndex, date === '' ? 'empty' : date, context as any)
+          checked: isFilterActive(colIndex, date === '' ? 'empty' : date, filterCtx)
         });
       });
     }
@@ -381,12 +389,12 @@ function getUniqueColumnCount(selectedCellsIndividual: Set<string>) {
   return uniqueColumns.size;
 }
 
-function areSelectedColumnsDeletable(selectionState: any, allColumnsMeta: GridHeader[]) {
+function areSelectedColumnsDeletable(selectionState: SelectionState, allColumnsMeta: GridHeader[]) {
   const { selectedRange, selectedCellsIndividual } = selectionState;
   
   // 1. 각 그룹별 전체 열의 개수를 미리 계산합니다.
-  const totalCounts = allColumnsMeta.reduce((acc: any, col) => {
-    if ([COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(col.type)) {
+  const totalCounts = allColumnsMeta.reduce((acc: Record<string, number>, col) => {
+    if (col.type && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(col.type)) {
       if (!acc[col.type]) acc[col.type] = 0;
       acc[col.type]++;
     }
@@ -394,22 +402,22 @@ function areSelectedColumnsDeletable(selectionState: any, allColumnsMeta: GridHe
   }, {});
 
   // 2. 선택된 열들의 개수를 그룹별로 계산합니다.
-  const selectedCounts: any = {};
+  const selectedCounts: Record<string, number> = {};
   
   if (selectedCellsIndividual.size > 0) {
     selectedCellsIndividual.forEach((cellKey: string) => {
       const [, colStr] = cellKey.split('_');
       const colIndex = parseInt(colStr, 10);
       const meta = allColumnsMeta.find(c => c.colIndex === colIndex);
-      if (meta && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(meta.type)) {
+      if (meta && meta.type && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(meta.type)) {
         if (!selectedCounts[meta.type]) selectedCounts[meta.type] = 0;
         selectedCounts[meta.type]++;
       }
     });
-  } else if (selectedRange.start.colIndex !== null) {
+  } else if (selectedRange.start.colIndex !== null && selectedRange.end.colIndex !== null) {
     for (let i = selectedRange.start.colIndex; i <= selectedRange.end.colIndex; i++) {
       const meta = allColumnsMeta.find(c => c.colIndex === i);
-      if (meta && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(meta.type)) {
+      if (meta && meta.type && [COL_TYPE_BASIC, 'clinicalSymptoms', 'dietInfo'].includes(meta.type)) {
         if (!selectedCounts[meta.type]) selectedCounts[meta.type] = 0;
         selectedCounts[meta.type]++;
       }

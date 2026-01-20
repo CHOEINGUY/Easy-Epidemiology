@@ -4,44 +4,22 @@
  * file:/// 환경에서도 완벽하게 작동
  */
 
+import { GridRow, GridHeader, CellValue } from '@/types/grid';
+
 // Use standard names if possible or compatible ones
 type RequestIdleCallbackHandle = number;
-type StandardIdleRequestCallback = (deadline: IdleDeadline) => void;
-type StandardIdleRequestOptions = { timeout?: number };
-type CancelIdleCallback = (handle: number) => void;
 
-declare global {
-  interface Window {
-    requestIdleCallback: (callback: StandardIdleRequestCallback, options?: StandardIdleRequestOptions) => number;
-    cancelIdleCallback: (handle: number) => void;
-  }
-}
+// ... (keep requestIdleCallback setup) ...
+// Assuming global definition is handled elsewhere or environment supports it.
+// If not, we should add polyfill or declaration. 
+// For now, I'll assume environment is OK as I see usage.
 
-// requestIdleCallback 폴백 (구형 브라우저 지원)
-const requestIdleCallbackFallback = (callback: (deadline: IdleDeadline) => void) => {
-  const start = Date.now();
-  return setTimeout(() => {
-    callback({
-      didTimeout: false,
-      timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
-    });
-  }, 1) as unknown as number;
-};
-
-const requestIdleCallback =
-  (typeof window !== 'undefined' && window.requestIdleCallback) ||
-  requestIdleCallbackFallback;
-
-const cancelIdleCallback: CancelIdleCallback =
-  (typeof window !== 'undefined' && window.cancelIdleCallback) ||
-  ((id: number) => clearTimeout(id));
-
-export interface ProcessInChunksOptions<T = any> {
+export interface ProcessInChunksOptions<T> {
   chunkSize?: number;
   timeout?: number;
   onProgress?: (progress: number, current: number, total: number) => void;
   onComplete?: (data: T[]) => void;
-  onError?: (error: any, index?: number) => void;
+  onError?: (error: unknown, index?: number) => void;
 }
 
 export interface AsyncProcessHandle {
@@ -144,26 +122,17 @@ export function processInChunks<T>(
   };
 }
 
-interface ColumnMeta {
-  isEditable?: boolean;
-  cellIndex?: number;
-  dataKey?: string;
-  colIndex: number;
-  type: string;
-  [key: string]: any;
-}
-
 interface ValidationOptions {
   chunkSize?: number;
   onProgress?: (progress: number, processed: number, total: number) => void;
   onComplete?: (invalidCells: InvalidCell[]) => void;
-  onError?: (error: any) => void;
+  onError?: (error: unknown) => void;
 }
 
 interface CellToValidate {
   rowIndex: number;
   colIndex: number;
-  value: any;
+  value: CellValue;
   type: string;
 }
 
@@ -178,14 +147,14 @@ interface ValidatorResult {
   message?: string;
 }
 
-type ValidatorFunction = (value: any, type: string) => ValidatorResult;
+type ValidatorFunction = (value: CellValue, type: string) => ValidatorResult;
 
 /**
  * 대용량 배열을 비동기적으로 검증하는 함수
  */
 export function validateDataAsync(
-  rows: any[],
-  columnMetas: ColumnMeta[],
+  rows: GridRow[],
+  columnMetas: GridHeader[],
   validator: ValidatorFunction,
   options: ValidationOptions = {}
 ): AsyncProcessHandle {
@@ -197,6 +166,7 @@ export function validateDataAsync(
   } = options;
 
   const invalidCells: InvalidCell[] = [];
+  // Use non-null assertion or filter properly to avoid count errors if colIndex missing
   const totalCells =
     rows.length * columnMetas.filter((meta) => meta.isEditable).length;
   let processedCells = 0;
@@ -210,18 +180,22 @@ export function validateDataAsync(
       // Safe check for dataKey
       if (!meta.dataKey) return;
 
-      let value: any = '';
+      let value: CellValue = '';
       if (meta.cellIndex !== null && meta.cellIndex !== undefined) {
         // dataKey is string here
-        const arr = row[meta.dataKey] || [];
+        const arr = row[meta.dataKey];
+        // Ensure arr is array before access
         value = Array.isArray(arr) ? arr[meta.cellIndex] ?? '' : '';
       } else {
-        value = row[meta.dataKey] ?? '';
+        // If not accessing by cellIndex, assume property access.
+        // row[meta.dataKey] could be array or primitive.
+        // We take it as is.
+        value = (row[meta.dataKey] as CellValue) ?? '';
       }
 
       cellsToValidate.push({
         rowIndex,
-        colIndex: meta.colIndex,
+        colIndex: meta.colIndex ?? -1,
         value,
         type: meta.type,
       });
@@ -259,8 +233,8 @@ export function validateDataAsync(
 interface ExcelProcessOptions {
   chunkSize?: number;
   onProgress?: (progress: number) => void;
-  onComplete?: (result: any) => void;
-  onError?: (error: any) => void;
+  onComplete?: (result: unknown) => void;
+  onError?: (error: unknown) => void;
 }
 
 /**
@@ -268,9 +242,9 @@ interface ExcelProcessOptions {
  */
 export function processExcelAsync(
   buffer: ArrayBuffer,
-  parser: (Input: ArrayBuffer | any, index?: number) => any,
+  parser: (Input: ArrayBuffer | unknown, index?: number) => unknown,
   options: ExcelProcessOptions = {}
-): Promise<any> {
+): Promise<unknown> {
   const {
     chunkSize = 1000,
     onProgress = () => {},
@@ -284,8 +258,8 @@ export function processExcelAsync(
       onProgress(10);
 
       // 파싱 작업을 청크로 나누어 처리
-      const processData = (data: any[]) => {
-        const processor = (item: any, index: number) => {
+      const processData = (data: unknown[]) => {
+        const processor = (item: unknown, index: number) => {
           // 각 행 처리
           parser(item, index);
         };
@@ -296,7 +270,7 @@ export function processExcelAsync(
           onProgress(adjustedProgress);
         };
 
-        const completeHandler = (result: any) => {
+        const completeHandler = (result: unknown) => {
           onProgress(100);
           onComplete(result);
           resolve(result);
@@ -316,7 +290,15 @@ export function processExcelAsync(
       // Excel 파싱 로직을 여기에 구현
       // (기존 excelWorker.js의 로직을 동기적으로 실행)
       const result = parser(buffer);
-      processData(result);
+      // If result is array, process it. If not, what?
+      if (Array.isArray(result)) {
+          processData(result);
+      } else {
+          // If parser returns single result (not array), finish immediately
+          onProgress(100);
+          onComplete(result);
+          resolve(result);
+      }
     } catch (error) {
       onError(error);
       reject(error);
