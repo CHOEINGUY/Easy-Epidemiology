@@ -33,7 +33,7 @@
     "immer": "^10.1.1",
     "jstat": "^1.9.6",
     "jszip": "^3.10.1",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "lodash-es": "^4.17.21",
     "lodash.debounce": "^4.0.8",
     "mitt": "^3.0.1",
