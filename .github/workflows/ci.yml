@@ -98,8 +98,8 @@ jobs:
           path: coverage/
           retention-days: 7
 
-  build:
-    name: 🏗️ Build Check
+  build-noauth:
+    name: 🏗️ No-auth Build
     runs-on: ubuntu-latest
     needs: [core-lint, strict-core-typecheck, unit-test]
     steps:
@@ -115,20 +115,40 @@ jobs:
       - name: 📚 Install dependencies
         run: npm ci
 
-      - name: 🏗️ Build application
+      - name: 🏗️ Build no-auth application
         run: npm run build:noauth
 
-      - name: 📤 Upload build artifacts
+      - name: 📤 Upload no-auth build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-noauth
           path: dist/
           retention-days: 1
 
-  e2e-test:
-    name: 🎭 E2E Tests (Playwright)
+  build-auth:
+    name: 🔐 Auth Build
     runs-on: ubuntu-latest
-    needs: build
+    needs: [core-lint, strict-core-typecheck, unit-test]
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: 📚 Install dependencies
+        run: npm ci
+
+      - name: 🔐 Build auth application
+        run: npm run build:auth
+
+  e2e-noauth:
+    name: 🎭 No-auth E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: build-noauth
     timeout-minutes: 15
     steps:
       - name: 📥 Checkout code
@@ -146,24 +166,24 @@ jobs:
       - name: 🎭 Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: 📥 Download build artifacts
+      - name: 📥 Download no-auth build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: dist-noauth
           path: dist/
 
-      - name: 🌐 Start server and run E2E tests
+      - name: 🌐 Start server and run no-auth E2E tests
         run: |
           npx serve -s dist -l 8081 > /tmp/easy-epi-serve.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID' EXIT
           sleep 5
-          npm run test:e2e
+          npm run test:e2e:noauth
 
       - name: 📤 Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-noauth
           path: playwright-report/
           retention-days: 7
