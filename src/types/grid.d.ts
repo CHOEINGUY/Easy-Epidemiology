@@ -12,6 +12,7 @@ export interface GridHeader {
   dataKey?: string; // e.g. '0-3'
   headerText?: string; // Display text for header (used in exports)
   headerRow?: number; // 1 or 2 for multi-row headers
+  group?: string; // Optional logical group used when building stable column keys
   style?: Record<string, string | number>;
   offsetLeft?: number; // Calculated offset for scrolling
   isCustom?: boolean; // Custom column flag
