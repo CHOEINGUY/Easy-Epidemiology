@@ -8,16 +8,13 @@
     "build": "vue-cli-service build --mode production",
     "build:noauth": "vue-cli-service build --mode noauth",
     "build:auth": "vue-cli-service build --mode production",
-    "build:clean": "npx tsx cleanup-for-production.ts && vue-cli-service build",
-    "build:clean:noauth": "npx tsx cleanup-for-production.ts && vue-cli-service build --mode noauth",
-    "build:clean:auth": "npx tsx cleanup-for-production.ts && vue-cli-service build --mode production",
-    "cleanup": "npx tsx cleanup-for-production.ts",
     "lint": "vue-cli-service lint",
+    "typecheck": "vue-tsc --noEmit",
+    "typecheck:strict-core": "vue-tsc --noEmit -p tsconfig.strict-core.json",
     "test": "jest",
-    "test:auth": "node test-modes.js auth",
-    "test:noauth": "node test-modes.js noauth",
+    "test:unit": "jest --runInBand",
+    "test:e2e": "playwright test --project=chromium",
     "download-icons": "npx tsx scripts/download-material-icons.ts",
-    "embed-templates": "npx tsx scripts/embed-zip-templates.ts",
     "postinstall": "npm run download-icons"
   },
   "dependencies": {
@@ -39,7 +36,6 @@
     "mitt": "^3.0.1",
     "papaparse": "^5.5.2",
     "pinia": "^3.0.4",
-
     "v-calendar": "^3.1.2",
     "vue": "^3.2.13",
     "vue-chartjs": "^5.3.2",
@@ -121,7 +117,8 @@
       ],
       "vue/multi-word-component-names": "off",
       "vue/no-unused-components": "error",
-      "vue/no-unused-vars": "error"
+      "vue/no-unused-vars": "error",
+      "@typescript-eslint/no-explicit-any": "warn"
     },
     "plugins": [
       "@typescript-eslint"
