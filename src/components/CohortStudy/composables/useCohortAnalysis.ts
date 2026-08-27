@@ -3,7 +3,8 @@ import { useSettingsStore } from '../../../stores/settingsStore';
 import { EpidemicHeaders } from '../../../stores/epidemicStore';
 import { jStat } from 'jstat';
 import { CohortResult } from '@/types/analysis';
-import { GridRow, GridHeader } from '@/types/grid';
+import { GridRow } from '@/types/grid';
+import { fisherExactTwoSided } from '../../../utils/statistics2x2';
 
 export function useCohortAnalysis(
     rows: Ref<GridRow[]>, 
@@ -15,45 +16,6 @@ export function useCohortAnalysis(
     // Cast rows to expected type internally
     const typedRows = computed(() => rows.value || []);
     const typedHeaders = computed(() => headers.value || { diet: [] });
-
-    // --- Helper Functions ---
-    // 팩토리얼 계산 함수
-    const factorial = (n: number): number => {
-        if (n < 0) return NaN;
-        if (n === 0 || n === 1) return 1;
-        let result = 1;
-        for (let i = 2; i <= n; i++) {
-            result *= i;
-        }
-        return result;
-    };
-
-    // Fisher의 정확검정 계산 함수 (양측 검정)
-    const calculateFisherExactTest = (a: number, b: number, c: number, d: number): number => {
-        const n = a + b + c + d;
-        const row1 = a + b;
-        const row2 = c + d;
-        const col1 = a + c;
-        const col2 = b + d;
-
-        const observedProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
-            (factorial(n) * factorial(a) * factorial(b) * factorial(c) * factorial(d));
-
-        let pValue = 0;
-        for (let x = 0; x <= Math.min(row1, col1); x++) {
-            const y = row1 - x;
-            const z = col1 - x;
-            const w = row2 - z;
-            if (y >= 0 && z >= 0 && w >= 0) {
-                const currentProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
-                    (factorial(n) * factorial(x) * factorial(y) * factorial(z) * factorial(w));
-                if (currentProb <= observedProb) {
-                    pValue += currentProb;
-                }
-            }
-        }
-        return pValue;
-    };
 
     // 카이제곱 항 계산 함수 (Yates' 보정 포함)
     const calculateChiTerm = (observed: number, expected: number): number => {
@@ -107,13 +69,12 @@ export function useCohortAnalysis(
             return [];
         }
 
-        const dietHeaders = typedHeaders.value.diet || [];
+        // 계산 중 store의 원본 헤더 배열을 변경하지 않도록 복사본 사용
+        const dietHeaders = [...(typedHeaders.value.diet || [])];
         if (dietHeaders.length === 0) {
-            const defaultDietItems: string[] = [];
             for (let i = 0; i < 10; i++) {
-                defaultDietItems.push(`식단${i + 1}`);
+                dietHeaders.push(`식단${i + 1}`);
             }
-            dietHeaders.push(...defaultDietItems);
         }
 
         const z_crit = jStat.normal.inv(0.975, 0, 1);
@@ -176,7 +137,7 @@ export function useCohortAnalysis(
                     const hasSmallExpected = a_exp < 5 || b_exp < 5 || c_exp < 5 || d_exp < 5;
                     if (hasSmallExpected) {
                         try {
-                            pValue = calculateFisherExactTest(a_obs, b_obs, c_obs, d_obs);
+                            pValue = fisherExactTwoSided(a_obs, b_obs, c_obs, d_obs);
                             adj_chi = null;
                         } catch (e) {
                             console.error(`Fisher's exact test calculation error for item ${factorName}:`, e);
