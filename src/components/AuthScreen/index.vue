@@ -13,8 +13,7 @@
           <span class="block text-slate-500 font-medium text-2xl mb-2">Easy</span>
           <span class="block bg-gradient-to-br from-blue-500 to-blue-700 bg-clip-text text-transparent pb-2">Epidemiology</span>
         </h1>
-        <p class="text-[1.1rem] text-slate-500 leading-relaxed mb-12" v-html="$t('auth.hero.subtitle').replace('{br}', '<br/>')">
-        </p>
+        <p class="text-[1.1rem] text-slate-500 leading-relaxed mb-12 whitespace-normal lg:whitespace-pre-line">{{ $t('auth.hero.subtitle') }}</p>
         
         <div class="flex flex-col gap-4 text-left">
           <div class="flex items-center gap-3 text-[0.95rem] group">
