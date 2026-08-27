@@ -11,11 +11,18 @@ module.exports = {
     '^.+\\.ts$': 'ts-jest'
   },
   testEnvironmentOptions: {
-    customExportConditions: ["node", "node-addons"],
+    customExportConditions: ['node', 'node-addons']
   },
+  // v3 quality ratchet: measure the strict-core surface first and expand it as legacy code is migrated.
   collectCoverageFrom: [
-    'src/**/*.{ts,vue}',
-    '!src/**/*.d.ts',
-    '!src/main.ts'
-  ]
-}
+    'src/components/DataInputVirtualScroll/utils/validationUtils.ts'
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 100,
+      lines: 90,
+      statements: 90
+    }
+  }
+};
