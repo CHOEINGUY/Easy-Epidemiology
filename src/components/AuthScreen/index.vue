@@ -8,12 +8,12 @@
         <div class="absolute -inset-[50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.06),transparent_60%)] animate-heroPulse"></div>
       </div>
       
-      <div class="relative z-10 p-12 max-w-[480px] text-center animate-fadeUp">
+      <div class="relative z-10 w-full max-w-[560px] px-8 py-12 text-center animate-fadeUp">
         <h1 class="text-[3.5rem] font-extrabold leading-[1.2] mb-6 tracking-tight">
           <span class="block text-slate-500 font-medium text-2xl mb-2">Easy</span>
           <span class="block bg-gradient-to-br from-blue-500 to-blue-700 bg-clip-text text-transparent pb-2">Epidemiology</span>
         </h1>
-        <p class="text-[1.1rem] text-slate-500 leading-relaxed mb-12 whitespace-normal lg:whitespace-pre">{{ $t('auth.hero.subtitle') }}</p>
+        <p class="text-[1.1rem] text-slate-500 leading-relaxed mb-12 whitespace-pre-line break-keep">{{ $t('auth.hero.subtitle') }}</p>
         
         <div class="flex flex-col gap-4 text-left">
           <div class="flex items-center gap-3 text-[0.95rem] group">
