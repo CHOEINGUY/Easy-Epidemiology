@@ -36,13 +36,22 @@ describe('validationUtils', () => {
       }))).toBe('exposure_exposure_3');
     });
 
-    it('includes an optional logical group in generic keys', () => {
+    it('includes optional cell and group metadata in generic keys', () => {
       expect(getColumnUniqueKey(makeHeader({
         type: 'diet',
         dataKey: 'meal',
         cellIndex: 2,
         group: 'lunch'
       }))).toBe('meal__diet__2__lunch');
+    });
+
+    it('keeps generic keys stable when optional metadata is absent', () => {
+      expect(getColumnUniqueKey(makeHeader({
+        type: 'clinical',
+        dataKey: 'fever',
+        cellIndex: undefined,
+        group: undefined
+      }))).toBe('fever__clinical');
     });
   });
 
@@ -81,6 +90,15 @@ describe('validationUtils', () => {
       expect(getValidationMessage(3, 0, header, errors)).toBe('유효성 검사 오류');
       expect(hasValidationError(4, 0, header, errors)).toBe(false);
       expect(getValidationMessage(4, 0, header, errors)).toBe('');
+    });
+
+    it('safely handles missing metadata or error maps', () => {
+      const emptyErrors: ValidationErrorMap = new Map();
+
+      expect(hasValidationError(0, 0, null, emptyErrors)).toBe(false);
+      expect(hasValidationError(0, 0, header, null)).toBe(false);
+      expect(getValidationMessage(0, 0, null, emptyErrors)).toBe('');
+      expect(getValidationMessage(0, 0, header, null)).toBe('');
     });
   });
 });
