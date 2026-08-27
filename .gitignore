@@ -1,36 +1,48 @@
 .DS_Store
-node_modules
-/dist
+node_modules/
+dist/
+coverage/
 
-
-# local env files
+# Local environment files
 .env.local
 .env.*.local
 
-# Log files
+# Logs and local test output
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+test_output.txt
+test_failure_log.txt
+
+# Generated release bundles / local packaged builds
+Easy-Epi v*.zip
+Easy-Epi v*/
 
 # Editor directories and files
-.idea
-.vscode
+.idea/
+.vscode/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-#Electron-builder output
-/dist_electron
+# Electron / Wrangler output
+dist_electron/
+.wrangler/
+worker/.wrangler/
+worker/node_modules/
 
-# 배포 전 정리 스크립트
+# Playwright output
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
 
-
-# 개발/테스트 전용 파일들 (배포 시 제거됨)
-tests/
-jest.config.js
+# Local-only utilities and generated temp files
 test-modes.js
 test-offline.html
 update-user.js
@@ -43,18 +55,6 @@ OFFLINE_README.md
 BUILD_SUMMARY.md
 worker/DEPLOYMENT_CHECKLIST.md
 worker/DEPLOYMENT_GUIDE.md
-worker/README.md
-# docs/
 env.development
 env.noauth
 temp_template/
-.wrangler/
-worker/.wrangler/
-worker/node_modules/
-
-# Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
