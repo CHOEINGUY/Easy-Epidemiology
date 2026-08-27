@@ -1,10 +1,11 @@
-import { computed, ref, watch, Ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useEpidemicStore } from '../../../stores/epidemicStore';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { jStat } from 'jstat';
 import { CaseControlResult } from '@/types/analysis';
 import { GridRow } from '@/types/grid';
 import { EpidemicHeaders } from '../../../stores/epidemicStore';
+import { fisherExactTwoSided } from '../../../utils/statistics2x2';
 
 export function useCaseControlStatistics() {
     const epidemicStore = useEpidemicStore();
@@ -17,7 +18,7 @@ export function useCaseControlStatistics() {
         set: (value: boolean) => settingsStore.setYatesCorrectionSettings({ type: 'caseControl', enabled: value })
     });
 
-    // Vuex 스토어에서 headers와 rows 데이터 가져오기
+    // Pinia 스토어에서 headers와 rows 데이터 가져오기
     const headers = computed<EpidemicHeaders>(() => epidemicStore.headers || { basic: [], clinical: [], diet: [] });
     const rows = computed<GridRow[]>(() => epidemicStore.rows || []);
 
@@ -41,51 +42,6 @@ export function useCaseControlStatistics() {
     // Yates 보정 토글 함수
     const toggleYatesCorrection = () => {
         useYatesCorrection.value = !useYatesCorrection.value;
-    };
-
-    // --- 팩토리얼 계산 함수 ---
-    const factorial = (n: number): number => {
-        if (n < 0) return NaN;
-        if (n === 0 || n === 1) return 1;
-        let result = 1;
-        for (let i = 2; i <= n; i++) {
-            result *= i;
-        }
-        return result;
-    };
-
-    // --- Fisher의 정확검정 계산 함수 (양측 검정) ---
-    const calculateFisherExactTest = (a: number, b: number, c: number, d: number): number => {
-        // 2x2 분할표에서 Fisher의 정확검정 계산 (양측 검정)
-        const n = a + b + c + d;
-        const row1 = a + b;
-        const row2 = c + d;
-        const col1 = a + c;
-        const col2 = b + d;
-
-        // 관측된 분할표의 확률 계산
-        const observedProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
-            (factorial(n) * factorial(a) * factorial(b) * factorial(c) * factorial(d));
-
-        let pValue = 0;
-        // 모든 가능한 분할표에 대해 확률 계산
-        for (let x = 0; x <= Math.min(row1, col1); x++) {
-            const y = row1 - x;
-            const z = col1 - x;
-            const w = row2 - z;
-
-            if (y >= 0 && z >= 0 && w >= 0) {
-                // 현재 분할표의 확률
-                const currentProb = (factorial(row1) * factorial(row2) * factorial(col1) * factorial(col2)) /
-                    (factorial(n) * factorial(x) * factorial(y) * factorial(z) * factorial(w));
-
-                // 관측된 분할표보다 극단적인 경우의 확률만 합산 (양측 검정)
-                if (currentProb <= observedProb) {
-                    pValue += currentProb;
-                }
-            }
-        }
-        return pValue;
     };
 
     // --- 카이제곱 항 계산 함수 (Yates' 보정 포함) ---
@@ -145,16 +101,13 @@ export function useCaseControlStatistics() {
             return [];
         }
 
-        // 식단 헤더가 없으면 기본 헤더 생성
-        const dietHeaders = headers.value?.diet || [];
+        // 계산 중 store의 원본 헤더 배열을 변경하지 않도록 복사본 사용
+        const dietHeaders = [...(headers.value?.diet || [])];
         if (dietHeaders.length === 0) {
             console.log('식단 헤더가 없어 기본 분석을 수행합니다.');
-            // 기본 식단 항목들 생성 (실제 데이터에서 추출)
-            const defaultDietItems: string[] = [];
             for (let i = 0; i < 10; i++) {
-                defaultDietItems.push(`식단${i + 1}`);
+                dietHeaders.push(`식단${i + 1}`);
             }
-            dietHeaders.push(...defaultDietItems);
         }
 
         // 95% CI를 위한 Z-score (양측 검정, 표준정규분포에서 0.975에 해당하는 값)
@@ -221,7 +174,7 @@ export function useCaseControlStatistics() {
                     if (hasSmallExpected) {
                         // 기대빈도 5미만: Fisher의 정확검정 사용
                         try {
-                            pValue = calculateFisherExactTest(b_obs, c_obs, e_obs, f_obs);
+                            pValue = fisherExactTwoSided(b_obs, c_obs, e_obs, f_obs);
                             adj_chi = null; // Fisher 검정에서는 카이제곱 값 계산 안함
                         } catch (e) {
                             console.error(`Fisher's exact test calculation error for item ${factorName}:`, e);
@@ -341,7 +294,7 @@ export function useCaseControlStatistics() {
         });
     });
 
-    // --- Vuex: 분석 요약 업데이트 ---
+    // --- 분석 요약 업데이트 ---
     watch([analysisResults, useYatesCorrection], () => {
         const fisherUsed = analysisResults.value.some(r => r.adj_chi === null && typeof r.pValue === 'number');
         const yatesUsed = useYatesCorrection.value;
