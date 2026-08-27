@@ -82,4 +82,5 @@ if ('serviceWorker' in navigator) {
   }
 }
 
-app.mount('#app');
+void userManager;
+app.mount('#vue-root');
