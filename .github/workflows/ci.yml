@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [main, develop, v3.0]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: "20"
 
