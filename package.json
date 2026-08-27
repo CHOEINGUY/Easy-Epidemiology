@@ -8,7 +8,7 @@
     "build": "vue-cli-service build --mode production",
     "build:noauth": "vue-cli-service build --mode noauth",
     "build:auth": "vue-cli-service build --mode production",
-    "lint": "vue-cli-service lint",
+    "lint": "eslint --ext .ts,.vue src tests",
     "typecheck": "vue-tsc --noEmit",
     "typecheck:strict-core": "vue-tsc --noEmit -p tsconfig.strict-core.json",
     "test": "jest",
