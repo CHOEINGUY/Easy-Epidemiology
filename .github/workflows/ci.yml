@@ -149,7 +149,7 @@ jobs:
     name: 🎭 No-auth E2E (Playwright)
     runs-on: ubuntu-latest
     needs: build-noauth
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -174,10 +174,14 @@ jobs:
 
       - name: 🌐 Start server and run no-auth E2E tests
         run: |
-          npx serve -s dist -l 8081 > /tmp/easy-epi-serve.log 2>&1 &
+          python3 -m http.server 8081 --directory dist > /tmp/easy-epi-server.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID' EXIT
-          sleep 5
+          for i in {1..10}; do
+            curl --fail --silent http://127.0.0.1:8081/ > /dev/null && break
+            sleep 1
+          done
+          curl --fail http://127.0.0.1:8081/ > /dev/null
           npm run test:e2e:noauth
 
       - name: 📤 Upload Playwright report
