@@ -9,7 +9,7 @@ export default {
   btnLogin: 'Login',
   btnRegister: 'Register',
   hero: {
-    subtitle: 'Professional Data Analysis Solution{br}for Rapid and Accurate Epidemiology',
+    subtitle: 'Professional Data Analysis Solution\nfor Rapid and Accurate Epidemiology',
     feature1: 'Intuitive Data Input',
     feature2: 'Automated Epidemic Curve',
     feature3: 'OR/RR Statistical Analysis',
