@@ -16,6 +16,8 @@
     "test": "jest",
     "test:unit": "jest --runInBand",
     "test:e2e": "playwright test --project=chromium",
+    "test:e2e:noauth": "playwright test e2e/app.spec.ts e2e/data-input.spec.ts e2e/analysis-flow.spec.ts --project=chromium",
+    "test:e2e:auth": "playwright test e2e/login.spec.ts --project=chromium",
     "download-icons": "npx tsx scripts/download-material-icons.ts",
     "postinstall": "npm run download-icons"
   },
