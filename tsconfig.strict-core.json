@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "useUnknownInCatchVariables": true,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": [
+    "src/types/grid.d.ts",
+    "src/components/DataInputVirtualScroll/utils/validationUtils.ts",
+    "tests/validationUtils.spec.ts"
+  ]
+}
