@@ -1,25 +1,19 @@
-# CI Pipeline - Lint, Build, Unit Test, E2E Test
-# 이 워크플로우는 PR 생성 시 코드 품질을 검증합니다
-
+# CI Pipeline - Lint, Strict Core Typecheck, Build, Unit Test, E2E Test
 name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, v3.0]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, v3.0]
 
 env:
   NODE_VERSION: "20"
 
 jobs:
-  # ============================================
-  # 1️⃣ Lint - 코드 스타일 검사
-  # ============================================
   lint:
     name: 🔍 Lint Check
     runs-on: ubuntu-latest
-
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -36,14 +30,58 @@ jobs:
       - name: 🔍 Run ESLint
         run: npm run lint
 
-  # ============================================
-  # 2️⃣ Build - 빌드 검증
-  # ============================================
+  strict-core-typecheck:
+    name: 🧷 Strict Core Typecheck
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: 📚 Install dependencies
+        run: npm ci
+
+      - name: 🧷 Run strict core typecheck
+        run: npm run typecheck:strict-core
+
+  unit-test:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: 📚 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run unit tests
+        run: npm test -- --coverage --runInBand
+
+      - name: 📊 Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
   build:
     name: 🏗️ Build Check
     runs-on: ubuntu-latest
-    needs: lint
-
+    needs: [lint, strict-core-typecheck, unit-test]
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -67,46 +105,11 @@ jobs:
           path: dist/
           retention-days: 1
 
-  # ============================================
-  # 3️⃣ Unit Test - 유닛 테스트
-  # ============================================
-  unit-test:
-    name: 🧪 Unit Tests
-    runs-on: ubuntu-latest
-    needs: lint
-
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: 📚 Install dependencies
-        run: npm ci
-
-      - name: 🧪 Run unit tests
-        run: npm test -- --coverage --passWithNoTests
-
-      - name: 📊 Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 7
-
-  # ============================================
-  # 4️⃣ E2E Test - End-to-End 테스트
-  # ============================================
   e2e-test:
     name: 🎭 E2E Tests (Playwright)
     runs-on: ubuntu-latest
     needs: build
-
+    timeout-minutes: 15
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -120,7 +123,7 @@ jobs:
       - name: 📚 Install dependencies
         run: npm ci
 
-      - name: 🎭 Install Playwright browsers
+      - name: 🎭 Install Playwright browser
         run: npx playwright install --with-deps chromium
 
       - name: 📥 Download build artifacts
@@ -131,9 +134,11 @@ jobs:
 
       - name: 🌐 Start server and run E2E tests
         run: |
-          npx serve -s dist -l 8081 &
+          npx serve -s dist -l 8081 > /tmp/easy-epi-serve.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
           sleep 5
-          npx playwright test --project=chromium || echo "No E2E tests found yet - skipping"
+          npm run test:e2e
 
       - name: 📤 Upload Playwright report
         uses: actions/upload-artifact@v4
