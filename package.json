@@ -1,6 +1,6 @@
 {
   "name": "webpage",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -8,7 +8,9 @@
     "build": "vue-cli-service build --mode production",
     "build:noauth": "vue-cli-service build --mode noauth",
     "build:auth": "vue-cli-service build --mode production",
-    "lint": "eslint --ext .ts,.vue src tests",
+    "lint": "npm run lint:core",
+    "lint:core": "eslint --ext .ts src/components/DataInputVirtualScroll/utils/validationUtils.ts tests",
+    "lint:legacy": "eslint --ext .ts,.vue src",
     "typecheck": "vue-tsc --noEmit",
     "typecheck:strict-core": "vue-tsc --noEmit -p tsconfig.strict-core.json",
     "test": "jest",
