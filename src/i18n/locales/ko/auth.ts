@@ -9,7 +9,7 @@ export default {
   btnLogin: '로그인',
   btnRegister: '회원가입',
   hero: {
-    subtitle: '신속하고 정확한 역학조사를 위한{br}전문 데이터 분석 솔루션',
+    subtitle: '신속하고 정확한 역학조사를 위한\n전문 데이터 분석 솔루션',
     feature1: '직관적인 데이터 입력',
     feature2: '자동화된 유행곡선 분석',
     feature3: 'OR/RR 통계 분석',
